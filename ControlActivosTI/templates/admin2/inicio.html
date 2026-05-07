@@ -1,7 +1,7 @@
 {% extends "admin2/base.html" %}
 
 {% block admin2_content %}
-<section id="admin2-resumen" class="admin2-panel admin2-panel--hero">
+<section id="admin2-resumen" class="admin2-panel admin2-panel--hero" data-admin2-section>
     <div class="admin2-hero">
         <div>
             <p class="admin2-hero__label">Lanzador administrativo</p>
@@ -27,7 +27,7 @@
 </section>
 
 {% for group in admin_groups %}
-    <section id="{{ group.section_id }}" class="admin2-panel admin2-panel--group">
+    <section id="{{ group.section_id }}" class="admin2-panel admin2-panel--group" data-admin2-section>
         <div class="admin2-sectionhead">
             <div>
                 <p class="admin2-sectionhead__eyebrow">{{ group.title }}</p>
@@ -57,7 +57,7 @@
     </section>
 {% endfor %}
 
-<section id="admin2-accesos-extra" class="admin2-panel">
+<section id="admin2-accesos-extra" class="admin2-panel" data-admin2-section>
     <div class="admin2-sectionhead">
         <div>
             <p class="admin2-sectionhead__eyebrow">Administrador</p>

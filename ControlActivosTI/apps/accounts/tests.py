@@ -198,6 +198,15 @@ class Admin2ViewsTests(TestCase):
         self.assertContains(response, 'data-admin2-scroll-top')
         self.assertContains(response, 'aria-label="Volver arriba"')
 
+    def test_admin2_home_marks_scroll_sections_for_dynamic_navigation(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("admin2-inicio"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-admin2-anchor-link')
+        self.assertContains(response, 'data-admin2-section')
+
 
 class PerfilUsuarioViewTests(TestCase):
     def setUp(self):

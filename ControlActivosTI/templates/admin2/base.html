@@ -47,7 +47,11 @@
                 <nav class="admin2-nav">
                     {% if admin2_scroll_sections %}
                         {% for item in admin2_scroll_sections %}
-                            <a href="{{ item.url }}" class="admin2-nav__link admin2-nav__link--anchor {% if forloop.first %}is-active{% endif %}">
+                            <a
+                                href="{{ item.url }}"
+                                class="admin2-nav__link admin2-nav__link--anchor {% if forloop.first %}is-active{% endif %}"
+                                data-admin2-anchor-link
+                            >
                                 <span class="admin2-nav__pill">{{ item.icon_label }}</span>
                                 <span>{{ item.label }}</span>
                             </a>
@@ -160,6 +164,65 @@
                 toggleScrollTopButton();
                 window.addEventListener("scroll", toggleScrollTopButton, { passive: true });
                 window.addEventListener("resize", toggleScrollTopButton, { passive: true });
+            }
+
+            const anchorLinks = Array.from(document.querySelectorAll("[data-admin2-anchor-link]"));
+            if (anchorLinks.length && "IntersectionObserver" in window) {
+                const sectionLinks = new Map();
+                const sections = [];
+
+                anchorLinks.forEach((link) => {
+                    const hash = link.getAttribute("href") || "";
+                    if (!hash.startsWith("#")) {
+                        return;
+                    }
+                    const section = document.querySelector(hash);
+                    if (section) {
+                        sectionLinks.set(section.id, link);
+                        sections.push(section);
+                    }
+                });
+
+                const setActiveLink = (sectionId) => {
+                    anchorLinks.forEach((link) => {
+                        const hash = (link.getAttribute("href") || "").replace(/^#/, "");
+                        const active = hash === sectionId;
+                        link.classList.toggle("is-active", active);
+                        link.setAttribute("aria-current", active ? "true" : "false");
+                    });
+                };
+
+                const initialSection = location.hash ? document.querySelector(location.hash) : null;
+                if (initialSection && initialSection.id && sectionLinks.has(initialSection.id)) {
+                    setActiveLink(initialSection.id);
+                }
+
+                const observer = new IntersectionObserver(
+                    (entries) => {
+                        const visibles = entries.filter((entry) => entry.isIntersecting);
+                        if (!visibles.length) {
+                            return;
+                        }
+
+                        const visible = visibles.sort((a, b) => {
+                            if (b.intersectionRatio !== a.intersectionRatio) {
+                                return b.intersectionRatio - a.intersectionRatio;
+                            }
+                            return a.boundingClientRect.top - b.boundingClientRect.top;
+                        })[0];
+
+                        if (visible && visible.target && visible.target.id) {
+                            setActiveLink(visible.target.id);
+                        }
+                    },
+                    {
+                        root: null,
+                        rootMargin: "-18% 0px -62% 0px",
+                        threshold: [0, 0.1, 0.25, 0.5, 0.75, 1],
+                    },
+                );
+
+                sections.forEach((section) => observer.observe(section));
             }
 
             if (shouldScroll && target) {
