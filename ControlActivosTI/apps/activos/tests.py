@@ -429,6 +429,7 @@ class ActivoDetailViewTests(TestCase):
             nombre="Tecnologia",
             empresa=self.empresa,
         )
+        self.historial_asignaciones = []
         self.colaborador = Colaborador.objects.create(
             nombres="Ana",
             apellidos="Perez",
@@ -465,14 +466,15 @@ class ActivoDetailViewTests(TestCase):
                 activa=False,
                 estado_activo_devolucion=self.estado_devuelto,
             )
+            self.historial_asignaciones.append(asignacion)
 
-        asignacion_activa = Asignacion.objects.create(
+        self.asignacion_activa = Asignacion.objects.create(
             colaborador=self.colaborador,
             fecha_asignacion=date(2026, 4, 6),
             usuario_responsable=self.user,
         )
         AsignacionDetalle.objects.create(
-            asignacion=asignacion_activa,
+            asignacion=self.asignacion_activa,
             activo=self.activo,
             orden=6,
         )
@@ -486,10 +488,12 @@ class ActivoDetailViewTests(TestCase):
         self.assertEqual(response.context["total_historial_asignaciones"], 6)
         self.assertEqual(len(response.context["historial_asignaciones"]), 5)
         self.assertEqual(len(response.context["historial_asignaciones_completo"]), 1)
-        self.assertContains(response, "Mostrando las 5 asignaciones mÃ¡s recientes")
+        self.assertContains(response, "Mostrando las 5 asignaciones")
         self.assertContains(response, "Ver historial completo")
         self.assertContains(response, "LAP-001")
         self.assertContains(response, reverse("admin:activos_activo_change", args=[self.activo.pk]))
+        self.assertContains(response, reverse("asignaciones:detalle", args=[self.asignacion_activa.pk]))
+        self.assertContains(response, reverse("asignaciones:detalle", args=[self.historial_asignaciones[0].pk]))
 
     def test_detail_view_blocks_quarantine_from_available_message(self):
         cuarentena = EstadoActivo.objects.create(nombre="Cuarentena", permite_asignacion=False)

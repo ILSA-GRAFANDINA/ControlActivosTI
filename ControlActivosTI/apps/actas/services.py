@@ -119,8 +119,14 @@ def _observaciones_detalle(detalle, tipo, devolucion_detalle=None):
     return detalle.observaciones_acta
 
 
+def _cargo_con_area(colaborador, default="-"):
+    cargo = _texto(colaborador.cargo, default="").strip()
+    area = _texto(colaborador.area, default="").strip()
+    return " ".join(parte for parte in (cargo, area) if parte) or default
+
+
 def _firmas(asignacion, tipo, devolucion=None):
-    colaborador = f"{_texto(asignacion.nombre_colaborador_completo)}\n{_texto(asignacion.colaborador.cargo)}"
+    colaborador = f"{_texto(asignacion.nombre_colaborador_completo)}\n{_cargo_con_area(asignacion.colaborador)}"
     responsable_entrega = _texto(
         asignacion.usuario_responsable.get_full_name() or asignacion.usuario_responsable.username
     )
@@ -332,7 +338,7 @@ def _llenar_firmas_entrega(ws, asignacion):
     fila_recibe = _buscar_fila_por_texto(ws, "RECIBE CONFORME")
     if fila_recibe:
         ws.cell(fila_recibe + 1, 4).value = _texto(asignacion.nombre_colaborador_completo, default="")
-        ws.cell(fila_recibe + 2, 4).value = _texto(asignacion.colaborador.cargo, default="")
+        ws.cell(fila_recibe + 2, 4).value = _cargo_con_area(asignacion.colaborador, default="")
 
 
 def construir_hoja_acta_entrega(asignacion):
@@ -350,7 +356,7 @@ def construir_hoja_acta_entrega(asignacion):
     ws["E6"] = timezone.localdate()
     ws["E10"] = _texto(asignacion.nombre_colaborador_completo, default="")
     ws["E11"] = _texto(asignacion.colaborador.cedula, default="")
-    ws["I10"] = _texto(asignacion.colaborador.cargo, default="")
+    ws["I10"] = _cargo_con_area(asignacion.colaborador, default="")
     _colocar_logo(ws)
 
     for indice, detalle in enumerate(detalles, start=FILA_INICIO_ACTIVOS):
@@ -402,7 +408,7 @@ def construir_documento_acta(asignacion, tipo=TIPO_ENTREGA, devolucion=None):
         ("Fecha de suscripcion", fecha_acta.strftime("%d/%m/%Y")),
         ("Colaborador", asignacion.nombre_colaborador_completo),
         ("Cedula", _texto(asignacion.colaborador.cedula)),
-        ("Cargo", _texto(asignacion.colaborador.cargo)),
+        ("Cargo", _cargo_con_area(asignacion.colaborador)),
         ("Area", _texto(asignacion.colaborador.area)),
         ("Empresa", _texto(asignacion.colaborador.empresa)),
         ("Ubicacion", _texto(asignacion.colaborador.ubicacion)),
