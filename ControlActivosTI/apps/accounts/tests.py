@@ -189,6 +189,15 @@ class Admin2ViewsTests(TestCase):
         finally:
             shutil.rmtree(media_root, ignore_errors=True)
 
+    def test_admin2_has_scroll_to_top_floating_button(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("admin2-inicio"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-admin2-scroll-top')
+        self.assertContains(response, 'aria-label="Volver arriba"')
+
 
 class PerfilUsuarioViewTests(TestCase):
     def setUp(self):

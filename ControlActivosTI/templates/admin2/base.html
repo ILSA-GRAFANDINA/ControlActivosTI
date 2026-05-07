@@ -7,7 +7,7 @@
     <title>{{ admin2_page_title|default:"Admin2" }} - ControlActivosTI</title>
     <link rel="icon" type="image/svg+xml" href="{% static 'icons/favicon-admin.svg' %}">
     <link rel="alternate icon" href="{% static 'icons/favicon-admin.svg' %}">
-    <link rel="stylesheet" href="{% static 'admin2/css/admin2.css' %}?v=20260424-3">
+    <link rel="stylesheet" href="{% static 'admin2/css/admin2.css' %}?v=20260507-1">
     <style>
         html {
             scroll-behavior: smooth;
@@ -43,7 +43,7 @@
     <div class="admin2-layout">
         <aside class="admin2-sidebar">
             <div class="admin2-sidebar__section">
-                <p class="admin2-sidebar__label">Navegación</p>
+                <p class="admin2-sidebar__label">Navegacion</p>
                 <nav class="admin2-nav">
                     {% if admin2_scroll_sections %}
                         {% for item in admin2_scroll_sections %}
@@ -74,8 +74,8 @@
             {% if admin2_sidebar_shortcuts %}
                 <section class="admin2-quickbar">
                     <div>
-                        <p class="admin2-sidebar__label">Accesos rápidos</p>
-                        <h2 class="admin2-quickbar__title">Entradas directas al trabajo técnico</h2>
+                        <p class="admin2-sidebar__label">Accesos rapidos</p>
+                        <h2 class="admin2-quickbar__title">Entradas directas al trabajo tecnico</h2>
                     </div>
                     <div class="admin2-sidebar__shortcuts">
                         {% for item in admin2_sidebar_shortcuts %}
@@ -103,9 +103,64 @@
             }
         });
 
+        const admin2ScrollTop = () => {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        };
+
         document.addEventListener("DOMContentLoaded", function () {
             const shouldScroll = sessionStorage.getItem("scrollToResults") === "true";
             const target = document.getElementById("resultados");
+            const scrollTopButton = document.querySelector("[data-admin2-scroll-top]");
+
+            if (scrollTopButton) {
+                const showButton = () => {
+                    scrollTopButton.style.opacity = "1";
+                    scrollTopButton.style.visibility = "visible";
+                    scrollTopButton.style.pointerEvents = "auto";
+                    scrollTopButton.style.transform = "translateY(0) scale(1)";
+                    scrollTopButton.setAttribute("aria-hidden", "false");
+                };
+
+                const hideButton = () => {
+                    scrollTopButton.style.opacity = "0";
+                    scrollTopButton.style.visibility = "hidden";
+                    scrollTopButton.style.pointerEvents = "none";
+                    scrollTopButton.style.transform = "translateY(12px) scale(0.98)";
+                    scrollTopButton.setAttribute("aria-hidden", "true");
+                };
+
+                scrollTopButton.addEventListener("click", admin2ScrollTop);
+                scrollTopButton.addEventListener("mouseenter", function () {
+                    if (scrollTopButton.style.visibility === "visible") {
+                        scrollTopButton.style.transform = "translateY(-2px) scale(1.01)";
+                    }
+                });
+                scrollTopButton.addEventListener("mouseleave", function () {
+                    if (scrollTopButton.style.visibility === "visible") {
+                        scrollTopButton.style.transform = "translateY(0) scale(1)";
+                    }
+                });
+
+                const toggleScrollTopButton = () => {
+                    const documentHeight = Math.max(
+                        document.documentElement.scrollHeight,
+                        document.body.scrollHeight,
+                    );
+                    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+                    const scrollableHeight = Math.max(0, documentHeight - viewportHeight);
+                    const threshold = scrollableHeight * 0.3;
+                    const shouldShow = window.scrollY >= threshold && scrollableHeight > 0;
+                    if (shouldShow) {
+                        showButton();
+                    } else {
+                        hideButton();
+                    }
+                };
+
+                toggleScrollTopButton();
+                window.addEventListener("scroll", toggleScrollTopButton, { passive: true });
+                window.addEventListener("resize", toggleScrollTopButton, { passive: true });
+            }
 
             if (shouldScroll && target) {
                 sessionStorage.removeItem("scrollToResults");
@@ -115,5 +170,17 @@
             }
         });
     </script>
+    <button
+        type="button"
+        class="admin2-scroll-top"
+        data-admin2-scroll-top
+        aria-hidden="true"
+        aria-label="Volver arriba"
+        title="Volver arriba"
+        style="position:fixed;right:2rem;bottom:2rem;z-index:60;display:inline-flex;align-items:center;gap:.75rem;padding:.95rem 1.1rem .95rem .95rem;border:1px solid rgba(255,255,255,.22);border-radius:999px;background:linear-gradient(135deg,#0b7f73 0%,#07685e 100%);color:#fff;box-shadow:0 18px 34px rgba(7,104,94,.28);cursor:pointer;opacity:0;visibility:hidden;pointer-events:none;transform:translateY(12px) scale(.98);transition:transform .2s ease,box-shadow .2s ease,background .2s ease,opacity .2s ease,visibility .2s ease,border-color .2s ease;backdrop-filter:blur(10px);"
+    >
+        <span class="admin2-scroll-top__icon" aria-hidden="true" style="display:grid;place-items:center;width:2rem;height:2rem;border-radius:999px;background:rgba(255,255,255,.14);font-size:1.05rem;font-weight:700;line-height:1;box-shadow:inset 0 1px 0 rgba(255,255,255,.14);">↑</span>
+        <span class="admin2-scroll-top__text" style="font-size:.8rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;">Volver arriba</span>
+    </button>
 </body>
 </html>
