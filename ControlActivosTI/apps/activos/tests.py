@@ -412,6 +412,82 @@ class ActivoListViewTests(TestCase):
         self.assertContains(response, "data-scroll-to-results")
         self.assertContains(response, 'id="resultados"')
 
+    def test_list_view_shows_add_active_button(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("activos:lista"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse("activos:nuevo"))
+        self.assertContains(response, "Agregar activo")
+
+
+class ActivoCreateViewTests(TestCase):
+    def setUp(self):
+        self.media_root = make_test_media_root()
+        self.override_media = override_settings(MEDIA_ROOT=self.media_root)
+        self.override_media.enable()
+
+        self.user = User.objects.create_user(username="creador", password="testpass123")
+        self.estado = EstadoActivo.objects.create(nombre="Disponible", permite_asignacion=True)
+        self.tipo_laptop = TipoActivo.objects.create(nombre="Laptop")
+
+    def tearDown(self):
+        self.override_media.disable()
+        shutil.rmtree(self.media_root, ignore_errors=True)
+
+    def _datos_base(self):
+        return {
+            "tipo_activo": self.tipo_laptop.pk,
+            "marca": "Dell",
+            "modelo": "Latitude 5440",
+            "serie": "LAP-777",
+            "cpu": "Intel Core i7",
+            "ram": "16 GB",
+            "disco": "512 GB SSD",
+            "sistema_operativo": "Windows 11",
+            "fecha_compra": "2026-05-07",
+            "valor": "1450.50",
+            "estado_activo": self.estado.pk,
+            "observaciones": "Activo creado desde el portal.",
+        }
+
+    def test_create_view_saves_activo_and_photos(self):
+        self.client.force_login(self.user)
+
+        data = self._datos_base()
+        data.update(
+            {
+                "fotos-TOTAL_FORMS": "5",
+                "fotos-INITIAL_FORMS": "0",
+                "fotos-MIN_NUM_FORMS": "0",
+                "fotos-MAX_NUM_FORMS": "5",
+                "fotos-0-imagen": make_test_image_file("foto-frontal.jpg"),
+                "fotos-0-descripcion": "Foto frontal",
+                "fotos-0-orden": "1",
+            }
+        )
+
+        response = self.client.post(reverse("activos:nuevo"), data)
+
+        self.assertEqual(response.status_code, 302)
+        activo = Activo.objects.get(serie="LAP-777")
+        self.assertEqual(activo.cpu, "Intel Core i7")
+        self.assertEqual(activo.ram, "16 GB")
+        self.assertEqual(activo.disco, "512 GB SSD")
+        self.assertEqual(activo.sistema_operativo, "Windows 11")
+        self.assertEqual(activo.fotos.count(), 1)
+        self.assertTrue(response.url.endswith(reverse("activos:detalle", args=[activo.pk])))
+
+    def test_create_view_renders_form(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("activos:nuevo"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Agregar activo")
+        self.assertContains(response, "Fotos del activo")
+
 
 class ActivoDetailViewTests(TestCase):
     def setUp(self):

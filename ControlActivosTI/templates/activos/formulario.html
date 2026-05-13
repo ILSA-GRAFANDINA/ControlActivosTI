@@ -1,0 +1,388 @@
+{% extends "base.html" %}
+
+{% block title %}Agregar activo - ControlActivosTI{% endblock %}
+{% block page_title %}Agregar activo{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+    <div>
+        <h2 class="text-xl font-semibold text-slate-900">Nuevo activo</h2>
+        <p class="text-sm text-slate-500">Registra la ficha del equipo y, si quieres, sus imagenes iniciales.</p>
+    </div>
+    <a href="{{ volver_url }}" class="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+        Volver al listado
+    </a>
+</div>
+
+<form method="post" enctype="multipart/form-data" class="space-y-6" data-activo-form>
+    {% csrf_token %}
+
+    {% if form.non_field_errors or formset.non_form_errors %}
+        <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            {{ form.non_field_errors }} {{ formset.non_form_errors }}
+        </div>
+    {% endif %}
+
+    <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Informacion base</p>
+                <h3 class="mt-1 text-lg font-semibold text-slate-900">Datos generales del activo</h3>
+            </div>
+            <span class="rounded-full bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">Codigo automatico</span>
+        </div>
+
+        <div class="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            <div>
+                <label class="mb-2 block text-sm font-semibold text-slate-700">Tipo de activo</label>
+                {{ form.tipo_activo }}
+                {% if form.tipo_activo.errors %}<p class="mt-2 text-sm text-red-600">{{ form.tipo_activo.errors|join:", " }}</p>{% endif %}
+            </div>
+            <div>
+                <label class="mb-2 block text-sm font-semibold text-slate-700">Estado del activo</label>
+                {{ form.estado_activo }}
+                {% if form.estado_activo.errors %}<p class="mt-2 text-sm text-red-600">{{ form.estado_activo.errors|join:", " }}</p>{% endif %}
+            </div>
+            <div>
+                <label class="mb-2 block text-sm font-semibold text-slate-700">Marca</label>
+                {{ form.marca }}
+                {% if form.marca.errors %}<p class="mt-2 text-sm text-red-600">{{ form.marca.errors|join:", " }}</p>{% endif %}
+            </div>
+            <div>
+                <label class="mb-2 block text-sm font-semibold text-slate-700">Modelo</label>
+                {{ form.modelo }}
+                {% if form.modelo.errors %}<p class="mt-2 text-sm text-red-600">{{ form.modelo.errors|join:", " }}</p>{% endif %}
+            </div>
+            <div>
+                <label class="mb-2 block text-sm font-semibold text-slate-700">Serie</label>
+                {{ form.serie }}
+                {% if form.serie.errors %}<p class="mt-2 text-sm text-red-600">{{ form.serie.errors|join:", " }}</p>{% endif %}
+            </div>
+            <div>
+                <label class="mb-2 block text-sm font-semibold text-slate-700">Fecha de compra</label>
+                {{ form.fecha_compra }}
+                {% if form.fecha_compra.errors %}<p class="mt-2 text-sm text-red-600">{{ form.fecha_compra.errors|join:", " }}</p>{% endif %}
+            </div>
+            <div>
+                <label class="mb-2 block text-sm font-semibold text-slate-700">Valor</label>
+                {{ form.valor }}
+                {% if form.valor.errors %}<p class="mt-2 text-sm text-red-600">{{ form.valor.errors|join:", " }}</p>{% endif %}
+            </div>
+        </div>
+
+        <div class="mt-5">
+            <label class="mb-2 block text-sm font-semibold text-slate-700">Observaciones</label>
+            {{ form.observaciones }}
+            {% if form.observaciones.errors %}<p class="mt-2 text-sm text-red-600">{{ form.observaciones.errors|join:", " }}</p>{% endif %}
+        </div>
+    </div>
+
+    <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Especificaciones tecnicas</p>
+                <h3 class="mt-1 text-lg font-semibold text-slate-900">Campos para equipos tecnicos</h3>
+            </div>
+            <p class="text-sm text-slate-500">Se ocultan segun el tipo seleccionado.</p>
+        </div>
+
+        <div class="mt-6 grid gap-5 md:grid-cols-2">
+            <div data-activo-tech-field="cpu">
+                <label class="mb-2 block text-sm font-semibold text-slate-700">CPU</label>
+                {{ form.cpu }}
+                {% if form.cpu.help_text %}<p class="mt-2 text-xs text-slate-500">{{ form.cpu.help_text }}</p>{% endif %}
+                {% if form.cpu.errors %}<p class="mt-2 text-sm text-red-600">{{ form.cpu.errors|join:", " }}</p>{% endif %}
+            </div>
+            <div data-activo-tech-field="ram">
+                <label class="mb-2 block text-sm font-semibold text-slate-700">RAM</label>
+                {{ form.ram }}
+                {% if form.ram.help_text %}<p class="mt-2 text-xs text-slate-500">{{ form.ram.help_text }}</p>{% endif %}
+                {% if form.ram.errors %}<p class="mt-2 text-sm text-red-600">{{ form.ram.errors|join:", " }}</p>{% endif %}
+            </div>
+            <div data-activo-tech-field="disco">
+                <label class="mb-2 block text-sm font-semibold text-slate-700">Disco</label>
+                {{ form.disco }}
+                {% if form.disco.help_text %}<p class="mt-2 text-xs text-slate-500">{{ form.disco.help_text }}</p>{% endif %}
+                {% if form.disco.errors %}<p class="mt-2 text-sm text-red-600">{{ form.disco.errors|join:", " }}</p>{% endif %}
+            </div>
+            <div data-activo-tech-field="sistema_operativo">
+                <label class="mb-2 block text-sm font-semibold text-slate-700">Sistema operativo</label>
+                {{ form.sistema_operativo }}
+                {% if form.sistema_operativo.help_text %}<p class="mt-2 text-xs text-slate-500">{{ form.sistema_operativo.help_text }}</p>{% endif %}
+                {% if form.sistema_operativo.errors %}<p class="mt-2 text-sm text-red-600">{{ form.sistema_operativo.errors|join:", " }}</p>{% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Imagenes</p>
+                <h3 class="mt-1 text-lg font-semibold text-slate-900">Fotos del activo</h3>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                    2 visibles por defecto
+                </span>
+                <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                    Maximo 5 fotos
+                </span>
+            </div>
+        </div>
+
+        {{ formset.management_form }}
+
+        <div class="mt-6 grid gap-4 lg:grid-cols-2" data-photo-forms>
+            {% for foto_form in formset %}
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-photo-card>
+                    {{ foto_form.id }}
+                    <div class="flex items-center justify-between gap-3">
+                        <p class="text-sm font-semibold text-slate-900" data-photo-title>Foto {{ forloop.counter }}</p>
+                        <span class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500" data-photo-status-badge>
+                            <span data-photo-status-icon aria-hidden="true">○</span>
+                            <span data-photo-status-text>Sin imagen</span>
+                        </span>
+                    </div>
+                    <div class="mt-4 space-y-4">
+                        <div>
+                            <label class="mb-2 block text-sm font-semibold text-slate-700">Imagen</label>
+                            {{ foto_form.imagen }}
+                            {% if foto_form.imagen.errors %}<p class="mt-2 text-sm text-red-600">{{ foto_form.imagen.errors|join:", " }}</p>{% endif %}
+                        </div>
+                        <div>
+                            <label class="mb-2 block text-sm font-semibold text-slate-700">Descripcion</label>
+                            {{ foto_form.descripcion }}
+                            {% if foto_form.descripcion.errors %}<p class="mt-2 text-sm text-red-600">{{ foto_form.descripcion.errors|join:", " }}</p>{% endif %}
+                        </div>
+                        <div>
+                            <label class="mb-2 block text-sm font-semibold text-slate-700">Orden</label>
+                            {{ foto_form.orden }}
+                            {% if foto_form.orden.errors %}<p class="mt-2 text-sm text-red-600">{{ foto_form.orden.errors|join:", " }}</p>{% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <template id="photo-empty-form-template">
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-photo-card>
+                {{ formset.empty_form.id }}
+                <div class="flex items-center justify-between gap-3">
+                    <p class="text-sm font-semibold text-slate-900" data-photo-title>Foto __index__</p>
+                    <span class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500" data-photo-status-badge>
+                        <span data-photo-status-icon aria-hidden="true">○</span>
+                        <span data-photo-status-text>Sin imagen</span>
+                    </span>
+                </div>
+                <div class="mt-4 space-y-4">
+                    <div>
+                        <label class="mb-2 block text-sm font-semibold text-slate-700" for="{{ formset.empty_form.imagen.id_for_label }}">Imagen</label>
+                        {{ formset.empty_form.imagen }}
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-sm font-semibold text-slate-700" for="{{ formset.empty_form.descripcion.id_for_label }}">Descripcion</label>
+                        {{ formset.empty_form.descripcion }}
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-sm font-semibold text-slate-700" for="{{ formset.empty_form.orden.id_for_label }}">Orden</label>
+                        {{ formset.empty_form.orden }}
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
+            <p class="text-sm text-slate-500">Comienza con 2 fotos y agrega mas si lo necesitas.</p>
+            <button
+                type="button"
+                class="rounded-xl border border-cyan-200 bg-cyan-50 px-5 py-3 text-sm font-semibold text-cyan-700 shadow-sm transition hover:bg-cyan-100"
+                data-add-photo-form
+            >
+                Agregar mas imagenes
+            </button>
+        </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-3">
+        <button type="submit" class="rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700">
+            Guardar activo
+        </button>
+        <a href="{{ volver_url }}" class="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+            Cancelar
+        </a>
+    </div>
+</form>
+
+<script>
+    (() => {
+        const form = document.querySelector("[data-activo-form]");
+        if (!form) {
+            return;
+        }
+
+        const maxForms = 5;
+        const selectTipo = form.querySelector("#id_tipo_activo");
+        const techFields = Array.from(form.querySelectorAll("[data-activo-tech-field]"));
+        const photoFormsContainer = form.querySelector("[data-photo-forms]");
+        const addPhotoButton = form.querySelector("[data-add-photo-form]");
+        const photoTemplate = document.getElementById("photo-empty-form-template");
+        const totalFormsInput = form.querySelector("#id_fotos-TOTAL_FORMS");
+        const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/jpg"];
+        const keywords = ["laptop", "pc", "desktop", "escritorio", "computador", "computadora"];
+
+        const usaEspecificaciones = () => {
+            if (!selectTipo || selectTipo.selectedIndex < 0) {
+                return false;
+            }
+
+            const texto = (selectTipo.options[selectTipo.selectedIndex].text || "").toLowerCase();
+            return keywords.some((keyword) => texto.includes(keyword));
+        };
+
+        const toggleTechFields = () => {
+            const visible = usaEspecificaciones();
+            techFields.forEach((field) => {
+                field.style.display = visible ? "" : "none";
+                if (!visible) {
+                    const input = field.querySelector("input, textarea, select");
+                    if (input) {
+                        input.value = "";
+                    }
+                }
+            });
+        };
+
+        const paintPhotoStatus = (card, state, message) => {
+            const badge = card.querySelector("[data-photo-status-badge]");
+            const icon = card.querySelector("[data-photo-status-icon]");
+            const text = card.querySelector("[data-photo-status-text]");
+            if (!badge || !icon || !text) {
+                return;
+            }
+
+            badge.className = "inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-semibold";
+            if (state === "ok") {
+                badge.classList.add("bg-emerald-50", "text-emerald-700");
+                icon.textContent = "✓";
+                text.textContent = message || "Imagen lista";
+            } else if (state === "error") {
+                badge.classList.add("bg-rose-50", "text-rose-700");
+                icon.textContent = "!";
+                text.textContent = message || "Formato no valido";
+            } else {
+                badge.classList.add("bg-slate-100", "text-slate-500");
+                icon.textContent = "○";
+                text.textContent = message || "Sin imagen";
+            }
+        };
+
+        const wirePhotoCard = (card) => {
+            const input = card.querySelector('input[type="file"]');
+            if (!input || input.dataset.wired === "true") {
+                return;
+            }
+
+            input.dataset.wired = "true";
+            input.accept = "image/*,.jpg,.jpeg,.png,.webp";
+
+            const updateStatus = () => {
+                const file = input.files && input.files[0];
+                if (!file) {
+                    paintPhotoStatus(card, "idle", "Sin imagen");
+                    return;
+                }
+
+                const mimeType = (file.type || "").toLowerCase();
+                const fileName = (file.name || "").toLowerCase();
+                const extensionOk = [".jpg", ".jpeg", ".png", ".webp", ".gif"].some((ext) => fileName.endsWith(ext));
+                if (allowedTypes.includes(mimeType) || extensionOk) {
+                    paintPhotoStatus(card, "ok", "Imagen lista");
+                    return;
+                }
+
+                input.value = "";
+                paintPhotoStatus(card, "error", "Solo imagenes");
+            };
+
+            input.addEventListener("change", updateStatus);
+            updateStatus();
+        };
+
+        const refreshPhotoCards = () => {
+            if (!photoFormsContainer) {
+                return;
+            }
+
+            const cards = Array.from(photoFormsContainer.querySelectorAll("[data-photo-card]"));
+            cards.forEach((card, index) => {
+                const title = card.querySelector("[data-photo-title]");
+                if (title) {
+                    title.textContent = `Foto ${index + 1}`;
+                }
+
+                card.querySelectorAll("[name], [id], [for]").forEach((field) => {
+                    const name = field.getAttribute("name");
+                    const id = field.getAttribute("id");
+                    const htmlFor = field.getAttribute("for");
+
+                    if (name) {
+                        field.setAttribute("name", name.replace(/fotos-(?:\d+|__prefix__)-/g, `fotos-${index}-`));
+                    }
+                    if (id) {
+                        field.setAttribute("id", id.replace(/fotos-(?:\d+|__prefix__)-/g, `fotos-${index}-`));
+                    }
+                    if (htmlFor) {
+                        field.setAttribute("for", htmlFor.replace(/fotos-(?:\d+|__prefix__)-/g, `fotos-${index}-`));
+                    }
+                });
+
+                wirePhotoCard(card);
+            });
+
+            if (totalFormsInput) {
+                totalFormsInput.value = String(cards.length);
+            }
+            if (addPhotoButton) {
+                const isFull = cards.length >= maxForms;
+                addPhotoButton.disabled = isFull;
+                addPhotoButton.classList.toggle("opacity-50", isFull);
+                addPhotoButton.classList.toggle("cursor-not-allowed", isFull);
+            }
+        };
+
+        if (photoFormsContainer) {
+            Array.from(photoFormsContainer.children).forEach((card) => wirePhotoCard(card));
+        }
+
+        if (addPhotoButton && photoTemplate && photoFormsContainer) {
+            addPhotoButton.addEventListener("click", () => {
+                const currentCount = photoFormsContainer.querySelectorAll("[data-photo-card]").length;
+                if (currentCount >= maxForms) {
+                    return;
+                }
+
+                const index = currentCount;
+                const html = photoTemplate.innerHTML
+                    .replace(/__prefix__/g, String(index))
+                    .replace(/__index__/g, String(index + 1));
+                const wrapper = document.createElement("div");
+                wrapper.innerHTML = html.trim();
+                const card = wrapper.firstElementChild;
+                if (!card) {
+                    return;
+                }
+
+                photoFormsContainer.appendChild(card);
+                refreshPhotoCards();
+            });
+        }
+
+        toggleTechFields();
+        if (selectTipo) {
+            selectTipo.addEventListener("change", toggleTechFields);
+        }
+
+        refreshPhotoCards();
+    })();
+</script>
+{% endblock %}

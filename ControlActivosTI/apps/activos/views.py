@@ -1,11 +1,14 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db import transaction
 from django.db.models import Prefetch, Q
+from django.http import HttpResponseRedirect
 from django.urls import reverse
-from django.views.generic import DetailView, ListView
+from django.views.generic import CreateView, DetailView, ListView
 
 from apps.asignaciones.models import AsignacionDetalle
 from apps.catalogos.models import EstadoActivo, TipoActivo
 
+from .forms import ActivoAdminForm, FotoActivoCreateFormSet
 from .models import Activo, EventoActivo, FotoActivo
 
 
@@ -84,6 +87,54 @@ class ActivoListView(LoginRequiredMixin, ListView):
         context["estados_activo"] = EstadoActivo.objects.filter(activo=True).order_by("nombre")
         context["tipos_activo"] = TipoActivo.objects.filter(activo=True).order_by("nombre")
         return context
+
+
+class ActivoCreateView(LoginRequiredMixin, CreateView):
+    model = Activo
+    form_class = ActivoAdminForm
+    template_name = "activos/formulario.html"
+    context_object_name = "activo"
+
+    def get_formset(self, data=None, files=None):
+        kwargs = {
+            "queryset": FotoActivo.objects.none(),
+            "prefix": "fotos",
+        }
+        if data is not None:
+            kwargs["data"] = data
+        if files is not None:
+            kwargs["files"] = files
+        return FotoActivoCreateFormSet(**kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.setdefault("formset", self.get_formset())
+        context["volver_url"] = reverse("activos:lista")
+        return context
+
+    def post(self, request, *args, **kwargs):
+        self.object = None
+        form = self.get_form()
+        formset = self.get_formset(request.POST, request.FILES)
+
+        if form.is_valid() and formset.is_valid():
+            return self.forms_valid(form, formset)
+        return self.forms_invalid(form, formset)
+
+    def forms_valid(self, form, formset):
+        with transaction.atomic():
+            self.object = form.save()
+            fotos = formset.save(commit=False)
+            for foto in fotos:
+                foto.activo = self.object
+                foto.save()
+        return HttpResponseRedirect(self.get_success_url())
+
+    def forms_invalid(self, form, formset):
+        return self.render_to_response(self.get_context_data(form=form, formset=formset))
+
+    def get_success_url(self):
+        return reverse("activos:detalle", args=[self.object.pk])
 
 
 class ActivoDetailView(LoginRequiredMixin, DetailView):

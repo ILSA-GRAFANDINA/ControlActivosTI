@@ -1,53 +1,8 @@
-from django import forms
 from django.contrib import admin
 from django.utils.html import format_html
 
-from .models import Activo, EventoActivo, FotoActivo, TIPOS_ACTIVO_CON_ESPECIFICACIONES
-
-
-class ActivoAdminForm(forms.ModelForm):
-    campos_tecnicos = ("cpu", "ram", "disco", "sistema_operativo")
-
-    class Meta:
-        model = Activo
-        fields = "__all__"
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        for nombre_campo in self.campos_tecnicos:
-            self.fields[nombre_campo].required = False
-
-        self.fields["cpu"].help_text = "Solo aplica para laptops, PC o equipos de escritorio."
-        self.fields["ram"].help_text = "Solo aplica para laptops, PC o equipos de escritorio."
-        self.fields["disco"].help_text = "Solo aplica para laptops, PC o equipos de escritorio."
-        self.fields["sistema_operativo"].help_text = "Solo aplica para laptops, PC o equipos de escritorio."
-
-    def clean(self):
-        cleaned_data = super().clean()
-        tipo_activo = cleaned_data.get("tipo_activo")
-        nombre_tipo = (tipo_activo.nombre if tipo_activo else "").strip().lower()
-        requiere_especificaciones = any(
-            clave in nombre_tipo
-            for clave in TIPOS_ACTIVO_CON_ESPECIFICACIONES
-        )
-
-        if not requiere_especificaciones:
-            for nombre_campo in self.campos_tecnicos:
-                cleaned_data[nombre_campo] = ""
-
-        return cleaned_data
-
-
-class FotoActivoInlineForm(forms.ModelForm):
-    class Meta:
-        model = FotoActivo
-        fields = "__all__"
-
-    def clean_imagen(self):
-        imagen = self.cleaned_data.get("imagen")
-        if self.instance.pk and not imagen:
-            return self.instance.imagen
-        return imagen
+from .forms import ActivoAdminForm, EventoActivoAdminForm, FotoActivoInlineForm
+from .models import Activo, EventoActivo, FotoActivo
 
 
 class FotoActivoInline(admin.TabularInline):
@@ -62,69 +17,11 @@ class FotoActivoInline(admin.TabularInline):
         if obj.pk and obj.imagen:
             return format_html(
                 '<img src="{}" style="max-height: 80px; max-width: 120px; border-radius: 6px;" />',
-                obj.preview_url
+                obj.preview_url,
             )
         return "Sin imagen"
 
     vista_previa.short_description = "Vista previa"
-
-
-class EventoActivoAdminForm(forms.ModelForm):
-    class Meta:
-        model = EventoActivo
-        fields = "__all__"
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        etiquetas = {
-            "activo": "Activo afectado",
-            "tipo_evento": "Tipo de evento",
-            "fecha_evento": "Fecha del evento",
-            "detalle": "Detalle del trabajo realizado",
-            "campo_afectado": "Dato del activo que se actualizara",
-            "valor_nuevo": "Nuevo valor final del dato seleccionado",
-            "costo_adicional": "Costo del repuesto o mejora",
-            "sumar_costo_al_valor": "Sumar este costo al valor del activo",
-            "nuevo_estado_activo": "Estado final del activo",
-            "usuario_responsable": "Responsable del registro",
-        }
-        ayudas = {
-            "campo_afectado": (
-                "Elige RAM, disco, procesador o sistema operativo solo si este evento debe "
-                "modificar la ficha actual del activo."
-            ),
-            "valor_nuevo": (
-                "No es el precio. Es el dato tecnico final que quedara en el activo, "
-                "por ejemplo: 16 GB, 512 GB SSD o Windows 11."
-            ),
-            "costo_adicional": (
-                "Usa este campo solo si se compro una pieza o mejora. Para mantenimiento "
-                "o limpieza simple, dejalo vacio."
-            ),
-            "sumar_costo_al_valor": (
-                "Activalo solo cuando el costo adicional deba aumentar el valor registrado del activo."
-            ),
-            "nuevo_estado_activo": (
-                "Opcional. Usalo si el evento deja el activo en otro estado, por ejemplo Mantenimiento o Baja."
-            ),
-        }
-        placeholders = {
-            "valor_nuevo": "Ej: 16 GB, 1 TB SSD, Intel Core i7, Windows 11",
-            "costo_adicional": "Ej: 40.00",
-        }
-
-        for nombre_campo, etiqueta in etiquetas.items():
-            if nombre_campo in self.fields:
-                self.fields[nombre_campo].label = etiqueta
-
-        for nombre_campo, ayuda in ayudas.items():
-            if nombre_campo in self.fields:
-                self.fields[nombre_campo].help_text = ayuda
-
-        for nombre_campo, placeholder in placeholders.items():
-            if nombre_campo in self.fields:
-                self.fields[nombre_campo].widget.attrs["placeholder"] = placeholder
 
 
 @admin.register(Activo)
@@ -170,7 +67,7 @@ class ActivoAdmin(admin.ModelAdmin):
         if primera_foto and primera_foto.imagen:
             return format_html(
                 '<img src="{}" style="max-height: 50px; max-width: 80px; border-radius: 4px;" />',
-                primera_foto.imagen_thumb_url
+                primera_foto.imagen_thumb_url,
             )
         return "Sin imagen"
 
