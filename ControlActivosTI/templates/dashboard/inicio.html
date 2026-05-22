@@ -306,6 +306,7 @@
 
 {{ activos_estado_labels|json_script:"activos-estado-labels" }}
 {{ activos_estado_data|json_script:"activos-estado-data" }}
+{{ activos_estado_ids|json_script:"activos-estado-ids" }}
 {{ activos_tipo_labels|json_script:"activos-tipo-labels" }}
 {{ activos_tipo_data|json_script:"activos-tipo-data" }}
 {{ cecos_labels|json_script:"cecos-labels" }}
@@ -326,12 +327,14 @@
 
         const estadoLabels = readJSON("activos-estado-labels");
         const estadoData = readJSON("activos-estado-data");
+        const estadoIds = readJSON("activos-estado-ids");
         const tipoLabels = readJSON("activos-tipo-labels");
         const tipoData = readJSON("activos-tipo-data");
         const cecosLabels = readJSON("cecos-labels");
         const cecosData = readJSON("cecos-data");
         const colaboradoresAreaLabels = readJSON("colaboradores-area-labels");
         const colaboradoresAreaData = readJSON("colaboradores-area-data");
+        const activosListaUrl = "{% url 'activos:lista' %}";
 
         const palette = {
             cyan: "#06b6d4",
@@ -399,6 +402,21 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 cutout: "62%",
+                onClick: (_event, elements) => {
+                    if (!elements.length) {
+                        return;
+                    }
+
+                    const estadoId = estadoIds[elements[0].index];
+                    if (!estadoId) {
+                        return;
+                    }
+
+                    window.location.href = `${activosListaUrl}?estado=${encodeURIComponent(estadoId)}`;
+                },
+                onHover: (_event, elements, chart) => {
+                    chart.canvas.style.cursor = elements.length ? "pointer" : "default";
+                },
                 plugins: {
                     legend: {
                         position: "bottom",

@@ -39,7 +39,7 @@ class InicioView(LoginRequiredMixin, TemplateView):
         valor_total_activos = Activo.objects.aggregate(total=Sum("valor")).get("total") or 0
 
         activos_por_estado = list(
-            Activo.objects.values("estado_activo__nombre")
+            Activo.objects.values("estado_activo_id", "estado_activo__nombre")
             .annotate(total=Count("id"))
             .order_by("-total", "estado_activo__nombre")
         )
@@ -123,9 +123,11 @@ class InicioView(LoginRequiredMixin, TemplateView):
                 "ultimas_asignaciones": ultimas_asignaciones,
                 "alertas": alertas,
                 "activos_estado_labels": [
-                    item["estado_activo__nombre"] for item in activos_por_estado
+                    item["estado_activo__nombre"] or "Sin estado"
+                    for item in activos_por_estado
                 ],
                 "activos_estado_data": [item["total"] for item in activos_por_estado],
+                "activos_estado_ids": [item["estado_activo_id"] for item in activos_por_estado],
                 "activos_tipo_labels": [
                     item["tipo_activo__nombre"] for item in activos_por_tipo
                 ],

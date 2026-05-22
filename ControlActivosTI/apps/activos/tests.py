@@ -535,8 +535,85 @@ class ActivoCreateViewTests(TestCase):
         response = self.client.get(reverse("activos:nuevo"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Agregar activo")
+        self.assertContains(response, "Nuevo activo")
         self.assertContains(response, "Fotos del activo")
+
+    def test_edit_mode_renders_existing_data_and_updates_activo(self):
+        activo = Activo.objects.create(
+            tipo_activo=self.tipo_laptop,
+            marca="Lenovo",
+            modelo="ThinkPad T14",
+            serie="LAP-900",
+            codigo_sap="SAP-EDIT-001",
+            cpu="Intel Core i5",
+            ram="8 GB",
+            disco="256 GB SSD",
+            sistema_operativo="Windows 10",
+            fecha_compra=date(2025, 5, 7),
+            valor=990.00,
+            estado_activo=self.estado,
+            observaciones="Equipo base para pruebas.",
+        )
+        FotoActivo.objects.create(
+            activo=activo,
+            imagen=make_test_image_file("foto-inicial.jpg"),
+            descripcion="Foto inicial",
+            orden=1,
+        )
+
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("activos:nuevo"), {"editar": activo.pk})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Editar activo")
+        self.assertContains(response, "Guardar cambios")
+        self.assertContains(response, "ThinkPad T14")
+        self.assertContains(response, "SAP-EDIT-001")
+        self.assertContains(response, "Foto 1")
+
+        data = self._datos_base()
+        data.update(
+            {
+                "activo_id": str(activo.pk),
+                "tipo_activo": self.tipo_laptop.pk,
+                "marca": "Lenovo",
+                "modelo": "ThinkPad T14 Gen 2",
+                "serie": "LAP-900",
+                "codigo_sap": "SAP-EDIT-002",
+                "cpu": "Intel Core i7",
+                "ram": "16 GB",
+                "disco": "512 GB SSD",
+                "sistema_operativo": "Windows 11",
+                "fecha_compra": "2025-05-08",
+                "valor": "1250.00",
+                "estado_activo": self.estado.pk,
+                "observaciones": "Equipo actualizado desde la pantalla de edicion.",
+                "fotos-TOTAL_FORMS": "3",
+                "fotos-INITIAL_FORMS": "1",
+                "fotos-MIN_NUM_FORMS": "0",
+                "fotos-MAX_NUM_FORMS": "5",
+                "fotos-0-id": str(activo.fotos.first().pk),
+                "fotos-0-imagen": "",
+                "fotos-0-descripcion": "Foto inicial actualizada",
+                "fotos-0-orden": "1",
+                "fotos-1-imagen": make_test_image_file("foto-lateral.jpg"),
+                "fotos-1-descripcion": "Foto lateral",
+                "fotos-1-orden": "2",
+            }
+        )
+
+        response = self.client.post(f"{reverse('activos:nuevo')}?editar={activo.pk}", data)
+
+        self.assertEqual(response.status_code, 302)
+        activo.refresh_from_db()
+        self.assertEqual(activo.modelo, "ThinkPad T14 Gen 2")
+        self.assertEqual(activo.codigo_sap, "SAP-EDIT-002")
+        self.assertEqual(activo.cpu, "Intel Core i7")
+        self.assertEqual(activo.ram, "16 GB")
+        self.assertEqual(activo.disco, "512 GB SSD")
+        self.assertEqual(activo.sistema_operativo, "Windows 11")
+        self.assertEqual(activo.fotos.count(), 2)
+        self.assertTrue(response.url.endswith(reverse("activos:detalle", args=[activo.pk])))
 
 
 class ActivoDetailViewTests(TestCase):
@@ -618,7 +695,7 @@ class ActivoDetailViewTests(TestCase):
         self.assertContains(response, "Mostrando las 5 asignaciones")
         self.assertContains(response, "Ver historial completo")
         self.assertContains(response, "LAP-001")
-        self.assertContains(response, reverse("admin:activos_activo_change", args=[self.activo.pk]))
+        self.assertContains(response, f"{reverse('activos:nuevo')}?editar={self.activo.pk}")
         self.assertContains(response, reverse("asignaciones:detalle", args=[self.asignacion_activa.pk]))
         self.assertContains(response, reverse("asignaciones:detalle", args=[self.historial_asignaciones[0].pk]))
 

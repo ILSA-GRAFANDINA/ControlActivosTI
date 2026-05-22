@@ -10,7 +10,7 @@
             <a href="{% url 'activos:lista' %}" class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
                 Volver a activos
             </a>
-            <a href="{{ admin_change_url }}" class="rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-700 shadow-sm transition hover:bg-cyan-100">
+            <a href="{{ editar_url }}" class="rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-700 shadow-sm transition hover:bg-cyan-100">
                 Editar activo
             </a>
             <a href="{% url 'admin:activos_eventoactivo_add' %}?activo={{ activo.pk }}" class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700 shadow-sm transition hover:bg-amber-100">

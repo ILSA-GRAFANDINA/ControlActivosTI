@@ -96,10 +96,48 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
     form_class = ActivoAdminForm
     template_name = "activos/formulario.html"
     context_object_name = "activo"
+    edit_param_name = "editar"
+    edit_pk_field_name = "activo_id"
+
+    def _get_activo_en_edicion(self):
+        raw_pk = (
+            self.request.POST.get(self.edit_pk_field_name)
+            or self.request.GET.get(self.edit_param_name)
+            or ""
+        ).strip()
+        if not raw_pk.isdigit():
+            return None
+
+        return (
+            Activo.objects.select_related("tipo_activo", "estado_activo")
+            .prefetch_related("fotos")
+            .filter(pk=raw_pk)
+            .first()
+        )
+
+    def dispatch(self, request, *args, **kwargs):
+        self.activo_en_edicion = self._get_activo_en_edicion()
+        self.object = None
+        return super().dispatch(request, *args, **kwargs)
+
+    def _get_activo_contextual(self):
+        return self.object or getattr(self, "activo_en_edicion", None)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        activo_en_edicion = getattr(self, "activo_en_edicion", None)
+        if activo_en_edicion and kwargs.get("instance") is None:
+            kwargs["instance"] = activo_en_edicion
+        return kwargs
 
     def get_formset(self, data=None, files=None):
+        activo_contextual = self._get_activo_contextual()
         kwargs = {
-            "queryset": FotoActivo.objects.none(),
+            "queryset": (
+                activo_contextual.fotos.order_by("orden", "id")
+                if activo_contextual
+                else FotoActivo.objects.none()
+            ),
             "prefix": "fotos",
         }
         if data is not None:
@@ -111,10 +149,31 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.setdefault("formset", self.get_formset())
-        context["volver_url"] = reverse("activos:lista")
+        activo_contextual = self._get_activo_contextual()
+        context["es_edicion"] = bool(activo_contextual)
+        context["titulo_formulario"] = "Editar activo" if activo_contextual else "Nuevo activo"
+        context["subtitulo_formulario"] = (
+            "Actualiza la ficha del equipo y, si quieres, sus imagenes asociadas."
+            if activo_contextual
+            else "Registra la ficha del equipo y, si quieres, sus imagenes iniciales."
+        )
+        context["texto_submit"] = "Guardar cambios" if activo_contextual else "Guardar activo"
+        context["etiqueta_codigo"] = "Codigo automatico"
+        context["volver_url"] = (
+            reverse("activos:detalle", args=[activo_contextual.pk])
+            if activo_contextual
+            else reverse("activos:lista")
+        )
+        context["form_action_url"] = (
+            f"{reverse('activos:nuevo')}?{self.edit_param_name}={activo_contextual.pk}"
+            if activo_contextual
+            else reverse("activos:nuevo")
+        )
+        context["activo_edicion_id"] = activo_contextual.pk if activo_contextual else None
         return context
 
     def post(self, request, *args, **kwargs):
+        self.activo_en_edicion = self._get_activo_en_edicion()
         self.object = None
         form = self.get_form()
         formset = self.get_formset(request.POST, request.FILES)
@@ -186,7 +245,7 @@ class ActivoDetailView(LoginRequiredMixin, DetailView):
 
         context["asignacion_activa"] = detalle_activo.asignacion if detalle_activo else None
         context["detalle_asignacion_activa"] = detalle_activo
-        context["admin_change_url"] = reverse("admin:activos_activo_change", args=[activo.pk])
+        context["editar_url"] = f"{reverse('activos:nuevo')}?{ActivoCreateView.edit_param_name}={activo.pk}"
         context["fotos_activo"] = list(activo.fotos.all())
         context["historial_asignaciones"] = historial_reciente
         context["historial_asignaciones_completo"] = historial_completo
