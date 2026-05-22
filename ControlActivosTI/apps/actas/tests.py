@@ -79,6 +79,7 @@ class ActaEntregaExcelTests(TestCase):
             marca=kwargs.get("marca", "Dell"),
             modelo=kwargs.get("modelo", f"Latitude {orden}"),
             serie=kwargs.get("serie", f"SERIE{orden:03d}"),
+            codigo_sap=kwargs.get("codigo_sap", f"SAP-ACTA-{orden:03d}"),
             cpu=kwargs.get("cpu", "Intel i5"),
             ram=kwargs.get("ram", "16GB"),
             disco=kwargs.get("disco", "512GB SSD"),

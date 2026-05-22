@@ -64,6 +64,12 @@
                     <p class="text-sm text-slate-500">Serie</p>
                     <p class="font-medium text-slate-900">{{ activo.serie|default:"S/N" }}</p>
                 </div>
+                {% if activo.requiere_codigo_sap or activo.codigo_sap %}
+                    <div>
+                        <p class="text-sm text-slate-500">Codigo SAP</p>
+                        <p class="font-medium text-slate-900">{{ activo.codigo_sap|default:"-" }}</p>
+                    </div>
+                {% endif %}
                 <div>
                     <p class="text-sm text-slate-500">Fecha de compra</p>
                     <p class="font-medium text-slate-900">{{ activo.fecha_compra|default:"-" }}</p>
@@ -240,6 +246,12 @@
                             <p class="text-slate-500">Sistema operativo</p>
                             <p class="font-medium text-slate-900">{{ activo.sistema_operativo|default:"-" }}</p>
                         </div>
+                        {% if activo.requiere_codigo_sap or activo.codigo_sap %}
+                            <div>
+                                <p class="text-slate-500">Codigo SAP</p>
+                                <p class="font-medium text-slate-900">{{ activo.codigo_sap|default:"-" }}</p>
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
             {% endif %}

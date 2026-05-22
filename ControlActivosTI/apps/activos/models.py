@@ -25,6 +25,11 @@ TIPOS_ACTIVO_CON_ESPECIFICACIONES = (
     "computadora",
 )
 
+TIPOS_ACTIVO_CON_CODIGO_SAP = (
+    "laptop",
+    "pc",
+)
+
 PREFIJOS_TIPOS_ACTIVO = {
     "laptop": "LAP",
     "mouse": "MOU",
@@ -53,6 +58,11 @@ def obtener_base_prefijo(nombre):
     return re.sub(r"[^A-Z0-9]+", "", nombre_normalizado.upper()) or "GEN"
 
 
+def tipo_activo_requiere_codigo_sap(nombre_tipo):
+    nombre_normalizado = normalizar_nombre_tipo(nombre_tipo)
+    return nombre_normalizado in TIPOS_ACTIVO_CON_CODIGO_SAP
+
+
 def ruta_foto_activo(instance, filename):
     codigo = instance.activo.codigo if instance.activo and instance.activo.codigo else "sin-codigo"
     return f"activos/{codigo}/{filename}"
@@ -78,6 +88,14 @@ class Activo(models.Model):
     blank=True,
     default="S/N",
     )
+    codigo_sap = models.CharField(
+        max_length=30,
+        unique=True,
+        db_index=True,
+        null=True,
+        blank=True,
+        help_text="Codigo SAP unico para laptops y PCs.",
+    )
     cpu = models.CharField(max_length=150, blank=True)
     ram = models.CharField(max_length=50, blank=True)
     disco = models.CharField(max_length=80, blank=True)
@@ -100,6 +118,10 @@ class Activo(models.Model):
 
     def __str__(self):
         return f"{self.codigo} - {self.marca} {self.modelo}"
+
+    def requiere_codigo_sap(self):
+        nombre_tipo = self.tipo_activo.nombre if self.tipo_activo_id else ""
+        return tipo_activo_requiere_codigo_sap(nombre_tipo)
 
     def _obtener_prefijo_tipo(self):
         nombre_tipo = self.tipo_activo.nombre if self.tipo_activo_id else ""
@@ -150,6 +172,26 @@ class Activo(models.Model):
         self.disco = ""
         self.sistema_operativo = ""
 
+    def limpiar_codigo_sap_no_aplicable(self):
+        if self.requiere_codigo_sap():
+            if self.codigo_sap:
+                self.codigo_sap = self.codigo_sap.strip().upper()
+            return
+
+        self.codigo_sap = None
+
+    def clean(self):
+        super().clean()
+
+        if self.codigo_sap:
+            self.codigo_sap = self.codigo_sap.strip().upper()
+        elif self.requiere_codigo_sap():
+            raise ValidationError(
+                {"codigo_sap": "Debes registrar el Codigo SAP para laptops y PCs."}
+            )
+        else:
+            self.codigo_sap = None
+
     def _generar_codigo(self):
         prefijo = self._obtener_prefijo_tipo()
         ultimo = (
@@ -173,8 +215,10 @@ class Activo(models.Model):
         if not self.serie or not self.serie.strip():
             self.serie = "S/N"
         self.limpiar_especificaciones_no_aplicables()
+        self.limpiar_codigo_sap_no_aplicable()
         if not self.codigo:
             self.codigo = self._generar_codigo()
+        self.full_clean()
         super().save(*args, **kwargs)
 
 

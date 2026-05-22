@@ -58,6 +58,12 @@
                 {{ form.serie }}
                 {% if form.serie.errors %}<p class="mt-2 text-sm text-red-600">{{ form.serie.errors|join:", " }}</p>{% endif %}
             </div>
+            <div data-activo-tech-field="codigo_sap">
+                <label class="mb-2 block text-sm font-semibold text-slate-700">Codigo SAP</label>
+                {{ form.codigo_sap }}
+                {% if form.codigo_sap.help_text %}<p class="mt-2 text-xs text-slate-500">{{ form.codigo_sap.help_text }}</p>{% endif %}
+                {% if form.codigo_sap.errors %}<p class="mt-2 text-sm text-red-600">{{ form.codigo_sap.errors|join:", " }}</p>{% endif %}
+            </div>
             <div>
                 <label class="mb-2 block text-sm font-semibold text-slate-700">Fecha de compra</label>
                 {{ form.fecha_compra }}

@@ -3,7 +3,13 @@ from django.core.exceptions import ValidationError
 from django.forms import modelformset_factory
 from pathlib import Path
 
-from .models import Activo, EventoActivo, FotoActivo, TIPOS_ACTIVO_CON_ESPECIFICACIONES
+from .models import (
+    Activo,
+    EventoActivo,
+    FotoActivo,
+    TIPOS_ACTIVO_CON_ESPECIFICACIONES,
+    tipo_activo_requiere_codigo_sap,
+)
 
 
 BASE_INPUT_CLASS = (
@@ -19,6 +25,13 @@ FILE_INPUT_CLASS = (
 FOTO_ACTIVO_MAX_FORMS = 5
 FOTO_ACTIVO_INITIAL_FORMS = 2
 FOTO_ACTIVO_ALLOWED_EXTENSIONS = ("jpg", "jpeg", "png", "webp")
+
+
+def _widget_input_type(widget):
+    if hasattr(widget, "input_type"):
+        return widget.input_type
+    nested_widget = getattr(widget, "widget", None)
+    return getattr(nested_widget, "input_type", None)
 
 
 class ActivoAdminForm(forms.ModelForm):
@@ -38,6 +51,7 @@ class ActivoAdminForm(forms.ModelForm):
             "marca": "Marca",
             "modelo": "Modelo",
             "serie": "Serie",
+            "codigo_sap": "Codigo SAP",
             "cpu": "CPU",
             "ram": "RAM",
             "disco": "Disco",
@@ -49,6 +63,7 @@ class ActivoAdminForm(forms.ModelForm):
         }
 
         ayuda_tecnica = "Solo aplica para laptops, PC o equipos de escritorio."
+        ayuda_codigo_sap = "Obligatorio para laptops y PCs. Debe ser unico."
 
         for nombre_campo, etiqueta in etiquetas.items():
             if nombre_campo in self.fields:
@@ -56,10 +71,11 @@ class ActivoAdminForm(forms.ModelForm):
 
         for nombre_campo in self.fields:
             widget = self.fields[nombre_campo].widget
+            input_type = _widget_input_type(widget)
             if isinstance(widget, forms.Textarea):
                 widget.attrs.setdefault("rows", 4)
                 widget.attrs["class"] = TEXTAREA_CLASS
-            elif widget.input_type == "file":
+            elif input_type == "file":
                 widget.attrs["class"] = FILE_INPUT_CLASS
             else:
                 widget.attrs["class"] = BASE_INPUT_CLASS
@@ -78,6 +94,8 @@ class ActivoAdminForm(forms.ModelForm):
         self.fields["ram"].help_text = ayuda_tecnica
         self.fields["disco"].help_text = ayuda_tecnica
         self.fields["sistema_operativo"].help_text = ayuda_tecnica
+        if "codigo_sap" in self.fields:
+            self.fields["codigo_sap"].help_text = ayuda_codigo_sap
 
     def clean(self):
         cleaned_data = super().clean()
@@ -92,6 +110,14 @@ class ActivoAdminForm(forms.ModelForm):
             for nombre_campo in self.campos_tecnicos:
                 cleaned_data[nombre_campo] = ""
 
+        codigo_sap = (cleaned_data.get("codigo_sap") or "").strip()
+        if tipo_activo_requiere_codigo_sap(nombre_tipo):
+            if not codigo_sap:
+                raise ValidationError({"codigo_sap": "Debes registrar el Codigo SAP para laptops y PCs."})
+            cleaned_data["codigo_sap"] = codigo_sap.upper()
+        else:
+            cleaned_data["codigo_sap"] = None
+
         return cleaned_data
 
 
@@ -104,7 +130,8 @@ class FotoActivoInlineForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         for nombre_campo in self.fields:
             widget = self.fields[nombre_campo].widget
-            if widget.input_type == "file":
+            input_type = _widget_input_type(widget)
+            if input_type == "file":
                 widget.attrs["class"] = FILE_INPUT_CLASS
                 widget.attrs["accept"] = "image/*,.jpg,.jpeg,.png,.webp"
             elif isinstance(widget, forms.Textarea):

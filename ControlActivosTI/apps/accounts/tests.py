@@ -64,6 +64,7 @@ class Admin2ViewsTests(TestCase):
             marca="Dell",
             modelo="Latitude 5440",
             serie="ABC123",
+            codigo_sap="SAP-ACC-001",
             estado_activo=self.estado_disponible,
         )
         self.activo_teclado = Activo.objects.create(

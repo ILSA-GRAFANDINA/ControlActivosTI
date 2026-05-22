@@ -178,7 +178,7 @@ class ColaboradorDetailView(LoginRequiredMixin, DetailView):
         )
 
         return (
-            Colaborador.objects.select_related("empresa", "area", "cargo", "ubicacion")
+            Colaborador.objects.select_related("empresa", "area", "cargo", "ubicacion", "centro_costo")
             .prefetch_related(Prefetch("asignaciones", queryset=asignaciones_qs))
         )
 

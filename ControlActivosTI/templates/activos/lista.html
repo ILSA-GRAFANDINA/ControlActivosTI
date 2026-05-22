@@ -23,7 +23,7 @@
                     type="text"
                     name="q"
                     value="{{ busqueda }}"
-                    placeholder="Buscar por código, marca, modelo o serie"
+                    placeholder="Buscar por código, código SAP, marca, modelo o serie"
                     class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
                 >
             </div>
@@ -124,6 +124,7 @@
                     {% if "marca" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Marca</th>{% endif %}
                     {% if "modelo" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Modelo</th>{% endif %}
                     {% if "serie" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Serie</th>{% endif %}
+                    {% if "codigo_sap" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Codigo SAP</th>{% endif %}
                     {% if "cpu" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">CPU</th>{% endif %}
                     {% if "ram" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">RAM</th>{% endif %}
                     {% if "disco" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Disco</th>{% endif %}
@@ -161,6 +162,7 @@
                         {% if "marca" in columnas_seleccionadas %}<td class="px-4 py-3 font-medium text-slate-900">{{ activo.marca }}</td>{% endif %}
                         {% if "modelo" in columnas_seleccionadas %}<td class="px-4 py-3">{{ activo.modelo }}</td>{% endif %}
                         {% if "serie" in columnas_seleccionadas %}<td class="px-4 py-3">{{ activo.serie }}</td>{% endif %}
+                        {% if "codigo_sap" in columnas_seleccionadas %}<td class="px-4 py-3">{{ activo.codigo_sap|default:"-" }}</td>{% endif %}
                         {% if "cpu" in columnas_seleccionadas %}<td class="px-4 py-3">{{ activo.cpu|default:"-" }}</td>{% endif %}
                         {% if "ram" in columnas_seleccionadas %}<td class="px-4 py-3">{{ activo.ram|default:"-" }}</td>{% endif %}
                         {% if "disco" in columnas_seleccionadas %}<td class="px-4 py-3">{{ activo.disco|default:"-" }}</td>{% endif %}

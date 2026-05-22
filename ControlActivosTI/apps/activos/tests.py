@@ -42,6 +42,7 @@ class ActivoAdminFormTests(TestCase):
         self.estado = EstadoActivo.objects.create(nombre="Disponible", permite_asignacion=True)
         self.tipo_mouse = TipoActivo.objects.create(nombre="Mouse")
         self.tipo_laptop = TipoActivo.objects.create(nombre="Laptop")
+        self.tipo_pc = TipoActivo.objects.create(nombre="PC")
 
     def _data_base(self, tipo_activo):
         return {
@@ -49,6 +50,7 @@ class ActivoAdminFormTests(TestCase):
             "marca": "Logitech",
             "modelo": "MX",
             "serie": "S/N",
+            "codigo_sap": "sap-001",
             "cpu": "Intel Core i5",
             "ram": "16 GB",
             "disco": "512 GB SSD",
@@ -69,6 +71,7 @@ class ActivoAdminFormTests(TestCase):
         self.assertEqual(activo.ram, "")
         self.assertEqual(activo.disco, "")
         self.assertEqual(activo.sistema_operativo, "")
+        self.assertIsNone(activo.codigo_sap)
 
     def test_conserva_especificaciones_tecnicas_para_laptops(self):
         form = ActivoAdminForm(data=self._data_base(self.tipo_laptop))
@@ -80,6 +83,35 @@ class ActivoAdminFormTests(TestCase):
         self.assertEqual(activo.ram, "16 GB")
         self.assertEqual(activo.disco, "512 GB SSD")
         self.assertEqual(activo.sistema_operativo, "Windows")
+        self.assertEqual(activo.codigo_sap, "SAP-001")
+
+    def test_exige_codigo_sap_para_laptops_y_pc(self):
+        data_laptop = self._data_base(self.tipo_laptop)
+        data_laptop["codigo_sap"] = ""
+
+        form_laptop = ActivoAdminForm(data=data_laptop)
+        self.assertFalse(form_laptop.is_valid())
+        self.assertIn("codigo_sap", form_laptop.errors)
+
+        data_pc = self._data_base(self.tipo_pc)
+        data_pc["codigo_sap"] = "pc-sap-002"
+
+        form_pc = ActivoAdminForm(data=data_pc)
+        self.assertTrue(form_pc.is_valid(), form_pc.errors)
+        activo_pc = form_pc.save()
+
+        self.assertEqual(activo_pc.codigo_sap, "PC-SAP-002")
+
+    def test_no_exige_codigo_sap_para_base_para_laptop(self):
+        tipo_base = TipoActivo.objects.create(nombre="Base para Laptop")
+        data_base = self._data_base(tipo_base)
+        data_base["codigo_sap"] = ""
+
+        form = ActivoAdminForm(data=data_base)
+
+        self.assertTrue(form.is_valid(), form.errors)
+        activo = form.save()
+        self.assertIsNone(activo.codigo_sap)
 
 
 class ActivoCodigoTests(TestCase):
@@ -103,6 +135,7 @@ class ActivoCodigoTests(TestCase):
                 marca="Marca",
                 modelo=f"Modelo {indice}",
                 serie=f"SERIE-{indice}",
+                codigo_sap=f"SAP-LOOP-{indice:03d}",
                 estado_activo=self.estado,
             )
 
@@ -194,6 +227,7 @@ class FotoActivoOptimizadaTests(TestCase):
             marca="Dell",
             modelo="Latitude",
             serie="IMG-001",
+            codigo_sap="SAP-IMG-001",
             estado_activo=self.estado,
         )
 
@@ -250,6 +284,7 @@ class EventoActivoAdminViewTests(TestCase):
             marca="Dell",
             modelo="Latitude",
             serie="LAP-100",
+            codigo_sap="SAP-ADM-001",
             estado_activo=self.estado,
         )
 
@@ -288,6 +323,7 @@ class EventoActivoImpactoTests(TestCase):
             marca="Dell",
             modelo="Latitude",
             serie="ABC123",
+            codigo_sap="SAP-EVT-001",
             ram="8 GB",
             valor=Decimal("500.00"),
             estado_activo=self.estado_disponible,
@@ -317,6 +353,7 @@ class EventoActivoImpactoTests(TestCase):
             marca="HP",
             modelo="ProBook",
             serie="DEF456",
+            codigo_sap="SAP-EVT-002",
             ram="8 GB",
             estado_activo=self.estado_disponible,
         )
@@ -339,6 +376,7 @@ class EventoActivoImpactoTests(TestCase):
             marca="Lenovo",
             modelo="ThinkPad",
             serie="GHI789",
+            codigo_sap="SAP-EVT-003",
             ram="8 GB",
             valor=Decimal("600.00"),
             estado_activo=self.estado_disponible,
@@ -397,6 +435,7 @@ class ActivoListViewTests(TestCase):
             marca="Dell",
             modelo="Latitude",
             serie="LAP-001",
+            codigo_sap="SAP-LST-001",
             estado_activo=self.estado,
         )
 
@@ -421,6 +460,15 @@ class ActivoListViewTests(TestCase):
         self.assertContains(response, reverse("activos:nuevo"))
         self.assertContains(response, "Agregar activo")
 
+    def test_list_view_allows_search_by_codigo_sap(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("activos:lista"), {"q": "SAP-LST-001"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "SAP-LST-001")
+        self.assertNotContains(response, "MOU-001")
+
 
 class ActivoCreateViewTests(TestCase):
     def setUp(self):
@@ -442,6 +490,7 @@ class ActivoCreateViewTests(TestCase):
             "marca": "Dell",
             "modelo": "Latitude 5440",
             "serie": "LAP-777",
+            "codigo_sap": "SAP-CRT-001",
             "cpu": "Intel Core i7",
             "ram": "16 GB",
             "disco": "512 GB SSD",
@@ -476,6 +525,7 @@ class ActivoCreateViewTests(TestCase):
         self.assertEqual(activo.ram, "16 GB")
         self.assertEqual(activo.disco, "512 GB SSD")
         self.assertEqual(activo.sistema_operativo, "Windows 11")
+        self.assertEqual(activo.codigo_sap, "SAP-CRT-001")
         self.assertEqual(activo.fotos.count(), 1)
         self.assertTrue(response.url.endswith(reverse("activos:detalle", args=[activo.pk])))
 
@@ -523,6 +573,7 @@ class ActivoDetailViewTests(TestCase):
             marca="Dell",
             modelo="Latitude",
             serie="LAP-001",
+            codigo_sap="SAP-DET-001",
             estado_activo=self.estado,
         )
 
@@ -578,6 +629,7 @@ class ActivoDetailViewTests(TestCase):
             marca="Lenovo",
             modelo="ThinkPad",
             serie="LAP-002",
+            codigo_sap="SAP-DET-002",
             estado_activo=cuarentena,
         )
 

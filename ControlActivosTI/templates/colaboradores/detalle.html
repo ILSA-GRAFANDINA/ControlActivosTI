@@ -71,6 +71,17 @@
         </div>
 
         <div>
+          <p class="text-sm text-slate-500">Centro de costo</p>
+          <p class="font-medium text-slate-900">
+            {% if colaborador.centro_costo %}
+              {{ colaborador.centro_costo.codigo }} - {{ colaborador.centro_costo.nombre }}
+            {% else %}
+              -
+            {% endif %}
+          </p>
+        </div>
+
+        <div>
           <p class="text-sm text-slate-500">Fecha de ingreso</p>
           <p class="font-medium text-slate-900">{{ colaborador.fecha_ingreso|default:"-" }}</p>
         </div>

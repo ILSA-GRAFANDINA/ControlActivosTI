@@ -68,6 +68,7 @@ class AsignacionCreateFormTests(TestCase):
             marca="Dell",
             modelo="Latitude 5440",
             serie="ABC123",
+            codigo_sap="SAP-ASG-001",
             cpu="Intel Core i7",
             ram="16 GB",
             disco="512 GB SSD",
@@ -79,6 +80,7 @@ class AsignacionCreateFormTests(TestCase):
             marca="HP",
             modelo="ProBook",
             serie="XYZ999",
+            codigo_sap="SAP-ASG-002",
             estado_activo=self.estado_no_disponible,
         )
         self.activo_cuarentena = Activo.objects.create(
@@ -86,6 +88,7 @@ class AsignacionCreateFormTests(TestCase):
             marca="Lenovo",
             modelo="ThinkPad",
             serie="CW001",
+            codigo_sap="SAP-ASG-003",
             estado_activo=self.estado_cuarentena,
         )
         self.activo_reparacion = Activo.objects.create(
@@ -93,6 +96,7 @@ class AsignacionCreateFormTests(TestCase):
             marca="Acer",
             modelo="Swift",
             serie="RP001",
+            codigo_sap="SAP-ASG-004",
             estado_activo=self.estado_reparacion,
         )
 
@@ -116,7 +120,7 @@ class AsignacionCreateFormTests(TestCase):
         self.assertIn("Serie: ABC123", rendered)
         self.assertIn("CPU: Intel Core i7", rendered)
         self.assertIn('data-search="', rendered)
-        self.assertIn('data-especificaciones="CPU: Intel Core i7 | RAM: 16 GB | Disco: 512 GB SSD | SO: Windows 11"', rendered)
+        self.assertNotIn("SAP:", rendered)
 
     def test_asignacion_detalle_rejects_repair_assets_even_if_state_allows_assignment(self):
         activo_reparacion = Activo.objects.create(
@@ -124,6 +128,7 @@ class AsignacionCreateFormTests(TestCase):
             marca="Acer",
             modelo="Swift 3",
             serie="REP-001",
+            codigo_sap="SAP-ASG-010",
             estado_activo=self.estado_reparacion,
         )
         asignacion = Asignacion.objects.create(
@@ -244,6 +249,7 @@ class AsignacionCreateFormTests(TestCase):
             marca="Logitech",
             modelo="K120",
             serie="KEY001",
+            codigo_sap="SAP-ASG-005",
             estado_activo=self.estado_disponible,
         )
         activo_mouse = Activo.objects.create(
@@ -251,6 +257,7 @@ class AsignacionCreateFormTests(TestCase):
             marca="Logitech",
             modelo="M185",
             serie="MOU001",
+            codigo_sap="SAP-ASG-006",
             estado_activo=self.estado_disponible,
         )
         asignacion = Asignacion.objects.create(
@@ -432,6 +439,7 @@ class AsignacionListViewTests(TestCase):
             marca="Dell",
             modelo="Latitude",
             serie="LAT001",
+            codigo_sap="SAP-ASG-007",
             estado_activo=self.estado_disponible,
         )
         self.activo_mouse = Activo.objects.create(
@@ -490,6 +498,7 @@ class AsignacionListViewTests(TestCase):
             marca="Acer",
             modelo=f"Model {indice}",
             serie=f"SER{indice:03d}",
+            codigo_sap=f"SAP-ASG-2{indice:02d}",
             estado_activo=self.estado_disponible,
         )
         asignacion = Asignacion.objects.create(

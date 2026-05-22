@@ -23,6 +23,7 @@ class ActivoListView(LoginRequiredMixin, ListView):
         ("marca", "Marca"),
         ("modelo", "Modelo"),
         ("serie", "Serie"),
+        ("codigo_sap", "Codigo SAP"),
         ("cpu", "CPU"),
         ("ram", "RAM"),
         ("disco", "Disco"),
@@ -63,6 +64,7 @@ class ActivoListView(LoginRequiredMixin, ListView):
                 | Q(marca__icontains=busqueda)
                 | Q(modelo__icontains=busqueda)
                 | Q(serie__icontains=busqueda)
+                | Q(codigo_sap__icontains=busqueda)
             )
 
         estado_id = self.request.GET.get("estado", "").strip()

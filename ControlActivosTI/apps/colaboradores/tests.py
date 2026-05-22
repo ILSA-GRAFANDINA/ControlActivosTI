@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from apps.catalogos.models import Area, Cargo, Empresa, Ubicacion
+from apps.catalogos.models import Area, Cargo, CentroCosto, Empresa, Ubicacion
 
 from apps.colaboradores.models import Colaborador
 
@@ -178,6 +178,11 @@ class ColaboradorDetailViewTests(TestCase):
         self.cargo = Cargo.objects.create(nombre="Soporte")
         self.ubicacion = Ubicacion.objects.create(nombre="Matriz")
         self.empresa = Empresa.objects.create(nombre="Andes Corp")
+        self.ceco = CentroCosto.objects.create(
+            codigo="TI-001",
+            nombre="Tecnologia",
+            empresa=self.empresa,
+        )
         self.colaborador = Colaborador.objects.create(
             nombres="Ana",
             apellidos="Zambrano",
@@ -187,6 +192,7 @@ class ColaboradorDetailViewTests(TestCase):
             cargo=self.cargo,
             area=self.area,
             ubicacion=self.ubicacion,
+            centro_costo=self.ceco,
             fecha_ingreso=date(2024, 1, 10),
         )
 
@@ -201,3 +207,5 @@ class ColaboradorDetailViewTests(TestCase):
             reverse("admin:colaboradores_colaborador_change", args=[self.colaborador.pk]),
         )
         self.assertContains(response, "Editar colaborador")
+        self.assertContains(response, "Centro de costo")
+        self.assertContains(response, "TI-001 - Tecnologia")
