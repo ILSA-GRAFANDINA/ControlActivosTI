@@ -198,7 +198,7 @@
                                     </span>
                                     <span class="ml-2 whitespace-nowrap text-xs text-slate-500">{{ activo.estado_activo }}</span>
                                 {% else %}
-                                    <span class="inline-flex whitespace-nowrap rounded-lg px-3 py-1 text-xs font-semibold {% if activo.estado_activo.nombre|lower == 'disponible' %}bg-emerald-50 text-emerald-700 border border-emerald-200{% elif activo.estado_activo.nombre|lower == 'asignado' %}bg-cyan-50 text-cyan-700 border border-cyan-200{% elif activo.estado_activo.permite_asignacion %}bg-amber-50 text-amber-700 border border-amber-200{% else %}bg-rose-50 text-rose-700 border border-rose-200{% endif %}">
+                                    <span class="inline-flex whitespace-nowrap rounded-lg px-3 py-1 text-xs font-semibold {% if 'operativo' in activo.estado_activo.nombre|lower or 'en uso' in activo.estado_activo.nombre|lower %}bg-orange-50 text-orange-700 border border-orange-200{% elif activo.estado_activo.nombre|lower == 'disponible' %}bg-emerald-50 text-emerald-700 border border-emerald-200{% elif activo.estado_activo.nombre|lower == 'asignado' %}bg-cyan-50 text-cyan-700 border border-cyan-200{% elif activo.estado_activo.permite_asignacion %}bg-amber-50 text-amber-700 border border-amber-200{% else %}bg-rose-50 text-rose-700 border border-rose-200{% endif %}">
                                         {{ activo.estado_activo }}
                                     </span>
                                 {% endif %}

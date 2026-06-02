@@ -737,7 +737,13 @@ class Admin2ModuleView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
                         {
                             "value": activo.estado_activo.nombre,
                             "badge": True,
-                            "tone": "emerald" if activo.estado_activo.permite_asignacion else "cyan" if activo.estado_activo.nombre.lower() == "asignado" else "amber",
+                            "tone": "orange"
+                            if "operativo" in activo.estado_activo.nombre.lower() or "en uso" in activo.estado_activo.nombre.lower()
+                            else "emerald"
+                            if activo.estado_activo.permite_asignacion
+                            else "cyan"
+                            if activo.estado_activo.nombre.lower() == "asignado"
+                            else "amber",
                         },
                         {"value": activo.created_at.strftime("%d/%m/%Y")},
                     ]
