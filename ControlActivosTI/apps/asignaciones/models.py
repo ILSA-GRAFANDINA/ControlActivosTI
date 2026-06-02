@@ -261,6 +261,9 @@ class AsignacionDetalle(models.Model):
         super().clean()
 
         if self.activa:
+            if self.activo_id and not self.activo.activo:
+                raise ValidationError({"activo": "El activo seleccionado está deshabilitado."})
+
             if self.activo_id and not self.activo.estado_activo.es_asignable_para_nueva_asignacion:
                 raise ValidationError({"activo": "El activo seleccionado no está disponible para asignación."})
 

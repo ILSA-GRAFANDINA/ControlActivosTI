@@ -25,7 +25,7 @@ TEXTAREA_CLASS = (
 def get_activos_asignables_queryset():
     queryset = (
         Activo.objects.select_related("tipo_activo", "estado_activo")
-        .filter(estado_activo__activo=True)
+        .filter(activo=True, estado_activo__activo=True)
         .order_by("codigo")
     )
     return queryset
@@ -169,12 +169,12 @@ class AsignacionCreateForm(forms.ModelForm):
         no_asignables = [
             activo
             for activo in activos
-            if not activo.estado_activo.es_asignable_para_nueva_asignacion
+            if not activo.activo or not activo.estado_activo.es_asignable_para_nueva_asignacion
         ]
         if no_asignables:
             codigos = ", ".join(activo.codigo for activo in no_asignables)
             raise forms.ValidationError(
-                f"No puedes asignar los activos seleccionados porque no están disponibles: {codigos}."
+                f"No puedes asignar los activos seleccionados porque no están disponibles o deshabilitados: {codigos}."
             )
         return activos
 

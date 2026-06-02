@@ -99,6 +99,15 @@ class AsignacionCreateFormTests(TestCase):
             codigo_sap="SAP-ASG-004",
             estado_activo=self.estado_reparacion,
         )
+        self.activo_deshabilitado = Activo.objects.create(
+            tipo_activo=self.tipo_activo,
+            marca="Apple",
+            modelo="MacBook Air",
+            serie="INACT-001",
+            codigo_sap="SAP-ASG-010",
+            estado_activo=self.estado_disponible,
+            activo=False,
+        )
 
     def test_form_only_lists_assignable_assets(self):
         form = AsignacionCreateForm()
@@ -109,6 +118,7 @@ class AsignacionCreateFormTests(TestCase):
         self.assertIn(self.activo_no_disponible, queryset)
         self.assertIn(self.activo_cuarentena, queryset)
         self.assertIn(self.activo_reparacion, queryset)
+        self.assertNotIn(self.activo_deshabilitado, queryset)
 
     def test_form_renders_detailed_asset_labels_and_filter_metadata(self):
         form = AsignacionCreateForm()
@@ -128,7 +138,7 @@ class AsignacionCreateFormTests(TestCase):
             marca="Acer",
             modelo="Swift 3",
             serie="REP-001",
-            codigo_sap="SAP-ASG-010",
+            codigo_sap="SAP-ASG-011",
             estado_activo=self.estado_reparacion,
         )
         asignacion = Asignacion.objects.create(
@@ -179,7 +189,7 @@ class AsignacionCreateFormTests(TestCase):
 
         self.assertFalse(form.is_valid())
         self.assertIn("activos", form.errors)
-        self.assertIn("no están disponibles", form.errors["activos"][0])
+        self.assertIn("no están disponibles o deshabilitados", form.errors["activos"][0])
 
     def test_devolucion_view_accepts_post_for_active_detail(self):
         asignacion = Asignacion.objects.create(

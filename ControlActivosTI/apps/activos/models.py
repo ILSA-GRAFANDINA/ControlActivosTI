@@ -101,11 +101,22 @@ class Activo(models.Model):
     disco = models.CharField(max_length=80, blank=True)
     sistema_operativo = models.CharField(max_length=50, blank=True, default="")
     fecha_compra = models.DateField(null=True, blank=True)
-    valor = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    valor = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Valor de Compra",
+        help_text="Ingresa el valor con coma de miles, por ejemplo 10,482.00.",
+    )
     estado_activo = models.ForeignKey(
         EstadoActivo,
         on_delete=models.PROTECT,
         related_name="activos",
+    )
+    activo = models.BooleanField(
+        default=True,
+        help_text="Desactiva este registro para conservarlo sin incluirlo en los totales vigentes.",
     )
     observaciones = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

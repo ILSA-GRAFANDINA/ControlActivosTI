@@ -19,6 +19,11 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
+            {% if not activo.activo %}
+                <span class="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                    Deshabilitado
+                </span>
+            {% endif %}
             <span class="rounded-lg px-3 py-1 text-xs font-semibold {% if activo.estado_activo.nombre|lower == 'disponible' %}border border-emerald-200 bg-emerald-50 text-emerald-700{% elif activo.estado_activo.nombre|lower == 'asignado' %}border border-cyan-200 bg-cyan-50 text-cyan-700{% elif activo.estado_activo.permite_asignacion %}border border-amber-200 bg-amber-50 text-amber-700{% else %}border border-rose-200 bg-rose-50 text-rose-700{% endif %}">
                 {{ activo.estado_activo }}
             </span>
@@ -75,7 +80,7 @@
                     <p class="font-medium text-slate-900">{{ activo.fecha_compra|default:"-" }}</p>
                 </div>
                 <div>
-                    <p class="text-sm text-slate-500">Valor</p>
+                    <p class="text-sm text-slate-500">Valor de Compra</p>
                     <p class="font-medium text-slate-900">{% if activo.valor %}${{ activo.valor|floatformat:2 }}{% else %}-{% endif %}</p>
                 </div>
             </div>
@@ -103,6 +108,10 @@
                         <p class="text-slate-500">Responsable TI</p>
                         <p class="font-medium text-slate-900">{{ asignacion_activa.usuario_responsable }}</p>
                     </div>
+                </div>
+            {% elif not activo.activo %}
+                <div class="mt-5 rounded-xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-600">
+                    Este activo estÃ¡ deshabilitado y no se puede usar en nuevas asignaciones.
                 </div>
             {% elif activo.estado_activo.permite_asignacion %}
                 <div class="mt-5 rounded-xl border border-dashed border-emerald-300 px-4 py-8 text-center text-sm text-emerald-700">

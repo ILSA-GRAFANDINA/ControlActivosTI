@@ -29,7 +29,7 @@ class ActivoListView(LoginRequiredMixin, ListView):
         ("disco", "Disco"),
         ("sistema_operativo", "Sistema operativo"),
         ("fecha_compra", "Fecha de compra"),
-        ("valor", "Valor"),
+        ("valor", "Valor de Compra"),
         ("estado_activo", "Estado"),
     ]
 
@@ -75,6 +75,9 @@ class ActivoListView(LoginRequiredMixin, ListView):
         if tipo_id.isdigit():
             queryset = queryset.filter(tipo_activo_id=tipo_id)
 
+        if self.request.GET.get("ocultar_deshabilitados") == "1":
+            queryset = queryset.filter(activo=True)
+
         return queryset
 
     def get_context_data(self, **kwargs):
@@ -86,6 +89,7 @@ class ActivoListView(LoginRequiredMixin, ListView):
         context["busqueda"] = self.request.GET.get("q", "").strip()
         context["estado_seleccionado"] = self.request.GET.get("estado", "").strip()
         context["tipo_seleccionado"] = self.request.GET.get("tipo", "").strip()
+        context["ocultar_deshabilitados"] = self.request.GET.get("ocultar_deshabilitados") == "1"
         context["estados_activo"] = EstadoActivo.objects.filter(activo=True).order_by("nombre")
         context["tipos_activo"] = TipoActivo.objects.filter(activo=True).order_by("nombre")
         return context

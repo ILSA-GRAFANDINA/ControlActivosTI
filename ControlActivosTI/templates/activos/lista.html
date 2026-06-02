@@ -61,7 +61,21 @@
             </div>
         </div>
 
-        {% if busqueda or estado_seleccionado or tipo_seleccionado %}
+        <div class="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+            <label class="inline-flex cursor-pointer items-center gap-3 text-sm font-semibold text-slate-700">
+                <input
+                    type="checkbox"
+                    name="ocultar_deshabilitados"
+                    value="1"
+                    class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                    {% if ocultar_deshabilitados %}checked{% endif %}
+                >
+                <span>Ocultar deshabilitados</span>
+            </label>
+            <span class="text-xs text-slate-500">Solo muestra activos vigentes en el listado.</span>
+        </div>
+
+        {% if busqueda or estado_seleccionado or tipo_seleccionado or ocultar_deshabilitados %}
             <div class="flex flex-wrap items-center gap-2">
                 <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Filtros activos</span>
                 {% if busqueda %}
@@ -80,6 +94,9 @@
                             <span class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">Tipo: {{ tipo.nombre }}</span>
                         {% endif %}
                     {% endfor %}
+                {% endif %}
+                {% if ocultar_deshabilitados %}
+                    <span class="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">Deshabilitados ocultos</span>
                 {% endif %}
             </div>
         {% endif %}
@@ -130,7 +147,7 @@
                     {% if "disco" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Disco</th>{% endif %}
                     {% if "sistema_operativo" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Sistema operativo</th>{% endif %}
                     {% if "fecha_compra" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Fecha de compra</th>{% endif %}
-                    {% if "valor" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Valor</th>{% endif %}
+                    {% if "valor" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Valor de Compra</th>{% endif %}
                     {% if "estado_activo" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Estado</th>{% endif %}
                     <th class="px-4 py-3 font-semibold">Acción</th>
                 </tr>
@@ -175,9 +192,16 @@
                         {% endif %}
                         {% if "estado_activo" in columnas_seleccionadas %}
                             <td class="px-4 py-3">
-                                <span class="rounded-lg px-3 py-1 text-xs font-semibold {% if activo.estado_activo.nombre|lower == 'disponible' %}bg-emerald-50 text-emerald-700 border border-emerald-200{% elif activo.estado_activo.nombre|lower == 'asignado' %}bg-cyan-50 text-cyan-700 border border-cyan-200{% elif activo.estado_activo.permite_asignacion %}bg-amber-50 text-amber-700 border border-amber-200{% else %}bg-rose-50 text-rose-700 border border-rose-200{% endif %}">
-                                    {{ activo.estado_activo }}
-                                </span>
+                                {% if not activo.activo %}
+                                    <span class="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                                        Deshabilitado
+                                    </span>
+                                    <span class="ml-2 text-xs text-slate-500">{{ activo.estado_activo }}</span>
+                                {% else %}
+                                    <span class="rounded-lg px-3 py-1 text-xs font-semibold {% if activo.estado_activo.nombre|lower == 'disponible' %}bg-emerald-50 text-emerald-700 border border-emerald-200{% elif activo.estado_activo.nombre|lower == 'asignado' %}bg-cyan-50 text-cyan-700 border border-cyan-200{% elif activo.estado_activo.permite_asignacion %}bg-amber-50 text-amber-700 border border-amber-200{% else %}bg-rose-50 text-rose-700 border border-rose-200{% endif %}">
+                                        {{ activo.estado_activo }}
+                                    </span>
+                                {% endif %}
                             </td>
                         {% endif %}
                         <td class="px-4 py-3">

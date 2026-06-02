@@ -201,7 +201,8 @@ class Admin2BaseContextMixin:
         return cards
 
     def get_module_metrics(self):
-        activos_disponibles = Activo.objects.filter(
+        activos_vigentes = Activo.objects.filter(activo=True)
+        activos_disponibles = activos_vigentes.filter(
             estado_activo__permite_asignacion=True
         ).count()
         usuarios_staff = User.objects.filter(is_staff=True).count()
@@ -262,7 +263,7 @@ class Admin2HomeView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
 
         modelos_registrados = len(admin.site._registry)
         usuarios_staff = User.objects.filter(is_staff=True).count()
-        activos_registrados = Activo.objects.count()
+        activos_registrados = Activo.objects.filter(activo=True).count()
         asignaciones_activas = Asignacion.objects.filter(
             estado_asignacion__in=ASIGNACIONES_ABIERTAS
         ).count()
@@ -318,7 +319,7 @@ class Admin2HomeView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
                         "description": "Consulta, edita o depura la ficha completa de cada equipo registrado.",
                         "url": get_admin_changelist_url(Activo),
                         "meta_label": "Total",
-                        "meta_value": Activo.objects.count(),
+                        "meta_value": Activo.objects.filter(activo=True).count(),
                     },
                     {
                         "eyebrow": "Seguimiento",
@@ -656,9 +657,10 @@ class Admin2ModuleView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
         }
 
     def build_reportes_payload(self):
-        valor_total = Activo.objects.aggregate(total=Sum("valor")).get("total") or 0
+        activos_vigentes = Activo.objects.filter(activo=True)
+        valor_total = activos_vigentes.aggregate(total=Sum("valor")).get("total") or 0
         activos_por_estado = (
-            Activo.objects.values("estado_activo__nombre")
+            activos_vigentes.values("estado_activo__nombre")
             .annotate(total=Count("id"))
             .order_by("-total", "estado_activo__nombre")[:6]
         )
@@ -698,8 +700,8 @@ class Admin2ModuleView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
         return {
             "stats": [
                 {"label": "Valor del inventario", "value": f"${valor_total}"},
-                {"label": "Activos disponibles", "value": Activo.objects.filter(estado_activo__permite_asignacion=True).count()},
-                {"label": "Activos asignados", "value": Activo.objects.filter(estado_activo__nombre__iexact="Asignado").count()},
+                {"label": "Activos disponibles", "value": activos_vigentes.filter(estado_activo__permite_asignacion=True).count()},
+                {"label": "Activos asignados", "value": activos_vigentes.filter(estado_activo__nombre__iexact="Asignado").count()},
                 {"label": "Asignaciones totales", "value": Asignacion.objects.count()},
             ],
             "module_actions": [
@@ -721,7 +723,8 @@ class Admin2ModuleView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
 
     def build_inventario_payload(self):
         activos = (
-            Activo.objects.select_related("tipo_activo", "estado_activo")
+            Activo.objects.filter(activo=True)
+            .select_related("tipo_activo", "estado_activo")
             .order_by("-created_at", "-id")[:8]
         )
         rows = []
@@ -742,21 +745,21 @@ class Admin2ModuleView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
             )
 
         estados = (
-            Activo.objects.values("estado_activo__nombre")
+            Activo.objects.filter(activo=True).values("estado_activo__nombre")
             .annotate(total=Count("id"))
             .order_by("-total", "estado_activo__nombre")[:5]
         )
         tipos = (
-            Activo.objects.values("tipo_activo__nombre")
+            Activo.objects.filter(activo=True).values("tipo_activo__nombre")
             .annotate(total=Count("id"))
             .order_by("-total", "tipo_activo__nombre")[:5]
         )
 
         return {
             "stats": [
-                {"label": "Total activos", "value": Activo.objects.count()},
-                {"label": "Disponibles", "value": Activo.objects.filter(estado_activo__permite_asignacion=True).count()},
-                {"label": "Con fotografia", "value": Activo.objects.filter(fotos__isnull=False).distinct().count()},
+                {"label": "Total activos", "value": Activo.objects.filter(activo=True).count()},
+                {"label": "Disponibles", "value": Activo.objects.filter(activo=True, estado_activo__permite_asignacion=True).count()},
+                {"label": "Con fotografia", "value": Activo.objects.filter(activo=True, fotos__isnull=False).distinct().count()},
                 {"label": "Tipos registrados", "value": TipoActivo.objects.count()},
             ],
             "module_actions": [

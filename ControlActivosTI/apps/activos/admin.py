@@ -37,6 +37,7 @@ class ActivoAdmin(admin.ModelAdmin):
         "fecha_compra",
         "valor",
         "estado_activo",
+        "activo",
         "sistema_operativo",
         "cantidad_fotos",
         "miniatura_principal",
@@ -54,6 +55,7 @@ class ActivoAdmin(admin.ModelAdmin):
     list_filter = (
         "tipo_activo",
         "estado_activo",
+        "activo",
         "marca",
         "sistema_operativo",
         "fecha_compra",

@@ -48,6 +48,16 @@
                 {{ form.estado_activo }}
                 {% if form.estado_activo.errors %}<p class="mt-2 text-sm text-red-600">{{ form.estado_activo.errors|join:", " }}</p>{% endif %}
             </div>
+            <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <label class="flex cursor-pointer items-start gap-3 text-sm font-semibold text-slate-700" for="{{ form.activo.id_for_label }}">
+                    {{ form.activo }}
+                    <span>
+                        {{ form.activo.label }}
+                        <span class="mt-1 block text-xs font-normal text-slate-500">{{ form.activo.help_text }}</span>
+                    </span>
+                </label>
+                {% if form.activo.errors %}<p class="mt-2 text-sm text-red-600">{{ form.activo.errors|join:", " }}</p>{% endif %}
+            </div>
             <div>
                 <label class="mb-2 block text-sm font-semibold text-slate-700">Marca</label>
                 {{ form.marca }}
@@ -75,9 +85,10 @@
                 {% if form.fecha_compra.errors %}<p class="mt-2 text-sm text-red-600">{{ form.fecha_compra.errors|join:", " }}</p>{% endif %}
             </div>
             <div>
-                <label class="mb-2 block text-sm font-semibold text-slate-700">Valor</label>
+                <label class="mb-2 block text-sm font-semibold text-slate-700">Valor de Compra</label>
                 {{ form.valor }}
                 {% if form.valor.errors %}<p class="mt-2 text-sm text-red-600">{{ form.valor.errors|join:", " }}</p>{% endif %}
+                {% if form.valor.help_text %}<p class="mt-2 text-xs text-slate-500">{{ form.valor.help_text }}</p>{% endif %}
             </div>
         </div>
 

@@ -58,6 +58,7 @@ class ActivoAdminFormTests(TestCase):
             "fecha_compra": "",
             "valor": "",
             "estado_activo": self.estado.pk,
+            "activo": "on",
             "observaciones": "",
         }
 
@@ -112,6 +113,19 @@ class ActivoAdminFormTests(TestCase):
         self.assertTrue(form.is_valid(), form.errors)
         activo = form.save()
         self.assertIsNone(activo.codigo_sap)
+
+    def test_acepta_valor_con_coma_de_miles(self):
+        data = self._data_base(self.tipo_laptop)
+        data["valor"] = "10,482.00"
+
+        form = ActivoAdminForm(data=data)
+
+        self.assertTrue(form.is_valid(), form.errors)
+        activo = form.save()
+
+        self.assertEqual(activo.valor, Decimal("10482.00"))
+        self.assertEqual(form.fields["valor"].label, "Valor de Compra")
+        self.assertIn("10,482.00", form.fields["valor"].help_text)
 
 
 class ActivoCodigoTests(TestCase):
@@ -438,6 +452,14 @@ class ActivoListViewTests(TestCase):
             codigo_sap="SAP-LST-001",
             estado_activo=self.estado,
         )
+        Activo.objects.create(
+            tipo_activo=self.tipo_mouse,
+            marca="HP",
+            modelo="M100",
+            serie="MOU-002",
+            estado_activo=self.estado,
+            activo=False,
+        )
 
     def test_list_view_shows_type_separators(self):
         self.client.force_login(self.user)
@@ -468,6 +490,16 @@ class ActivoListViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "SAP-LST-001")
         self.assertNotContains(response, "MOU-001")
+
+    def test_list_view_can_hide_disabled_assets(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("activos:lista"), {"ocultar_deshabilitados": "1"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Deshabilitados ocultos")
+        self.assertContains(response, "LAP-001")
+        self.assertNotContains(response, "MOU-002")
 
 
 class ActivoCreateViewTests(TestCase):
@@ -552,6 +584,7 @@ class ActivoCreateViewTests(TestCase):
             fecha_compra=date(2025, 5, 7),
             valor=990.00,
             estado_activo=self.estado,
+            activo=True,
             observaciones="Equipo base para pruebas.",
         )
         FotoActivo.objects.create(
@@ -587,6 +620,7 @@ class ActivoCreateViewTests(TestCase):
                 "fecha_compra": "2025-05-08",
                 "valor": "1250.00",
                 "estado_activo": self.estado.pk,
+                "activo": "on",
                 "observaciones": "Equipo actualizado desde la pantalla de edicion.",
                 "fotos-TOTAL_FORMS": "3",
                 "fotos-INITIAL_FORMS": "1",
@@ -740,3 +774,39 @@ class ActivoDetailViewTests(TestCase):
             self.assertNotContains(response, 'target="_blank"')
         finally:
             shutil.rmtree(media_root, ignore_errors=True)
+
+
+class DashboardInventarioTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="dashboard", password="testpass123")
+        self.estado = EstadoActivo.objects.create(nombre="Disponible", permite_asignacion=True)
+        self.tipo = TipoActivo.objects.create(nombre="Laptop")
+
+    def test_dashboard_excludes_inactive_assets_from_value_and_totals(self):
+        Activo.objects.create(
+            tipo_activo=self.tipo,
+            marca="Dell",
+            modelo="Latitude",
+            serie="DASH-001",
+            codigo_sap="SAP-DASH-001",
+            valor=1000,
+            estado_activo=self.estado,
+            activo=True,
+        )
+        Activo.objects.create(
+            tipo_activo=self.tipo,
+            marca="HP",
+            modelo="ProBook",
+            serie="DASH-002",
+            codigo_sap="SAP-DASH-002",
+            valor=250,
+            estado_activo=self.estado,
+            activo=False,
+        )
+
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("dashboard-inicio"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["total_activos"], 1)
+        self.assertEqual(response.context["valor_total_activos"], 1000)

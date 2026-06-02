@@ -428,7 +428,7 @@ def construir_documento_acta(asignacion, tipo=TIPO_ENTREGA, devolucion=None):
 
     tabla = document.add_table(rows=1, cols=6)
     tabla.style = "Table Grid"
-    encabezados = ["Articulo", "Marca", "Valor", "Estado", "Caracteristicas", "Observaciones"]
+    encabezados = ["Articulo", "Marca", "Valor de Compra", "Estado", "Caracteristicas", "Observaciones"]
     for idx, texto in enumerate(encabezados):
         tabla.rows[0].cells[idx].text = texto
 

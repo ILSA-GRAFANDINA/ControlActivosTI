@@ -11,13 +11,15 @@ ASIGNACIONES_ABIERTAS = [
     Asignacion.EstadoAsignacion.PARCIAL,
 ]
 
+ACTIVO_VIGENTE_Q = Q(activo=True)
 ESTADO_ASIGNABLE_Q = (
-    Q(estado_activo__permite_asignacion=True)
+    ACTIVO_VIGENTE_Q
+    & Q(estado_activo__permite_asignacion=True)
     & ~Q(estado_activo__nombre__icontains="repar")
     & ~Q(estado_activo__nombre__icontains="cuarentena")
 )
 
-ESTADO_ASIGNADO_Q = Q(estado_activo__nombre__iexact="Asignado")
+ESTADO_ASIGNADO_Q = ACTIVO_VIGENTE_Q & Q(estado_activo__nombre__iexact="Asignado")
 
 
 class InicioView(LoginRequiredMixin, TemplateView):
@@ -26,7 +28,8 @@ class InicioView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        total_activos = Activo.objects.count()
+        activos_vigentes = Activo.objects.filter(activo=True)
+        total_activos = activos_vigentes.count()
         total_colaboradores = Colaborador.objects.count()
         total_colaboradores_activos = Colaborador.objects.filter(
             estado=Colaborador.EstadoColaborador.ACTIVO
@@ -34,22 +37,22 @@ class InicioView(LoginRequiredMixin, TemplateView):
         asignaciones_activas = Asignacion.objects.filter(
             estado_asignacion__in=ASIGNACIONES_ABIERTAS
         ).count()
-        activos_disponibles = Activo.objects.filter(ESTADO_ASIGNABLE_Q).count()
-        activos_asignados = Activo.objects.filter(ESTADO_ASIGNADO_Q).count()
-        valor_total_activos = Activo.objects.aggregate(total=Sum("valor")).get("total") or 0
+        activos_disponibles = activos_vigentes.filter(ESTADO_ASIGNABLE_Q).count()
+        activos_asignados = activos_vigentes.filter(ESTADO_ASIGNADO_Q).count()
+        valor_total_activos = activos_vigentes.aggregate(total=Sum("valor")).get("total") or 0
 
         activos_por_estado = list(
-            Activo.objects.values("estado_activo_id", "estado_activo__nombre")
+            activos_vigentes.values("estado_activo_id", "estado_activo__nombre")
             .annotate(total=Count("id"))
             .order_by("-total", "estado_activo__nombre")
         )
         activos_por_tipo = list(
-            Activo.objects.values("tipo_activo__nombre")
+            activos_vigentes.values("tipo_activo__nombre")
             .annotate(total=Count("id"))
             .order_by("-total", "tipo_activo__nombre")[:8]
         )
         activos_por_tipo_resumen = list(
-            Activo.objects.values("tipo_activo__nombre")
+            activos_vigentes.values("tipo_activo__nombre")
             .annotate(
                 total=Count("id"),
                 disponibles=Count("id", filter=ESTADO_ASIGNABLE_Q),
@@ -61,6 +64,7 @@ class InicioView(LoginRequiredMixin, TemplateView):
             AsignacionDetalle.objects.filter(
                 activa=True,
                 asignacion__estado_asignacion__in=ASIGNACIONES_ABIERTAS,
+                activo__activo=True,
             )
             .values(
                 "asignacion__centro_costo__codigo",

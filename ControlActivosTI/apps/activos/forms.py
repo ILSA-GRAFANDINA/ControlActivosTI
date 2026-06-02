@@ -16,6 +16,7 @@ BASE_INPUT_CLASS = (
     "w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 "
     "shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
 )
+CHECKBOX_CLASS = "h-5 w-5 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
 TEXTAREA_CLASS = BASE_INPUT_CLASS
 FILE_INPUT_CLASS = (
     "block w-full text-sm text-slate-700 file:mr-4 file:rounded-lg file:border-0 "
@@ -32,6 +33,13 @@ def _widget_input_type(widget):
         return widget.input_type
     nested_widget = getattr(widget, "widget", None)
     return getattr(nested_widget, "input_type", None)
+
+
+class CommaDecimalField(forms.DecimalField):
+    def to_python(self, value):
+        if isinstance(value, str):
+            value = value.replace(",", "").strip()
+        return super().to_python(value)
 
 
 class ActivoAdminForm(forms.ModelForm):
@@ -57,8 +65,9 @@ class ActivoAdminForm(forms.ModelForm):
             "disco": "Disco",
             "sistema_operativo": "Sistema operativo",
             "fecha_compra": "Fecha de compra",
-            "valor": "Valor",
+            "valor": "Valor de Compra",
             "estado_activo": "Estado del activo",
+            "activo": "Activo en inventario",
             "observaciones": "Observaciones",
         }
 
@@ -75,6 +84,8 @@ class ActivoAdminForm(forms.ModelForm):
             if isinstance(widget, forms.Textarea):
                 widget.attrs.setdefault("rows", 4)
                 widget.attrs["class"] = TEXTAREA_CLASS
+            elif isinstance(widget, forms.CheckboxInput):
+                widget.attrs["class"] = CHECKBOX_CLASS
             elif input_type == "file":
                 widget.attrs["class"] = FILE_INPUT_CLASS
             else:
@@ -88,12 +99,30 @@ class ActivoAdminForm(forms.ModelForm):
                 }
             )
         if "valor" in self.fields:
-            self.fields["valor"].widget.attrs["step"] = "0.01"
+            valor_field = self.fields["valor"]
+            self.fields["valor"] = CommaDecimalField(
+                max_digits=valor_field.max_digits,
+                decimal_places=valor_field.decimal_places,
+                required=valor_field.required,
+                label="Valor de Compra",
+                help_text=valor_field.help_text,
+                widget=forms.TextInput(
+                    attrs={
+                        "class": BASE_INPUT_CLASS,
+                        "inputmode": "decimal",
+                        "placeholder": "Ej: 10,482.00",
+                    }
+                ),
+            )
 
         self.fields["cpu"].help_text = ayuda_tecnica
         self.fields["ram"].help_text = ayuda_tecnica
         self.fields["disco"].help_text = ayuda_tecnica
         self.fields["sistema_operativo"].help_text = ayuda_tecnica
+        if "valor" in self.fields:
+            self.fields["valor"].help_text = (
+                "Usa coma para miles y punto para decimales, por ejemplo 10,482.00."
+            )
         if "codigo_sap" in self.fields:
             self.fields["codigo_sap"].help_text = ayuda_codigo_sap
 
