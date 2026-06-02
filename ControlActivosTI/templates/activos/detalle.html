@@ -24,7 +24,7 @@
                     Deshabilitado
                 </span>
             {% endif %}
-            <span class="rounded-lg px-3 py-1 text-xs font-semibold {% if activo.estado_activo.nombre|lower == 'disponible' %}border border-emerald-200 bg-emerald-50 text-emerald-700{% elif activo.estado_activo.nombre|lower == 'asignado' %}border border-cyan-200 bg-cyan-50 text-cyan-700{% elif activo.estado_activo.permite_asignacion %}border border-amber-200 bg-amber-50 text-amber-700{% else %}border border-rose-200 bg-rose-50 text-rose-700{% endif %}">
+                <span class="inline-flex whitespace-nowrap rounded-lg px-3 py-1 text-xs font-semibold {% if activo.estado_activo.nombre|lower == 'disponible' %}border border-emerald-200 bg-emerald-50 text-emerald-700{% elif activo.estado_activo.nombre|lower == 'asignado' %}border border-cyan-200 bg-cyan-50 text-cyan-700{% elif activo.estado_activo.permite_asignacion %}border border-amber-200 bg-amber-50 text-amber-700{% else %}border border-rose-200 bg-rose-50 text-rose-700{% endif %}">
                 {{ activo.estado_activo }}
             </span>
             {% if asignacion_activa %}

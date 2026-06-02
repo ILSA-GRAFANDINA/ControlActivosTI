@@ -193,12 +193,12 @@
                         {% if "estado_activo" in columnas_seleccionadas %}
                             <td class="px-4 py-3">
                                 {% if not activo.activo %}
-                                    <span class="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                                    <span class="inline-flex whitespace-nowrap rounded-lg border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
                                         Deshabilitado
                                     </span>
-                                    <span class="ml-2 text-xs text-slate-500">{{ activo.estado_activo }}</span>
+                                    <span class="ml-2 whitespace-nowrap text-xs text-slate-500">{{ activo.estado_activo }}</span>
                                 {% else %}
-                                    <span class="rounded-lg px-3 py-1 text-xs font-semibold {% if activo.estado_activo.nombre|lower == 'disponible' %}bg-emerald-50 text-emerald-700 border border-emerald-200{% elif activo.estado_activo.nombre|lower == 'asignado' %}bg-cyan-50 text-cyan-700 border border-cyan-200{% elif activo.estado_activo.permite_asignacion %}bg-amber-50 text-amber-700 border border-amber-200{% else %}bg-rose-50 text-rose-700 border border-rose-200{% endif %}">
+                                    <span class="inline-flex whitespace-nowrap rounded-lg px-3 py-1 text-xs font-semibold {% if activo.estado_activo.nombre|lower == 'disponible' %}bg-emerald-50 text-emerald-700 border border-emerald-200{% elif activo.estado_activo.nombre|lower == 'asignado' %}bg-cyan-50 text-cyan-700 border border-cyan-200{% elif activo.estado_activo.permite_asignacion %}bg-amber-50 text-amber-700 border border-amber-200{% else %}bg-rose-50 text-rose-700 border border-rose-200{% endif %}">
                                         {{ activo.estado_activo }}
                                     </span>
                                 {% endif %}
