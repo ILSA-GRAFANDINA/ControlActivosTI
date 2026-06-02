@@ -8,6 +8,7 @@ import uuid
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.files.storage import default_storage
 from django.test.utils import override_settings
 from django.test import TestCase
 from django.urls import reverse
@@ -772,6 +773,30 @@ class ActivoDetailViewTests(TestCase):
             self.assertContains(response, "data-image-modal")
             self.assertContains(response, ".webp")
             self.assertNotContains(response, 'target="_blank"')
+        finally:
+            shutil.rmtree(media_root, ignore_errors=True)
+
+    def test_detail_view_shows_placeholder_when_photo_file_is_missing(self):
+        media_root = make_test_media_root()
+        try:
+            with override_settings(MEDIA_ROOT=media_root):
+                foto = FotoActivo.objects.create(
+                    activo=self.activo,
+                    imagen=make_test_image_file("portada-borrada.jpg"),
+                    descripcion="Portada",
+                    orden=1,
+                )
+                default_storage.delete(foto.imagen.name)
+                default_storage.delete(foto._variant_name("thumb"))
+                default_storage.delete(foto._variant_name("medium"))
+                default_storage.delete(foto._variant_name("large"))
+
+                self.client.force_login(self.user)
+                response = self.client.get(reverse("activos:detalle", args=[self.activo.pk]))
+
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, "Imagen no disponible")
+            self.assertNotContains(response, "portada-borrada.jpg")
         finally:
             shutil.rmtree(media_root, ignore_errors=True)
 

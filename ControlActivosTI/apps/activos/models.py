@@ -337,30 +337,55 @@ class FotoActivo(models.Model):
             variant_name = posixpath.join(base_dir, variant_filename) if base_dir else variant_filename
             default_storage.delete(variant_name)
 
+    def _best_available_image_name(self):
+        if not self.imagen or not self.imagen.name:
+            return ""
+
+        candidate_names = [
+            self.imagen.name,
+            self._variant_name("large"),
+            self._variant_name("medium"),
+            self._variant_name("thumb"),
+        ]
+        for candidate in candidate_names:
+            if candidate and default_storage.exists(candidate):
+                return candidate
+        return ""
+
     @property
     def imagen_original_url(self):
-        return self.imagen.url if self.imagen else ""
+        nombre_imagen = self._best_available_image_name()
+        return default_storage.url(nombre_imagen) if nombre_imagen else ""
 
     @property
     def imagen_large_url(self):
         if not self.imagen:
             return ""
         variant_name = self._save_variant_file("large", FOTO_VARIANTS["large"])
-        return default_storage.url(variant_name) if variant_name else self.imagen.url
+        if variant_name:
+            return default_storage.url(variant_name)
+        nombre_imagen = self._best_available_image_name()
+        return default_storage.url(nombre_imagen) if nombre_imagen else ""
 
     @property
     def imagen_medium_url(self):
         if not self.imagen:
             return ""
         variant_name = self._save_variant_file("medium", FOTO_VARIANTS["medium"])
-        return default_storage.url(variant_name) if variant_name else self.imagen.url
+        if variant_name:
+            return default_storage.url(variant_name)
+        nombre_imagen = self._best_available_image_name()
+        return default_storage.url(nombre_imagen) if nombre_imagen else ""
 
     @property
     def imagen_thumb_url(self):
         if not self.imagen:
             return ""
         variant_name = self._save_variant_file("thumb", FOTO_VARIANTS["thumb"])
-        return default_storage.url(variant_name) if variant_name else self.imagen.url
+        if variant_name:
+            return default_storage.url(variant_name)
+        nombre_imagen = self._best_available_image_name()
+        return default_storage.url(nombre_imagen) if nombre_imagen else ""
 
     @property
     def imagen_srcset(self):
