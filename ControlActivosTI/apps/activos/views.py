@@ -1,18 +1,73 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 from django.db.models import Prefetch, Q
-from django.http import HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect
 from django.urls import reverse
-from django.views.generic import CreateView, DetailView, ListView
+from django.utils import timezone
+from django.views.generic import CreateView, DetailView, ListView, TemplateView
 
 from apps.asignaciones.models import AsignacionDetalle
 from apps.catalogos.models import EstadoActivo, TipoActivo
 
 from .forms import ActivoAdminForm, FotoActivoCreateFormSet
 from .models import Activo, EventoActivo, FotoActivo
+from .services import build_activos_export_workbook
 
 
-class ActivoListView(LoginRequiredMixin, ListView):
+class ActivoFilterMixin:
+    def get_filter_value(self, name):
+        if self.request.method == "POST":
+            return self.request.POST.get(name, self.request.GET.get(name, "")).strip()
+        return self.request.GET.get(name, "").strip()
+
+    def get_filtered_queryset(self):
+        queryset = (
+            Activo.objects.select_related("tipo_activo", "estado_activo")
+            .prefetch_related("fotos")
+            .order_by("tipo_activo__nombre", "codigo")
+        )
+
+        busqueda = self.get_filter_value("q")
+        if busqueda:
+            queryset = queryset.filter(
+                Q(codigo__icontains=busqueda)
+                | Q(marca__icontains=busqueda)
+                | Q(modelo__icontains=busqueda)
+                | Q(serie__icontains=busqueda)
+                | Q(codigo_sap__icontains=busqueda)
+            )
+
+        estado_id = self.get_filter_value("estado")
+        if estado_id.isdigit():
+            queryset = queryset.filter(estado_activo_id=estado_id)
+
+        tipo_id = self.get_filter_value("tipo")
+        if tipo_id.isdigit():
+            queryset = queryset.filter(tipo_activo_id=tipo_id)
+
+        if self.get_filter_value("ocultar_deshabilitados") == "1":
+            queryset = queryset.filter(activo=True)
+
+        return queryset
+
+    def get_filter_context(self):
+        return {
+            "busqueda": self.get_filter_value("q"),
+            "estado_seleccionado": self.get_filter_value("estado"),
+            "tipo_seleccionado": self.get_filter_value("tipo"),
+            "ocultar_deshabilitados": self.get_filter_value("ocultar_deshabilitados") == "1",
+            "estados_activo": EstadoActivo.objects.filter(activo=True).order_by("nombre"),
+            "tipos_activo": TipoActivo.objects.filter(activo=True).order_by("nombre"),
+        }
+
+    def get_export_querystring(self):
+        params = self.request.GET.copy()
+        params.pop("cols", None)
+        querystring = params.urlencode()
+        return f"?{querystring}" if querystring else ""
+
+
+class ActivoListView(LoginRequiredMixin, ActivoFilterMixin, ListView):
     model = Activo
     template_name = "activos/lista.html"
     context_object_name = "activos"
@@ -51,34 +106,7 @@ class ActivoListView(LoginRequiredMixin, ListView):
         return seleccionadas or self.COLUMNAS_POR_DEFECTO
 
     def get_queryset(self):
-        queryset = (
-            Activo.objects.select_related("tipo_activo", "estado_activo")
-            .prefetch_related("fotos")
-            .order_by("tipo_activo__nombre", "codigo")
-        )
-
-        busqueda = self.request.GET.get("q", "").strip()
-        if busqueda:
-            queryset = queryset.filter(
-                Q(codigo__icontains=busqueda)
-                | Q(marca__icontains=busqueda)
-                | Q(modelo__icontains=busqueda)
-                | Q(serie__icontains=busqueda)
-                | Q(codigo_sap__icontains=busqueda)
-            )
-
-        estado_id = self.request.GET.get("estado", "").strip()
-        if estado_id.isdigit():
-            queryset = queryset.filter(estado_activo_id=estado_id)
-
-        tipo_id = self.request.GET.get("tipo", "").strip()
-        if tipo_id.isdigit():
-            queryset = queryset.filter(tipo_activo_id=tipo_id)
-
-        if self.request.GET.get("ocultar_deshabilitados") == "1":
-            queryset = queryset.filter(activo=True)
-
-        return queryset
+        return self.get_filtered_queryset()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -86,13 +114,52 @@ class ActivoListView(LoginRequiredMixin, ListView):
         context["columnas_disponibles"] = self.COLUMNAS_DISPONIBLES
         context["columnas_seleccionadas"] = columnas_seleccionadas
         context["total_columnas_tabla"] = len(columnas_seleccionadas) + 1
-        context["busqueda"] = self.request.GET.get("q", "").strip()
-        context["estado_seleccionado"] = self.request.GET.get("estado", "").strip()
-        context["tipo_seleccionado"] = self.request.GET.get("tipo", "").strip()
-        context["ocultar_deshabilitados"] = self.request.GET.get("ocultar_deshabilitados") == "1"
-        context["estados_activo"] = EstadoActivo.objects.filter(activo=True).order_by("nombre")
-        context["tipos_activo"] = TipoActivo.objects.filter(activo=True).order_by("nombre")
+        context.update(self.get_filter_context())
+        context["exportar_url"] = f"{reverse('activos:exportar')}{self.get_export_querystring()}"
         return context
+
+
+class ActivoExportView(LoginRequiredMixin, ActivoFilterMixin, TemplateView):
+    template_name = "activos/exportar.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        activos = list(self.get_filtered_queryset())
+        context.update(self.get_filter_context())
+        context["activos"] = activos
+        context["total_activos_filtrados"] = len(activos)
+        context["volver_url"] = f"{reverse('activos:lista')}{self.get_export_querystring()}"
+        context["error_exportacion"] = kwargs.get("error_exportacion", "")
+        context["selected_ids"] = kwargs.get("selected_ids", [])
+        return context
+
+    def post(self, request, *args, **kwargs):
+        selected_ids = [pk for pk in request.POST.getlist("activos") if pk.isdigit()]
+        if not selected_ids:
+            context = self.get_context_data(
+                error_exportacion="Debes seleccionar al menos un activo para exportar.",
+                selected_ids=[],
+            )
+            return self.render_to_response(context)
+
+        activos = list(
+            self.get_filtered_queryset().filter(pk__in=selected_ids).order_by("tipo_activo__nombre", "codigo")
+        )
+        if not activos:
+            context = self.get_context_data(
+                error_exportacion="Los activos seleccionados no estan disponibles con los filtros actuales.",
+                selected_ids=selected_ids,
+            )
+            return self.render_to_response(context)
+
+        workbook = build_activos_export_workbook(activos)
+        response = HttpResponse(
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        filename = f"activos_export_{timezone.localdate().isoformat()}.xlsx"
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        workbook.save(response)
+        return response
 
 
 class ActivoCreateView(LoginRequiredMixin, CreateView):

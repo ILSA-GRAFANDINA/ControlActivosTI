@@ -9,9 +9,14 @@
         <h2 class="text-xl font-semibold text-slate-900">Listado de activos</h2>
         <p class="text-sm text-slate-500">Consulta rápidamente el inventario y abre el detalle técnico de cada activo.</p>
     </div>
-    <a href="{% url 'activos:nuevo' %}" class="rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700">
-        Agregar activo
-    </a>
+    <div class="flex flex-wrap items-center gap-3">
+        <a href="{{ exportar_url }}" class="rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-semibold text-emerald-700 shadow-sm transition hover:bg-emerald-100">
+            Exportar
+        </a>
+        <a href="{% url 'activos:nuevo' %}" class="rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700">
+            Agregar activo
+        </a>
+    </div>
 </div>
 
 <div class="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">

@@ -16,6 +16,7 @@ from django.urls import reverse
 from apps.asignaciones.models import Asignacion, AsignacionDetalle
 from apps.catalogos.models import Area, Cargo, CentroCosto, Empresa, EstadoActivo, TipoActivo, TipoEventoActivo, Ubicacion
 from apps.colaboradores.models import Colaborador
+from openpyxl import load_workbook
 from PIL import Image
 
 from apps.activos.admin import ActivoAdminForm, EventoActivoAdminForm, FotoActivoInlineForm
@@ -501,6 +502,91 @@ class ActivoListViewTests(TestCase):
         self.assertContains(response, "Deshabilitados ocultos")
         self.assertContains(response, "LAP-001")
         self.assertNotContains(response, "MOU-002")
+
+    def test_list_view_shows_export_button(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("activos:lista"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse("activos:exportar"))
+        self.assertContains(response, "Exportar")
+
+
+class ActivoExportViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="exportador", password="testpass123")
+        self.estado = EstadoActivo.objects.create(nombre="Disponible", permite_asignacion=True)
+        self.tipo_laptop = TipoActivo.objects.create(nombre="Laptop")
+        self.tipo_mouse = TipoActivo.objects.create(nombre="Mouse")
+        self.activo_laptop = Activo.objects.create(
+            tipo_activo=self.tipo_laptop,
+            marca="Dell",
+            modelo="Latitude",
+            serie="EXP-001",
+            codigo_sap="SAP-EXP-001",
+            cpu="Intel Core i7",
+            ram="16 GB",
+            disco="512 GB SSD",
+            sistema_operativo="Windows 11",
+            valor=Decimal("1450.50"),
+            estado_activo=self.estado,
+            observaciones="Equipo principal",
+        )
+        self.activo_mouse = Activo.objects.create(
+            tipo_activo=self.tipo_mouse,
+            marca="Logitech",
+            modelo="M185",
+            serie="EXP-002",
+            estado_activo=self.estado,
+            activo=False,
+        )
+
+    def test_export_view_renders_filtered_selection_page(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("activos:exportar"), {"ocultar_deshabilitados": "1"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Exportar seleccionados")
+        self.assertContains(response, self.activo_laptop.codigo)
+        self.assertNotContains(response, self.activo_mouse.codigo)
+
+    def test_export_view_generates_excel_for_selected_assets(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse("activos:exportar"),
+            {"activos": [str(self.activo_laptop.pk)]},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            response["Content-Type"],
+        )
+        self.assertIn("activos_export_", response["Content-Disposition"])
+
+        workbook = load_workbook(BytesIO(response.content))
+        worksheet = workbook.active
+        headers = [cell.value for cell in worksheet[1]]
+        self.assertIn("Valor de Compra", headers)
+        self.assertNotIn("Fotos", headers)
+
+        rows = list(worksheet.iter_rows(min_row=2, values_only=True))
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0][0], self.activo_laptop.codigo)
+        self.assertEqual(rows[0][1], self.activo_laptop.tipo_activo.nombre)
+        self.assertEqual(rows[0][11], self.activo_laptop.valor)
+        self.assertEqual(rows[0][13], "Si")
+
+    def test_export_view_requires_at_least_one_selected_asset(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(reverse("activos:exportar"), {})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Debes seleccionar al menos un activo para exportar.")
 
 
 class ActivoCreateViewTests(TestCase):
