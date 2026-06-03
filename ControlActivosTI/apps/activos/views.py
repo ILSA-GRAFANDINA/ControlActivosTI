@@ -178,8 +178,9 @@ class ActivoListView(LoginRequiredMixin, ActivoFilterMixin, ListView):
         columnas_seleccionadas = self.get_selected_columns()
         context["columnas_disponibles"] = self.COLUMNAS_DISPONIBLES
         context["columnas_seleccionadas"] = columnas_seleccionadas
-        context["total_columnas_tabla"] = len(columnas_seleccionadas) + 1
+        context["total_columnas_tabla"] = len(columnas_seleccionadas) + 2
         context.update(self.get_filter_context())
+        context["total_activos_filtrados"] = len(context.get("activos", []))
         context["exportar_url"] = f"{reverse('activos:exportar')}{self.get_export_querystring()}"
         return context
 

@@ -59,18 +59,20 @@
                             <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08Z" clip-rule="evenodd" />
                         </svg>
                     </summary>
-                    <div class="absolute left-0 right-0 z-20 mt-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
-                        <div class="grid gap-2 sm:grid-cols-2">
+                    <div class="absolute left-0 right-0 z-20 mt-2 max-h-72 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
+                        <div class="grid gap-2">
                             {% for tipo in tipos_activo %}
-                                <label class="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 transition hover:border-cyan-300 hover:bg-cyan-50/70">
+                                <label class="flex w-full min-w-0 cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm text-slate-700 transition hover:border-cyan-300 hover:bg-cyan-50/70">
                                     <input
                                         type="checkbox"
                                         name="tipo"
                                         value="{{ tipo.pk }}"
-                                        class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                                        class="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
                                         {% if tipo.pk|stringformat:"s" in tipos_seleccionados %}checked{% endif %}
                                     >
-                                    <span class="font-medium">{{ tipo.nombre }}</span>
+                                    <span class="min-w-0 flex-1 whitespace-normal break-words leading-snug font-medium">
+                                        {{ tipo.nombre }}
+                                    </span>
                                 </label>
                             {% endfor %}
                         </div>
