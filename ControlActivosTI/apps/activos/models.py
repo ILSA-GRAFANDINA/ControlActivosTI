@@ -196,10 +196,6 @@ class Activo(models.Model):
 
         if self.codigo_sap:
             self.codigo_sap = self.codigo_sap.strip().upper()
-        elif self.requiere_codigo_sap():
-            raise ValidationError(
-                {"codigo_sap": "Debes registrar el Codigo SAP para laptops y PCs."}
-            )
         else:
             self.codigo_sap = None
 

@@ -8,7 +8,6 @@ from .models import (
     EventoActivo,
     FotoActivo,
     TIPOS_ACTIVO_CON_ESPECIFICACIONES,
-    tipo_activo_requiere_codigo_sap,
 )
 
 
@@ -72,7 +71,7 @@ class ActivoAdminForm(forms.ModelForm):
         }
 
         ayuda_tecnica = "Solo aplica para laptops, PC o equipos de escritorio."
-        ayuda_codigo_sap = "Obligatorio para laptops y PCs. Debe ser unico."
+        ayuda_codigo_sap = "Opcional por ahora. Si lo ingresas, debe ser unico."
 
         for nombre_campo, etiqueta in etiquetas.items():
             if nombre_campo in self.fields:
@@ -140,9 +139,7 @@ class ActivoAdminForm(forms.ModelForm):
                 cleaned_data[nombre_campo] = ""
 
         codigo_sap = (cleaned_data.get("codigo_sap") or "").strip()
-        if tipo_activo_requiere_codigo_sap(nombre_tipo):
-            if not codigo_sap:
-                raise ValidationError({"codigo_sap": "Debes registrar el Codigo SAP para laptops y PCs."})
+        if codigo_sap:
             cleaned_data["codigo_sap"] = codigo_sap.upper()
         else:
             cleaned_data["codigo_sap"] = None
