@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.views.generic import CreateView, DetailView, ListView, TemplateView
 
 from apps.asignaciones.models import AsignacionDetalle
-from apps.catalogos.models import EstadoActivo, TipoActivo
+from apps.catalogos.models import Empresa, EstadoActivo, TipoActivo
 
 from .forms import ActivoAdminForm, FotoActivoCreateFormSet
 from .models import Activo, EventoActivo, FotoActivo
@@ -15,14 +15,50 @@ from .services import build_activos_export_workbook
 
 
 class ActivoFilterMixin:
+    FILTER_SESSION_KEY = "activos_filtros_guardados"
+    FILTER_FIELDS = ("q", "estado", "tipo", "empresa", "ocultar_deshabilitados")
+
     def get_filter_value(self, name):
-        if self.request.method == "POST":
-            return self.request.POST.get(name, self.request.GET.get(name, "")).strip()
-        return self.request.GET.get(name, "").strip()
+        return self.get_active_filters().get(name, "")
+
+    def _filters_from_request(self):
+        source = self.request.POST if self.request.method == "POST" else self.request.GET
+        filtros = {}
+        for field in self.FILTER_FIELDS:
+            value = (source.get(field, "") or "").strip()
+            if field == "ocultar_deshabilitados":
+                value = "1" if source.get(field) in ("1", "on", "true", "True") else ""
+            filtros[field] = value
+        return filtros
+
+    def _has_filter_params(self):
+        source = self.request.POST if self.request.method == "POST" else self.request.GET
+        return any(source.get(field) not in (None, "") for field in self.FILTER_FIELDS)
+
+    def _reset_filter_state(self):
+        self.request.session.pop(self.FILTER_SESSION_KEY, None)
+        self.request.session.modified = True
+
+    def get_active_filters(self):
+        if self.request.GET.get("reset") == "1" or self.request.POST.get("reset") == "1":
+            self._reset_filter_state()
+            return {field: "" for field in self.FILTER_FIELDS}
+
+        if self._has_filter_params():
+            filtros = self._filters_from_request()
+            self.request.session[self.FILTER_SESSION_KEY] = filtros
+            self.request.session.modified = True
+            return filtros
+
+        filtros_guardados = self.request.session.get(self.FILTER_SESSION_KEY, {})
+        if isinstance(filtros_guardados, dict):
+            return {field: (filtros_guardados.get(field, "") or "") for field in self.FILTER_FIELDS}
+
+        return {field: "" for field in self.FILTER_FIELDS}
 
     def get_filtered_queryset(self):
         queryset = (
-            Activo.objects.select_related("tipo_activo", "estado_activo")
+            Activo.objects.select_related("tipo_activo", "estado_activo", "empresa")
             .prefetch_related("fotos")
             .order_by("tipo_activo__nombre", "codigo")
         )
@@ -35,6 +71,7 @@ class ActivoFilterMixin:
                 | Q(modelo__icontains=busqueda)
                 | Q(serie__icontains=busqueda)
                 | Q(codigo_sap__icontains=busqueda)
+                | Q(empresa__nombre__icontains=busqueda)
             )
 
         estado_id = self.get_filter_value("estado")
@@ -45,24 +82,41 @@ class ActivoFilterMixin:
         if tipo_id.isdigit():
             queryset = queryset.filter(tipo_activo_id=tipo_id)
 
+        empresa_id = self.get_filter_value("empresa")
+        if empresa_id.isdigit():
+            queryset = queryset.filter(empresa_id=empresa_id)
+
         if self.get_filter_value("ocultar_deshabilitados") == "1":
             queryset = queryset.filter(activo=True)
 
         return queryset
 
     def get_filter_context(self):
+        filtros = self.get_active_filters()
         return {
-            "busqueda": self.get_filter_value("q"),
-            "estado_seleccionado": self.get_filter_value("estado"),
-            "tipo_seleccionado": self.get_filter_value("tipo"),
-            "ocultar_deshabilitados": self.get_filter_value("ocultar_deshabilitados") == "1",
+            "busqueda": filtros["q"],
+            "estado_seleccionado": filtros["estado"],
+            "tipo_seleccionado": filtros["tipo"],
+            "empresa_seleccionada": filtros["empresa"],
+            "ocultar_deshabilitados": filtros["ocultar_deshabilitados"] == "1",
             "estados_activo": EstadoActivo.objects.filter(activo=True).order_by("nombre"),
             "tipos_activo": TipoActivo.objects.filter(activo=True).order_by("nombre"),
+            "empresas_activo": Empresa.objects.filter(activo=True).order_by("nombre"),
         }
 
     def get_export_querystring(self):
+        filtros = self.get_active_filters()
         params = self.request.GET.copy()
         params.pop("cols", None)
+        params["q"] = filtros["q"]
+        params["estado"] = filtros["estado"]
+        params["tipo"] = filtros["tipo"]
+        params["empresa"] = filtros["empresa"]
+        if filtros["ocultar_deshabilitados"] == "1":
+            params["ocultar_deshabilitados"] = "1"
+        else:
+            params.pop("ocultar_deshabilitados", None)
+        params.pop("reset", None)
         querystring = params.urlencode()
         return f"?{querystring}" if querystring else ""
 
@@ -75,6 +129,7 @@ class ActivoListView(LoginRequiredMixin, ActivoFilterMixin, ListView):
     COLUMNAS_DISPONIBLES = [
         ("codigo", "Código"),
         ("tipo_activo", "Tipo"),
+        ("empresa", "Empresa"),
         ("marca", "Marca"),
         ("modelo", "Modelo"),
         ("serie", "Serie"),
@@ -91,6 +146,7 @@ class ActivoListView(LoginRequiredMixin, ActivoFilterMixin, ListView):
     COLUMNAS_POR_DEFECTO = [
         "codigo",
         "tipo_activo",
+        "empresa",
         "marca",
         "modelo",
         "serie",
@@ -180,7 +236,7 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
             return None
 
         return (
-            Activo.objects.select_related("tipo_activo", "estado_activo")
+            Activo.objects.select_related("tipo_activo", "estado_activo", "empresa")
             .prefetch_related("fotos")
             .filter(pk=raw_pk)
             .first()
@@ -276,7 +332,7 @@ class ActivoDetailView(LoginRequiredMixin, DetailView):
 
     def get_queryset(self):
         return (
-            Activo.objects.select_related("tipo_activo", "estado_activo")
+            Activo.objects.select_related("tipo_activo", "estado_activo", "empresa")
             .prefetch_related(
                 Prefetch(
                     "fotos",

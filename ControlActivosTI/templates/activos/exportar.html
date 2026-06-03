@@ -16,7 +16,7 @@
 
 <div class="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
     <form method="get" class="space-y-6" data-scroll-to-results>
-        <div class="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(180px,0.7fr)_minmax(180px,0.7fr)]">
+        <div class="grid gap-4 lg:grid-cols-4">
             <div>
                 <label class="mb-2 block text-sm font-semibold text-slate-700">Busqueda</label>
                 <input
@@ -59,6 +59,22 @@
                     {% endfor %}
                 </select>
             </div>
+
+            <div>
+                <label for="filtro-empresa" class="mb-2 block text-sm font-semibold text-slate-700">Empresa</label>
+                <select
+                    id="filtro-empresa"
+                    name="empresa"
+                    class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+                >
+                    <option value="">Todas las empresas</option>
+                    {% for empresa in empresas_activo %}
+                        <option value="{{ empresa.pk }}" {% if empresa_seleccionada == empresa.pk|stringformat:"s" %}selected{% endif %}>
+                            {{ empresa.nombre }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
         </div>
 
         <div class="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
@@ -79,7 +95,7 @@
             <button type="submit" class="rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700">
                 Aplicar filtros
             </button>
-            <a href="{% url 'activos:exportar' %}" class="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+            <a href="{% url 'activos:exportar' %}?reset=1" class="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
                 Limpiar
             </a>
         </div>
@@ -106,6 +122,7 @@
         <input type="hidden" name="q" value="{{ busqueda }}">
         <input type="hidden" name="estado" value="{{ estado_seleccionado }}">
         <input type="hidden" name="tipo" value="{{ tipo_seleccionado }}">
+        <input type="hidden" name="empresa" value="{{ empresa_seleccionada }}">
         {% if ocultar_deshabilitados %}
             <input type="hidden" name="ocultar_deshabilitados" value="1">
         {% endif %}
@@ -124,6 +141,7 @@
                             <th class="px-4 py-3 font-semibold">Seleccion</th>
                             <th class="px-4 py-3 font-semibold">Codigo</th>
                             <th class="px-4 py-3 font-semibold">Tipo</th>
+                            <th class="px-4 py-3 font-semibold">Empresa</th>
                             <th class="px-4 py-3 font-semibold">Marca / Modelo</th>
                             <th class="px-4 py-3 font-semibold">Serie</th>
                             <th class="px-4 py-3 font-semibold">Codigo SAP</th>
@@ -146,6 +164,7 @@
                                 </td>
                                 <td class="px-4 py-3 font-semibold text-slate-900">{{ activo.codigo }}</td>
                                 <td class="px-4 py-3">{{ activo.tipo_activo }}</td>
+                                <td class="px-4 py-3">{{ activo.empresa|default:"-" }}</td>
                                 <td class="px-4 py-3">{{ activo.marca }} {{ activo.modelo }}</td>
                                 <td class="px-4 py-3">{{ activo.serie|default:"-" }}</td>
                                 <td class="px-4 py-3">{{ activo.codigo_sap|default:"-" }}</td>

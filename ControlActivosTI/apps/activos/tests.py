@@ -45,10 +45,12 @@ class ActivoAdminFormTests(TestCase):
         self.tipo_mouse = TipoActivo.objects.create(nombre="Mouse")
         self.tipo_laptop = TipoActivo.objects.create(nombre="Laptop")
         self.tipo_pc = TipoActivo.objects.create(nombre="PC")
+        self.empresa = Empresa.objects.create(nombre="Empresa Test")
 
     def _data_base(self, tipo_activo):
         return {
             "tipo_activo": tipo_activo.pk,
+            "empresa": self.empresa.pk,
             "marca": "Logitech",
             "modelo": "MX",
             "serie": "S/N",
@@ -88,13 +90,14 @@ class ActivoAdminFormTests(TestCase):
         self.assertEqual(activo.sistema_operativo, "Windows")
         self.assertEqual(activo.codigo_sap, "SAP-001")
 
-    def test_exige_codigo_sap_para_laptops_y_pc(self):
+    def test_codigo_sap_es_opcional_para_laptops_y_pc(self):
         data_laptop = self._data_base(self.tipo_laptop)
         data_laptop["codigo_sap"] = ""
 
         form_laptop = ActivoAdminForm(data=data_laptop)
-        self.assertFalse(form_laptop.is_valid())
-        self.assertIn("codigo_sap", form_laptop.errors)
+        self.assertTrue(form_laptop.is_valid(), form_laptop.errors)
+        activo_laptop = form_laptop.save()
+        self.assertIsNone(activo_laptop.codigo_sap)
 
         data_pc = self._data_base(self.tipo_pc)
         data_pc["codigo_sap"] = "pc-sap-002"
@@ -297,6 +300,7 @@ class EventoActivoAdminViewTests(TestCase):
         self.tipo_laptop = TipoActivo.objects.create(nombre="Laptop")
         self.activo = Activo.objects.create(
             tipo_activo=self.tipo_laptop,
+            empresa=self.empresa,
             marca="Dell",
             modelo="Latitude",
             serie="LAP-100",
@@ -389,6 +393,7 @@ class EventoActivoImpactoTests(TestCase):
     def test_evento_informativo_no_modifica_ficha_del_activo(self):
         activo = Activo.objects.create(
             tipo_activo=self.tipo_laptop,
+            empresa=self.empresa,
             marca="Lenovo",
             modelo="ThinkPad",
             serie="GHI789",
@@ -438,9 +443,12 @@ class ActivoListViewTests(TestCase):
         self.estado = EstadoActivo.objects.create(nombre="Disponible", permite_asignacion=True)
         self.tipo_laptop = TipoActivo.objects.create(nombre="Laptop")
         self.tipo_mouse = TipoActivo.objects.create(nombre="Mouse")
+        self.empresa_acme = Empresa.objects.create(nombre="Acme")
+        self.empresa_globex = Empresa.objects.create(nombre="Globex")
 
         Activo.objects.create(
             tipo_activo=self.tipo_mouse,
+            empresa=self.empresa_globex,
             marca="Logitech",
             modelo="M185",
             serie="MOU-001",
@@ -448,6 +456,7 @@ class ActivoListViewTests(TestCase):
         )
         Activo.objects.create(
             tipo_activo=self.tipo_laptop,
+            empresa=self.empresa_acme,
             marca="Dell",
             modelo="Latitude",
             serie="LAP-001",
@@ -456,6 +465,7 @@ class ActivoListViewTests(TestCase):
         )
         Activo.objects.create(
             tipo_activo=self.tipo_mouse,
+            empresa=self.empresa_globex,
             marca="HP",
             modelo="M100",
             serie="MOU-002",
@@ -512,6 +522,33 @@ class ActivoListViewTests(TestCase):
         self.assertContains(response, reverse("activos:exportar"))
         self.assertContains(response, "Exportar")
 
+    def test_list_view_can_filter_by_empresa(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("activos:lista"), {"empresa": str(self.empresa_acme.pk)})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Empresa: Acme")
+        self.assertContains(response, "LAP-001")
+        self.assertNotContains(response, "MOU-001")
+
+    def test_list_view_recuerda_ultimo_filtro_y_puede_restablecerlo(self):
+        self.client.force_login(self.user)
+
+        filtered_response = self.client.get(reverse("activos:lista"), {"empresa": str(self.empresa_acme.pk)})
+        self.assertEqual(filtered_response.status_code, 200)
+        self.assertContains(filtered_response, "Empresa: Acme")
+
+        remembered_response = self.client.get(reverse("activos:lista"))
+        self.assertEqual(remembered_response.status_code, 200)
+        self.assertContains(remembered_response, "Empresa: Acme")
+        self.assertNotContains(remembered_response, "MOU-001")
+
+        reset_response = self.client.get(reverse("activos:lista"), {"reset": "1"})
+        self.assertEqual(reset_response.status_code, 200)
+        self.assertNotContains(reset_response, "Empresa: Acme")
+        self.assertContains(reset_response, "MOU-001")
+
 
 class ActivoExportViewTests(TestCase):
     def setUp(self):
@@ -519,8 +556,10 @@ class ActivoExportViewTests(TestCase):
         self.estado = EstadoActivo.objects.create(nombre="Disponible", permite_asignacion=True)
         self.tipo_laptop = TipoActivo.objects.create(nombre="Laptop")
         self.tipo_mouse = TipoActivo.objects.create(nombre="Mouse")
+        self.empresa = Empresa.objects.create(nombre="Acme")
         self.activo_laptop = Activo.objects.create(
             tipo_activo=self.tipo_laptop,
+            empresa=self.empresa,
             marca="Dell",
             modelo="Latitude",
             serie="EXP-001",
@@ -535,6 +574,7 @@ class ActivoExportViewTests(TestCase):
         )
         self.activo_mouse = Activo.objects.create(
             tipo_activo=self.tipo_mouse,
+            empresa=self.empresa,
             marca="Logitech",
             modelo="M185",
             serie="EXP-002",
@@ -571,14 +611,16 @@ class ActivoExportViewTests(TestCase):
         worksheet = workbook.active
         headers = [cell.value for cell in worksheet[1]]
         self.assertIn("Valor de Compra", headers)
+        self.assertIn("Empresa", headers)
         self.assertNotIn("Fotos", headers)
 
         rows = list(worksheet.iter_rows(min_row=2, values_only=True))
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0][0], self.activo_laptop.codigo)
         self.assertEqual(rows[0][1], self.activo_laptop.tipo_activo.nombre)
-        self.assertEqual(rows[0][11], self.activo_laptop.valor)
-        self.assertEqual(rows[0][13], "Si")
+        self.assertEqual(rows[0][2], self.activo_laptop.empresa.nombre)
+        self.assertEqual(rows[0][12], self.activo_laptop.valor)
+        self.assertEqual(rows[0][14], "Si")
 
     def test_export_view_requires_at_least_one_selected_asset(self):
         self.client.force_login(self.user)
@@ -598,6 +640,7 @@ class ActivoCreateViewTests(TestCase):
         self.user = User.objects.create_user(username="creador", password="testpass123")
         self.estado = EstadoActivo.objects.create(nombre="Disponible", permite_asignacion=True)
         self.tipo_laptop = TipoActivo.objects.create(nombre="Laptop")
+        self.empresa = Empresa.objects.create(nombre="Acme")
 
     def tearDown(self):
         self.override_media.disable()
@@ -606,6 +649,7 @@ class ActivoCreateViewTests(TestCase):
     def _datos_base(self):
         return {
             "tipo_activo": self.tipo_laptop.pk,
+            "empresa": self.empresa.pk,
             "marca": "Dell",
             "modelo": "Latitude 5440",
             "serie": "LAP-777",
@@ -640,6 +684,7 @@ class ActivoCreateViewTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         activo = Activo.objects.get(serie="LAP-777")
+        self.assertEqual(activo.empresa, self.empresa)
         self.assertEqual(activo.cpu, "Intel Core i7")
         self.assertEqual(activo.ram, "16 GB")
         self.assertEqual(activo.disco, "512 GB SSD")
@@ -656,6 +701,7 @@ class ActivoCreateViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Nuevo activo")
         self.assertContains(response, "Fotos del activo")
+        self.assertContains(response, "Empresa")
 
     def test_edit_mode_renders_existing_data_and_updates_activo(self):
         activo = Activo.objects.create(
@@ -728,6 +774,7 @@ class ActivoCreateViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         activo.refresh_from_db()
         self.assertEqual(activo.modelo, "ThinkPad T14 Gen 2")
+        self.assertEqual(activo.empresa, self.empresa)
         self.assertEqual(activo.codigo_sap, "SAP-EDIT-002")
         self.assertEqual(activo.cpu, "Intel Core i7")
         self.assertEqual(activo.ram, "16 GB")
@@ -816,6 +863,7 @@ class ActivoDetailViewTests(TestCase):
         self.assertContains(response, "Mostrando las 5 asignaciones")
         self.assertContains(response, "Ver historial completo")
         self.assertContains(response, "LAP-001")
+        self.assertContains(response, "Acme")
         self.assertContains(response, f"{reverse('activos:nuevo')}?editar={self.activo.pk}")
         self.assertContains(response, reverse("asignaciones:detalle", args=[self.asignacion_activa.pk]))
         self.assertContains(response, reverse("asignaciones:detalle", args=[self.historial_asignaciones[0].pk]))

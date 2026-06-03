@@ -13,7 +13,7 @@ from django.db.models import Max
 from django.utils import timezone
 from PIL import Image, ImageOps
 
-from apps.catalogos.models import EstadoActivo, TipoActivo, TipoEventoActivo
+from apps.catalogos.models import Empresa, EstadoActivo, TipoActivo, TipoEventoActivo
 
 
 TIPOS_ACTIVO_CON_ESPECIFICACIONES = (
@@ -79,6 +79,13 @@ class Activo(models.Model):
         TipoActivo,
         on_delete=models.PROTECT,
         related_name="activos",
+    )
+    empresa = models.ForeignKey(
+        Empresa,
+        on_delete=models.PROTECT,
+        related_name="activos",
+        null=True,
+        blank=True,
     )
     marca = models.CharField(max_length=80)
     modelo = models.CharField(max_length=80)

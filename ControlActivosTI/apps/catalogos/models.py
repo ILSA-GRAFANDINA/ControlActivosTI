@@ -52,7 +52,7 @@ class Empresa(models.Model):
 
     class Meta:
         verbose_name = "Empresa"
-        verbose_name_plural = "Empresas"
+        verbose_name_plural = "Empresas de Activos"
         ordering = ["nombre"]
 
     def __str__(self):

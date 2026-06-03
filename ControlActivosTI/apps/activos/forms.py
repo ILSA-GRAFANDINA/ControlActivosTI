@@ -55,6 +55,7 @@ class ActivoAdminForm(forms.ModelForm):
 
         etiquetas = {
             "tipo_activo": "Tipo de activo",
+            "empresa": "Empresa",
             "marca": "Marca",
             "modelo": "Modelo",
             "serie": "Serie",

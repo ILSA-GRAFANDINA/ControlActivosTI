@@ -21,7 +21,7 @@
 
 <div class="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
     <form method="get" class="space-y-6" data-scroll-to-results>
-        <div class="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(180px,0.7fr)_minmax(180px,0.7fr)]">
+        <div class="grid gap-4 lg:grid-cols-4">
             <div>
                 <label class="mb-2 block text-sm font-semibold text-slate-700">Búsqueda</label>
                 <input
@@ -64,6 +64,22 @@
                     {% endfor %}
                 </select>
             </div>
+
+            <div>
+                <label for="filtro-empresa" class="mb-2 block text-sm font-semibold text-slate-700">Empresa</label>
+                <select
+                    id="filtro-empresa"
+                    name="empresa"
+                    class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+                >
+                    <option value="">Todas las empresas</option>
+                    {% for empresa in empresas_activo %}
+                        <option value="{{ empresa.pk }}" {% if empresa_seleccionada == empresa.pk|stringformat:"s" %}selected{% endif %}>
+                            {{ empresa.nombre }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
         </div>
 
         <div class="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
@@ -80,7 +96,7 @@
             <span class="text-xs text-slate-500">Solo muestra activos vigentes en el listado.</span>
         </div>
 
-        {% if busqueda or estado_seleccionado or tipo_seleccionado or ocultar_deshabilitados %}
+        {% if busqueda or estado_seleccionado or tipo_seleccionado or empresa_seleccionada or ocultar_deshabilitados %}
             <div class="flex flex-wrap items-center gap-2">
                 <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Filtros activos</span>
                 {% if busqueda %}
@@ -97,6 +113,13 @@
                     {% for tipo in tipos_activo %}
                         {% if tipo_seleccionado == tipo.pk|stringformat:"s" %}
                             <span class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">Tipo: {{ tipo.nombre }}</span>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+                {% if empresa_seleccionada %}
+                    {% for empresa in empresas_activo %}
+                        {% if empresa_seleccionada == empresa.pk|stringformat:"s" %}
+                            <span class="rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700">Empresa: {{ empresa.nombre }}</span>
                         {% endif %}
                     {% endfor %}
                 {% endif %}
@@ -129,7 +152,7 @@
             <button type="submit" class="rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700">
                 Aplicar
             </button>
-            <a href="{% url 'activos:lista' %}" class="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+            <a href="{% url 'activos:lista' %}?reset=1" class="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
                 Restablecer
             </a>
         </div>
@@ -143,6 +166,7 @@
                 <tr>
                     {% if "codigo" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Código</th>{% endif %}
                     {% if "tipo_activo" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Tipo</th>{% endif %}
+                    {% if "empresa" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Empresa</th>{% endif %}
                     {% if "marca" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Marca</th>{% endif %}
                     {% if "modelo" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Modelo</th>{% endif %}
                     {% if "serie" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Serie</th>{% endif %}
@@ -181,6 +205,7 @@
                             </td>
                         {% endif %}
                         {% if "tipo_activo" in columnas_seleccionadas %}<td class="px-4 py-3">{{ activo.tipo_activo }}</td>{% endif %}
+                        {% if "empresa" in columnas_seleccionadas %}<td class="px-4 py-3">{{ activo.empresa|default:"-" }}</td>{% endif %}
                         {% if "marca" in columnas_seleccionadas %}<td class="px-4 py-3 font-medium text-slate-900">{{ activo.marca }}</td>{% endif %}
                         {% if "modelo" in columnas_seleccionadas %}<td class="px-4 py-3">{{ activo.modelo }}</td>{% endif %}
                         {% if "serie" in columnas_seleccionadas %}<td class="px-4 py-3">{{ activo.serie }}</td>{% endif %}

@@ -6,6 +6,7 @@ from openpyxl.utils import get_column_letter
 EXPORT_HEADERS = [
     "Codigo",
     "Tipo de activo",
+    "Empresa",
     "Marca",
     "Modelo",
     "Serie",
@@ -28,6 +29,7 @@ def _activo_to_row(activo):
     return [
         activo.codigo,
         activo.tipo_activo.nombre if activo.tipo_activo_id else "",
+        activo.empresa.nombre if activo.empresa_id else "",
         activo.marca,
         activo.modelo,
         activo.serie,
@@ -65,10 +67,10 @@ def build_activos_export_workbook(activos):
         worksheet.append(_activo_to_row(activo))
 
     for row in worksheet.iter_rows(min_row=2, max_row=worksheet.max_row):
-        row[10].number_format = "dd/mm/yyyy"
-        row[11].number_format = '#,##0.00'
-        row[15].number_format = "dd/mm/yyyy hh:mm"
+        row[11].number_format = "dd/mm/yyyy"
+        row[12].number_format = '#,##0.00'
         row[16].number_format = "dd/mm/yyyy hh:mm"
+        row[17].number_format = "dd/mm/yyyy hh:mm"
 
     for index, header in enumerate(EXPORT_HEADERS, start=1):
         max_length = len(header)
