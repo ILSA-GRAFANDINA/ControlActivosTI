@@ -45,19 +45,38 @@
             </div>
 
             <div>
-                <label for="filtro-tipo" class="mb-2 block text-sm font-semibold text-slate-700">Tipo</label>
-                <select
-                    id="filtro-tipo"
-                    name="tipo"
-                    class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
-                >
-                    <option value="">Todos los tipos</option>
-                    {% for tipo in tipos_activo %}
-                        <option value="{{ tipo.pk }}" {% if tipo_seleccionado == tipo.pk|stringformat:"s" %}selected{% endif %}>
-                            {{ tipo.nombre }}
-                        </option>
-                    {% endfor %}
-                </select>
+                <label class="mb-2 block text-sm font-semibold text-slate-700">Tipo</label>
+                <details class="relative">
+                    <summary class="flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition duration-200 hover:border-cyan-400 hover:bg-slate-50 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
+                        <span class="{% if tipos_seleccionados %}text-slate-900{% else %}text-slate-400{% endif %}">
+                            {% if tipos_seleccionados %}
+                                {{ tipos_seleccionados|length }} tipo{{ tipos_seleccionados|length|pluralize }} seleccionado{{ tipos_seleccionados|length|pluralize:"s" }}
+                            {% else %}
+                                Selecciona uno o varios tipos
+                            {% endif %}
+                        </span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08Z" clip-rule="evenodd" />
+                        </svg>
+                    </summary>
+                    <div class="absolute left-0 right-0 z-20 mt-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
+                        <div class="grid gap-2 sm:grid-cols-2">
+                            {% for tipo in tipos_activo %}
+                                <label class="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 transition hover:border-cyan-300 hover:bg-cyan-50/70">
+                                    <input
+                                        type="checkbox"
+                                        name="tipo"
+                                        value="{{ tipo.pk }}"
+                                        class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                                        {% if tipo.pk|stringformat:"s" in tipos_seleccionados %}checked{% endif %}
+                                    >
+                                    <span class="font-medium">{{ tipo.nombre }}</span>
+                                </label>
+                            {% endfor %}
+                        </div>
+                        <p class="mt-3 text-xs text-slate-500">Selecciona uno o varios tipos para combinar la búsqueda.</p>
+                    </div>
+                </details>
             </div>
 
             <div>
@@ -121,7 +140,9 @@
         {% csrf_token %}
         <input type="hidden" name="q" value="{{ busqueda }}">
         <input type="hidden" name="estado" value="{{ estado_seleccionado }}">
-        <input type="hidden" name="tipo" value="{{ tipo_seleccionado }}">
+        {% for tipo_id in tipos_seleccionados %}
+            <input type="hidden" name="tipo" value="{{ tipo_id }}">
+        {% endfor %}
         <input type="hidden" name="empresa" value="{{ empresa_seleccionada }}">
         {% if ocultar_deshabilitados %}
             <input type="hidden" name="ocultar_deshabilitados" value="1">

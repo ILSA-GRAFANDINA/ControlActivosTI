@@ -16,7 +16,8 @@ from .services import build_activos_export_workbook
 
 class ActivoFilterMixin:
     FILTER_SESSION_KEY = "activos_filtros_guardados"
-    FILTER_FIELDS = ("q", "estado", "tipo", "empresa", "ocultar_deshabilitados")
+    FILTER_FIELDS = ("q", "estado", "empresa", "ocultar_deshabilitados")
+    FILTER_MULTI_FIELDS = ("tipo",)
 
     def get_filter_value(self, name):
         return self.get_active_filters().get(name, "")
@@ -29,11 +30,14 @@ class ActivoFilterMixin:
             if field == "ocultar_deshabilitados":
                 value = "1" if source.get(field) in ("1", "on", "true", "True") else ""
             filtros[field] = value
+        filtros["tipo"] = [valor.strip() for valor in source.getlist("tipo") if valor.strip().isdigit()]
         return filtros
 
     def _has_filter_params(self):
         source = self.request.POST if self.request.method == "POST" else self.request.GET
-        return any(source.get(field) not in (None, "") for field in self.FILTER_FIELDS)
+        return any(source.get(field) not in (None, "") for field in self.FILTER_FIELDS) or bool(
+            [valor for valor in source.getlist("tipo") if valor.strip()]
+        )
 
     def _reset_filter_state(self):
         self.request.session.pop(self.FILTER_SESSION_KEY, None)
@@ -42,7 +46,7 @@ class ActivoFilterMixin:
     def get_active_filters(self):
         if self.request.GET.get("reset") == "1" or self.request.POST.get("reset") == "1":
             self._reset_filter_state()
-            return {field: "" for field in self.FILTER_FIELDS}
+            return {**{field: "" for field in self.FILTER_FIELDS}, "tipo": []}
 
         if self._has_filter_params():
             filtros = self._filters_from_request()
@@ -52,9 +56,14 @@ class ActivoFilterMixin:
 
         filtros_guardados = self.request.session.get(self.FILTER_SESSION_KEY, {})
         if isinstance(filtros_guardados, dict):
-            return {field: (filtros_guardados.get(field, "") or "") for field in self.FILTER_FIELDS}
+            filtros = {field: (filtros_guardados.get(field, "") or "") for field in self.FILTER_FIELDS}
+            tipo_guardado = filtros_guardados.get("tipo", [])
+            if isinstance(tipo_guardado, str):
+                tipo_guardado = [tipo for tipo in tipo_guardado.split(",") if tipo]
+            filtros["tipo"] = [str(tipo) for tipo in tipo_guardado if str(tipo).strip()]
+            return filtros
 
-        return {field: "" for field in self.FILTER_FIELDS}
+        return {**{field: "" for field in self.FILTER_FIELDS}, "tipo": []}
 
     def get_filtered_queryset(self):
         queryset = (
@@ -78,9 +87,9 @@ class ActivoFilterMixin:
         if estado_id.isdigit():
             queryset = queryset.filter(estado_activo_id=estado_id)
 
-        tipo_id = self.get_filter_value("tipo")
-        if tipo_id.isdigit():
-            queryset = queryset.filter(tipo_activo_id=tipo_id)
+        tipo_ids = self.get_active_filters().get("tipo", [])
+        if tipo_ids:
+            queryset = queryset.filter(tipo_activo_id__in=tipo_ids)
 
         empresa_id = self.get_filter_value("empresa")
         if empresa_id.isdigit():
@@ -96,7 +105,7 @@ class ActivoFilterMixin:
         return {
             "busqueda": filtros["q"],
             "estado_seleccionado": filtros["estado"],
-            "tipo_seleccionado": filtros["tipo"],
+            "tipos_seleccionados": filtros["tipo"],
             "empresa_seleccionada": filtros["empresa"],
             "ocultar_deshabilitados": filtros["ocultar_deshabilitados"] == "1",
             "estados_activo": EstadoActivo.objects.filter(activo=True).order_by("nombre"),
@@ -110,7 +119,7 @@ class ActivoFilterMixin:
         params.pop("cols", None)
         params["q"] = filtros["q"]
         params["estado"] = filtros["estado"]
-        params["tipo"] = filtros["tipo"]
+        params.setlist("tipo", filtros["tipo"])
         params["empresa"] = filtros["empresa"]
         if filtros["ocultar_deshabilitados"] == "1":
             params["ocultar_deshabilitados"] = "1"

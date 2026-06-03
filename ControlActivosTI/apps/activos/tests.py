@@ -443,6 +443,7 @@ class ActivoListViewTests(TestCase):
         self.estado = EstadoActivo.objects.create(nombre="Disponible", permite_asignacion=True)
         self.tipo_laptop = TipoActivo.objects.create(nombre="Laptop")
         self.tipo_mouse = TipoActivo.objects.create(nombre="Mouse")
+        self.tipo_pc = TipoActivo.objects.create(nombre="PC")
         self.empresa_acme = Empresa.objects.create(nombre="Acme")
         self.empresa_globex = Empresa.objects.create(nombre="Globex")
 
@@ -471,6 +472,14 @@ class ActivoListViewTests(TestCase):
             serie="MOU-002",
             estado_activo=self.estado,
             activo=False,
+        )
+        Activo.objects.create(
+            tipo_activo=self.tipo_pc,
+            empresa=self.empresa_acme,
+            marca="Lenovo",
+            modelo="ThinkCentre",
+            serie="PC-001",
+            estado_activo=self.estado,
         )
 
     def test_list_view_shows_type_separators(self):
@@ -530,6 +539,21 @@ class ActivoListViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Empresa: Acme")
         self.assertContains(response, "LAP-001")
+        self.assertNotContains(response, "MOU-001")
+
+    def test_list_view_can_filter_by_multiple_tipos(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse("activos:lista"),
+            {"tipo": [self.tipo_laptop.pk, self.tipo_pc.pk]},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Tipo: Laptop")
+        self.assertContains(response, "Tipo: PC")
+        self.assertContains(response, "LAP-001")
+        self.assertContains(response, "PC-001")
         self.assertNotContains(response, "MOU-001")
 
     def test_list_view_recuerda_ultimo_filtro_y_puede_restablecerlo(self):
