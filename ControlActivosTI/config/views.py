@@ -90,7 +90,7 @@ class InicioView(LoginRequiredMixin, TemplateView):
 
         alertas = [
             {
-                "titulo": "Activos listos para asignacion",
+                "titulo": "Activos listos para asignación",
                 "valor": activos_disponibles,
                 "tono": "emerald",
                 "detalle": "Equipos que pueden entregarse de inmediato.",
@@ -99,7 +99,7 @@ class InicioView(LoginRequiredMixin, TemplateView):
                 "titulo": "Activos actualmente asignados",
                 "valor": activos_asignados,
                 "tono": "cyan",
-                "detalle": "Inventario que ya esta en manos de colaboradores.",
+                "detalle": "Inventario que ya está en manos de colaboradores.",
             },
             {
                 "titulo": "Colaboradores no activos",
@@ -111,7 +111,7 @@ class InicioView(LoginRequiredMixin, TemplateView):
                 "titulo": "Asignaciones activas",
                 "valor": asignaciones_activas,
                 "tono": "rose",
-                "detalle": "Procesos abiertos pendientes de devolucion o seguimiento.",
+                "detalle": "Procesos abiertos pendientes de devolución o seguimiento.",
             },
         ]
 
