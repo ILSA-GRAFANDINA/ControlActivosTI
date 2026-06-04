@@ -556,6 +556,50 @@ class ActivoListViewTests(TestCase):
         self.assertContains(response, "PC-001")
         self.assertNotContains(response, "MOU-001")
 
+    def test_list_view_shows_tabs_by_tipo_with_filtered_counts(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("activos:lista"), {"empresa": str(self.empresa_acme.pk)})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, ">Todos<", html=False)
+        self.assertContains(response, ">Laptop<", html=False)
+        self.assertContains(response, ">PC<", html=False)
+        self.assertNotContains(response, ">Mouse<", html=False)
+        self.assertContains(response, "tab_tipo=%s" % self.tipo_laptop.pk)
+        self.assertContains(response, "tab_tipo=%s" % self.tipo_pc.pk)
+
+    def test_list_view_can_focus_one_tipo_from_tab(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("activos:lista"), {"tab_tipo": str(self.tipo_laptop.pk)})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "LAP-001")
+        self.assertNotContains(response, "MOU-001")
+        self.assertNotContains(response, "PC-001")
+        self.assertEqual(response.context["tab_tipo_activa"], str(self.tipo_laptop.pk))
+
+    def test_list_view_keeps_filters_when_switching_tab(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse("activos:lista"),
+            {
+                "empresa": str(self.empresa_acme.pk),
+                "tipo": [self.tipo_laptop.pk, self.tipo_pc.pk],
+                "tab_tipo": str(self.tipo_pc.pk),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Empresa: Acme")
+        self.assertContains(response, "Tipo: Laptop")
+        self.assertContains(response, "Tipo: PC")
+        self.assertContains(response, "PC-001")
+        self.assertNotContains(response, "LAP-001")
+        self.assertNotContains(response, "MOU-001")
+
     def test_list_view_recuerda_ultimo_filtro_y_puede_restablecerlo(self):
         self.client.force_login(self.user)
 
