@@ -624,6 +624,7 @@ class ActivoExportViewTests(TestCase):
         self.estado = EstadoActivo.objects.create(nombre="Disponible", permite_asignacion=True)
         self.tipo_laptop = TipoActivo.objects.create(nombre="Laptop")
         self.tipo_mouse = TipoActivo.objects.create(nombre="Mouse")
+        self.tipo_pc = TipoActivo.objects.create(nombre="PC")
         self.empresa = Empresa.objects.create(nombre="Acme")
         self.activo_laptop = Activo.objects.create(
             tipo_activo=self.tipo_laptop,
@@ -649,6 +650,15 @@ class ActivoExportViewTests(TestCase):
             estado_activo=self.estado,
             activo=False,
         )
+        self.activo_pc = Activo.objects.create(
+            tipo_activo=self.tipo_pc,
+            empresa=self.empresa,
+            marca="Lenovo",
+            modelo="ThinkCentre",
+            serie="EXP-003",
+            codigo_sap="SAP-EXP-003",
+            estado_activo=self.estado,
+        )
 
     def test_export_view_renders_filtered_selection_page(self):
         self.client.force_login(self.user)
@@ -659,6 +669,30 @@ class ActivoExportViewTests(TestCase):
         self.assertContains(response, "Exportar seleccionados")
         self.assertContains(response, self.activo_laptop.codigo)
         self.assertNotContains(response, self.activo_mouse.codigo)
+
+    def test_export_view_shows_tabs_and_selection_actions(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("activos:exportar"), {"ocultar_deshabilitados": "1"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, ">Todos<", html=False)
+        self.assertContains(response, ">Laptop<", html=False)
+        self.assertContains(response, ">PC<", html=False)
+        self.assertNotContains(response, ">Mouse<", html=False)
+        self.assertContains(response, "Seleccionar todos")
+        self.assertContains(response, "Descartar todos")
+
+    def test_export_view_can_focus_one_tipo_from_tab(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("activos:exportar"), {"tab_tipo": str(self.tipo_pc.pk)})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.activo_pc.codigo)
+        self.assertNotContains(response, self.activo_laptop.codigo)
+        self.assertNotContains(response, self.activo_mouse.codigo)
+        self.assertEqual(response.context["tab_tipo_activa"], str(self.tipo_pc.pk))
 
     def test_export_view_generates_excel_for_selected_assets(self):
         self.client.force_login(self.user)

@@ -16,6 +16,9 @@
 
 <div class="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
     <form method="get" class="space-y-6" data-scroll-to-results>
+        {% if tab_tipo_activa %}
+            <input type="hidden" name="tab_tipo" value="{{ tab_tipo_activa }}">
+        {% endif %}
         <div class="grid gap-4 lg:grid-cols-4">
             <div>
                 <label class="mb-2 block text-sm font-semibold text-slate-700">Busqueda</label>
@@ -123,22 +126,49 @@
     </form>
 </div>
 
+{% if tabs_tipo %}
+    <div class="mb-4 overflow-x-auto pb-2">
+        <div class="inline-flex min-w-full gap-2">
+            {% for tab in tabs_tipo %}
+                <a
+                    href="{{ tab.url }}#resultados"
+                    class="inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-semibold transition {% if tab.activa %}border-cyan-200 bg-cyan-50 text-cyan-700 shadow-sm{% else %}border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50{% endif %}"
+                >
+                    <span>{{ tab.nombre }}</span>
+                    <span class="rounded-full {% if tab.activa %}bg-cyan-100 text-cyan-700{% else %}bg-slate-100 text-slate-500{% endif %} px-2 py-0.5 text-xs font-bold">
+                        {{ tab.total }}
+                    </span>
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+{% endif %}
+
 <div id="resultados" class="rounded-2xl border border-slate-200 bg-white shadow-sm">
     <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 px-6 py-4">
         <div>
             <h3 class="text-lg font-semibold text-slate-900">Activos filtrados</h3>
             <p class="text-sm text-slate-500">{{ total_activos_filtrados }} activo{{ total_activos_filtrados|pluralize }} disponible{{ total_activos_filtrados|pluralize:"s," }} para seleccionar.</p>
         </div>
-        <button
-            type="button"
-            class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-            data-toggle-select-all
-        >
-            Seleccionar visibles
-        </button>
+        <div class="flex flex-wrap gap-3">
+            <button
+                type="button"
+                class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                data-select-tab="all"
+            >
+                Seleccionar todos
+            </button>
+            <button
+                type="button"
+                class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                data-select-tab="none"
+            >
+                Descartar todos
+            </button>
+        </div>
     </div>
 
-    <form method="post" class="space-y-4 p-6">
+    <form method="post" class="space-y-4 p-6" data-export-selection-form>
         {% csrf_token %}
         <input type="hidden" name="q" value="{{ busqueda }}">
         <input type="hidden" name="estado" value="{{ estado_seleccionado }}">
@@ -146,9 +176,13 @@
             <input type="hidden" name="tipo" value="{{ tipo_id }}">
         {% endfor %}
         <input type="hidden" name="empresa" value="{{ empresa_seleccionada }}">
+        {% if tab_tipo_activa %}
+            <input type="hidden" name="tab_tipo" value="{{ tab_tipo_activa }}">
+        {% endif %}
         {% if ocultar_deshabilitados %}
             <input type="hidden" name="ocultar_deshabilitados" value="1">
         {% endif %}
+        <div data-selected-hidden-inputs></div>
 
         {% if error_exportacion %}
             <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -182,6 +216,7 @@
                                         value="{{ activo.pk }}"
                                         class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
                                         data-activo-checkbox
+                                        data-activo-id="{{ activo.pk }}"
                                         {% if activo.pk|stringformat:"s" in selected_ids %}checked{% endif %}
                                     >
                                 </td>
@@ -225,17 +260,100 @@
 
 <script>
     (() => {
-        const toggleButton = document.querySelector("[data-toggle-select-all]");
+        const form = document.querySelector("[data-export-selection-form]");
         const checkboxes = Array.from(document.querySelectorAll("[data-activo-checkbox]"));
-        if (!toggleButton || !checkboxes.length) {
+        const hiddenInputsContainer = document.querySelector("[data-selected-hidden-inputs]");
+        const selectAllButton = document.querySelector("[data-select-tab='all']");
+        const clearAllButton = document.querySelector("[data-select-tab='none']");
+
+        if (!form || !hiddenInputsContainer) {
             return;
         }
 
-        toggleButton.addEventListener("click", () => {
-            const allChecked = checkboxes.every((checkbox) => checkbox.checked);
+        const filtersKey = `activos-export-filters:${window.location.pathname}`;
+        const currentFilterSignature = JSON.stringify({
+            q: "{{ busqueda|escapejs }}",
+            estado: "{{ estado_seleccionado|escapejs }}",
+            tipos: [{% for tipo_id in tipos_seleccionados %}"{{ tipo_id|escapejs }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
+            empresa: "{{ empresa_seleccionada|escapejs }}",
+            ocultar: "{{ ocultar_deshabilitados|yesno:'1,0' }}",
+        });
+        const selectionKey = `activos-export-selection:${window.location.pathname}:${currentFilterSignature}`;
+
+        const previousFilterSignature = window.sessionStorage.getItem(filtersKey);
+        if (previousFilterSignature !== currentFilterSignature) {
+            window.sessionStorage.removeItem(selectionKey);
+            window.sessionStorage.setItem(filtersKey, currentFilterSignature);
+        }
+
+        const selectedIds = new Set(
+            JSON.parse(window.sessionStorage.getItem(selectionKey) || "[]")
+        );
+
+        const syncCheckboxes = () => {
             checkboxes.forEach((checkbox) => {
-                checkbox.checked = !allChecked;
+                checkbox.checked = selectedIds.has(checkbox.dataset.activoId);
             });
+        };
+
+        const syncHiddenInputs = () => {
+            hiddenInputsContainer.innerHTML = "";
+            selectedIds.forEach((id) => {
+                const input = document.createElement("input");
+                input.type = "hidden";
+                input.name = "activos";
+                input.value = id;
+                hiddenInputsContainer.appendChild(input);
+            });
+        };
+
+        const persistSelection = () => {
+            window.sessionStorage.setItem(selectionKey, JSON.stringify(Array.from(selectedIds)));
+            syncHiddenInputs();
+        };
+
+        if (selectedIds.size === 0) {
+            checkboxes
+                .filter((checkbox) => checkbox.checked)
+                .forEach((checkbox) => selectedIds.add(checkbox.dataset.activoId));
+        }
+
+        syncCheckboxes();
+        persistSelection();
+
+        checkboxes.forEach((checkbox) => {
+            checkbox.addEventListener("change", () => {
+                if (checkbox.checked) {
+                    selectedIds.add(checkbox.dataset.activoId);
+                } else {
+                    selectedIds.delete(checkbox.dataset.activoId);
+                }
+                persistSelection();
+            });
+        });
+
+        if (selectAllButton) {
+            selectAllButton.addEventListener("click", () => {
+                checkboxes.forEach((checkbox) => {
+                    selectedIds.add(checkbox.dataset.activoId);
+                });
+                syncCheckboxes();
+                persistSelection();
+            });
+        }
+
+        if (clearAllButton) {
+            clearAllButton.addEventListener("click", () => {
+                checkboxes.forEach((checkbox) => {
+                    selectedIds.delete(checkbox.dataset.activoId);
+                });
+                syncCheckboxes();
+                persistSelection();
+            });
+        }
+
+        form.addEventListener("submit", () => {
+            syncHiddenInputs();
         });
     })();
 </script>

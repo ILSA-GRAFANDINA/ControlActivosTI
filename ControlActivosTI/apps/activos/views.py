@@ -18,6 +18,7 @@ class ActivoFilterMixin:
     FILTER_SESSION_KEY = "activos_filtros_guardados"
     FILTER_FIELDS = ("q", "estado", "empresa", "ocultar_deshabilitados")
     FILTER_MULTI_FIELDS = ("tipo",)
+    TAB_PARAM = "tab_tipo"
 
     def get_filter_value(self, name):
         return self.get_active_filters().get(name, "")
@@ -129,12 +130,73 @@ class ActivoFilterMixin:
         querystring = params.urlencode()
         return f"?{querystring}" if querystring else ""
 
+    def get_tab_summary(self, queryset):
+        return list(
+            queryset.values("tipo_activo_id", "tipo_activo__nombre")
+            .annotate(total=Count("id"))
+            .order_by("tipo_activo__nombre")
+        )
+
+    def get_active_tab_type_id(self):
+        source = self.request.POST if self.request.method == "POST" else self.request.GET
+        raw_value = (source.get(self.TAB_PARAM, "") or "").strip()
+        if not raw_value.isdigit():
+            return ""
+        if raw_value not in getattr(self, "available_tab_type_ids", set()):
+            return ""
+        return raw_value
+
+    def build_filter_querystring(self, extra_params=None, include_columns=False):
+        filtros = self.get_active_filters()
+        params = QueryDict("", mutable=True)
+        params["q"] = filtros["q"]
+        params["estado"] = filtros["estado"]
+        params.setlist("tipo", filtros["tipo"])
+        params["empresa"] = filtros["empresa"]
+        if filtros["ocultar_deshabilitados"] == "1":
+            params["ocultar_deshabilitados"] = "1"
+
+        if include_columns and hasattr(self, "get_selected_columns"):
+            for columna in self.get_selected_columns():
+                params.appendlist("cols", columna)
+
+        for key, value in (extra_params or {}).items():
+            if value in ("", None, [], ()):
+                continue
+            if isinstance(value, (list, tuple)):
+                params.setlist(key, [str(item) for item in value])
+            else:
+                params[key] = str(value)
+
+        querystring = params.urlencode()
+        return f"?{querystring}" if querystring else ""
+
+    def build_tabs_context(self, base_url, summary, active_tab_type_id, include_columns=False):
+        return [
+            {
+                "id": "",
+                "nombre": "Todos",
+                "total": sum(item["total"] for item in summary),
+                "activa": not active_tab_type_id,
+                "url": f"{base_url}{self.build_filter_querystring(include_columns=include_columns)}",
+            },
+            *[
+                {
+                    "id": str(item["tipo_activo_id"]),
+                    "nombre": item["tipo_activo__nombre"],
+                    "total": item["total"],
+                    "activa": active_tab_type_id == str(item["tipo_activo_id"]),
+                    "url": f"{base_url}{self.build_filter_querystring({self.TAB_PARAM: item['tipo_activo_id']}, include_columns=include_columns)}",
+                }
+                for item in summary
+            ],
+        ]
+
 
 class ActivoListView(LoginRequiredMixin, ActivoFilterMixin, ListView):
     model = Activo
     template_name = "activos/lista.html"
     context_object_name = "activos"
-    TAB_PARAM = "tab_tipo"
 
     COLUMNAS_DISPONIBLES = [
         ("codigo", "Código"),
@@ -171,40 +233,9 @@ class ActivoListView(LoginRequiredMixin, ActivoFilterMixin, ListView):
         ]
         return seleccionadas or self.COLUMNAS_POR_DEFECTO
 
-    def get_active_tab_type_id(self):
-        raw_value = (self.request.GET.get(self.TAB_PARAM, "") or "").strip()
-        if not raw_value.isdigit():
-            return ""
-        if raw_value not in getattr(self, "available_tab_type_ids", set()):
-            return ""
-        return raw_value
-
-    def build_list_querystring(self, tab_tipo=None):
-        filtros = self.get_active_filters()
-        params = QueryDict("", mutable=True)
-        params["q"] = filtros["q"]
-        params["estado"] = filtros["estado"]
-        params.setlist("tipo", filtros["tipo"])
-        params["empresa"] = filtros["empresa"]
-        if filtros["ocultar_deshabilitados"] == "1":
-            params["ocultar_deshabilitados"] = "1"
-
-        for columna in self.get_selected_columns():
-            params.appendlist("cols", columna)
-
-        if tab_tipo:
-            params[self.TAB_PARAM] = str(tab_tipo)
-
-        querystring = params.urlencode()
-        return f"?{querystring}" if querystring else ""
-
     def get_queryset(self):
         queryset = self.get_filtered_queryset()
-        resumen_tipos = list(
-            queryset.values("tipo_activo_id", "tipo_activo__nombre")
-            .annotate(total=Count("id"))
-            .order_by("tipo_activo__nombre")
-        )
+        resumen_tipos = self.get_tab_summary(queryset)
         self.tab_type_summary = resumen_tipos
         self.available_tab_type_ids = {str(item["tipo_activo_id"]) for item in resumen_tipos}
         self.active_tab_type_id = self.get_active_tab_type_id()
@@ -224,40 +255,42 @@ class ActivoListView(LoginRequiredMixin, ActivoFilterMixin, ListView):
         context["total_activos_filtrados"] = len(context.get("activos", []))
         context["exportar_url"] = f"{reverse('activos:exportar')}{self.get_export_querystring()}"
         context["tab_tipo_activa"] = self.active_tab_type_id
-        context["tabs_tipo"] = [
-            {
-                "id": "",
-                "nombre": "Todos",
-                "total": sum(item["total"] for item in self.tab_type_summary),
-                "activa": not self.active_tab_type_id,
-                "url": f"{reverse('activos:lista')}{self.build_list_querystring()}",
-            },
-            *[
-                {
-                    "id": str(item["tipo_activo_id"]),
-                    "nombre": item["tipo_activo__nombre"],
-                    "total": item["total"],
-                    "activa": self.active_tab_type_id == str(item["tipo_activo_id"]),
-                    "url": f"{reverse('activos:lista')}{self.build_list_querystring(item['tipo_activo_id'])}",
-                }
-                for item in self.tab_type_summary
-            ],
-        ]
+        context["tabs_tipo"] = self.build_tabs_context(
+            reverse("activos:lista"),
+            self.tab_type_summary,
+            self.active_tab_type_id,
+            include_columns=True,
+        )
         return context
 
 
 class ActivoExportView(LoginRequiredMixin, ActivoFilterMixin, TemplateView):
     template_name = "activos/exportar.html"
 
+    def get_filtered_export_queryset(self):
+        queryset = self.get_filtered_queryset()
+        self.tab_type_summary = self.get_tab_summary(queryset)
+        self.available_tab_type_ids = {str(item["tipo_activo_id"]) for item in self.tab_type_summary}
+        self.active_tab_type_id = self.get_active_tab_type_id()
+        if self.active_tab_type_id:
+            queryset = queryset.filter(tipo_activo_id=self.active_tab_type_id)
+        return queryset
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        activos = list(self.get_filtered_queryset())
+        activos = list(self.get_filtered_export_queryset())
         context.update(self.get_filter_context())
         context["activos"] = activos
         context["total_activos_filtrados"] = len(activos)
         context["volver_url"] = f"{reverse('activos:lista')}{self.get_export_querystring()}"
         context["error_exportacion"] = kwargs.get("error_exportacion", "")
         context["selected_ids"] = kwargs.get("selected_ids", [])
+        context["tab_tipo_activa"] = self.active_tab_type_id
+        context["tabs_tipo"] = self.build_tabs_context(
+            reverse("activos:exportar"),
+            self.tab_type_summary,
+            self.active_tab_type_id,
+        )
         return context
 
     def post(self, request, *args, **kwargs):
