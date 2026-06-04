@@ -4,7 +4,6 @@ from django.views.generic import TemplateView
 
 from apps.activos.models import Activo
 from apps.asignaciones.models import Asignacion, AsignacionDetalle
-from apps.catalogos.models import Empresa
 from apps.colaboradores.models import Colaborador
 
 ASIGNACIONES_ABIERTAS = [
@@ -91,7 +90,7 @@ class InicioView(LoginRequiredMixin, TemplateView):
 
         alertas = [
             {
-                "titulo": "Activos listos para asignación",
+                "titulo": "Activos listos para asignacion",
                 "valor": activos_disponibles,
                 "tono": "emerald",
                 "detalle": "Equipos que pueden entregarse de inmediato.",
@@ -112,7 +111,7 @@ class InicioView(LoginRequiredMixin, TemplateView):
                 "titulo": "Asignaciones activas",
                 "valor": asignaciones_activas,
                 "tono": "rose",
-                "detalle": "Procesos abiertos pendientes de devolución o seguimiento.",
+                "detalle": "Procesos abiertos pendientes de devolucion o seguimiento.",
             },
         ]
 

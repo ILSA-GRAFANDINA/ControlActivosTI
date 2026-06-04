@@ -10,10 +10,10 @@
     <section class="overflow-hidden rounded-3xl border border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.18),_transparent_35%),linear-gradient(135deg,_#0f172a,_#1e293b)] p-8 text-white shadow-sm">
         <div class="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(320px,1fr)] lg:items-end">
             <div>
-                <p class="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-200">Visión general</p>
+                <p class="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-200">Vision general</p>
                 <h2 class="mt-3 text-3xl font-semibold leading-tight">DASHBOARD PRINCIPAL</h2>
                 <p class="mt-3 max-w-2xl text-sm text-slate-300">
-                    Revisa rápidamente el estado del inventario, la tendencia de asignaciones y los puntos que requieren atención.
+                    Revisa rapidamente el estado del inventario, la tendencia de asignaciones y los puntos que requieren atencion.
                 </p>
             </div>
             <div class="grid gap-4 sm:grid-cols-2">
@@ -70,7 +70,7 @@
                 <div class="mb-5 flex items-start justify-between gap-4">
                     <div>
                         <h3 class="text-lg font-semibold text-slate-900">Activos por estado</h3>
-                        <p class="mt-1 text-sm text-slate-500">Distribución actual del inventario según disponibilidad y condición.</p>
+                        <p class="mt-1 text-sm text-slate-500">Distribucion actual del inventario segun disponibilidad y condicion.</p>
                     </div>
                     <button
                         type="button"
@@ -118,7 +118,7 @@
                 <div class="mb-5 flex items-start justify-between gap-4">
                     <div>
                         <h3 class="text-lg font-semibold text-slate-900">Activos por tipo</h3>
-                        <p class="mt-1 text-sm text-slate-500">Composición del inventario por categoría principal.</p>
+                        <p class="mt-1 text-sm text-slate-500">Composicion del inventario por categoria principal.</p>
                     </div>
                     <button
                         type="button"
@@ -140,14 +140,14 @@
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div class="mb-5 flex items-start justify-between gap-4">
                     <div>
-                        <h3 class="text-lg font-semibold text-slate-900">Colaboradores por área</h3>
-                        <p class="mt-1 text-sm text-slate-500">Carga de personal por área organizacional.</p>
+                        <h3 class="text-lg font-semibold text-slate-900">Activos por empresa</h3>
+                        <p class="mt-1 text-sm text-slate-500">Total de activos vigentes agrupados por empresa.</p>
                     </div>
                     <button
                         type="button"
                         class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
                         title="Refrescar panel"
-                        aria-label="Refrescar panel Colaboradores por área"
+                        aria-label="Refrescar panel Activos por empresa"
                         data-refresh-dashboard
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -156,7 +156,7 @@
                     </button>
                 </div>
                 <div class="h-80">
-                    <canvas id="chartColaboradoresArea"></canvas>
+                    <canvas id="chartActivosEmpresa"></canvas>
                 </div>
             </div>
         </div>
@@ -166,7 +166,7 @@
         <div class="mb-5 flex items-start justify-between gap-4">
             <div>
                 <h3 class="text-lg font-semibold text-slate-900">Disponibilidad por tipo de activo</h3>
-                <p class="mt-1 text-sm text-slate-500">Resumen rápido para ver cuántos equipos están listos y cuántos ya están asignados por categoría.</p>
+                <p class="mt-1 text-sm text-slate-500">Resumen rapido para ver cuantos equipos estan listos y cuantos ya estan asignados por categoria.</p>
             </div>
             <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
                 Todos los tipos
@@ -221,11 +221,11 @@
         <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div class="mb-5 flex items-start justify-between gap-4">
                 <div>
-                    <h3 class="text-lg font-semibold text-slate-900">Últimas asignaciones</h3>
-                    <p class="mt-1 text-sm text-slate-500">Últimos movimientos registrados en el módulo de asignaciones.</p>
+                    <h3 class="text-lg font-semibold text-slate-900">Ultimas asignaciones</h3>
+                    <p class="mt-1 text-sm text-slate-500">Ultimos movimientos registrados en el modulo de asignaciones.</p>
                 </div>
                 <a href="/asignaciones/" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">
-                    Ver módulo
+                    Ver modulo
                 </a>
             </div>
 
@@ -233,7 +233,7 @@
                 <table class="min-w-full divide-y divide-slate-200 text-sm">
                     <thead class="bg-slate-50 text-left text-slate-600">
                         <tr>
-                            <th class="px-4 py-3 font-semibold">Código</th>
+                            <th class="px-4 py-3 font-semibold">Codigo</th>
                             <th class="px-4 py-3 font-semibold">Colaborador</th>
                             <th class="px-4 py-3 font-semibold">Fecha</th>
                             <th class="px-4 py-3 font-semibold">Activos</th>
@@ -277,8 +277,8 @@
 
         <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div class="mb-5">
-                <h3 class="text-lg font-semibold text-slate-900">Indicadores rápidos</h3>
-                <p class="mt-1 text-sm text-slate-500">Puntos de control para revisar el estado de la operación.</p>
+                <h3 class="text-lg font-semibold text-slate-900">Indicadores rapidos</h3>
+                <p class="mt-1 text-sm text-slate-500">Puntos de control para revisar el estado de la operacion.</p>
             </div>
 
             <div class="space-y-4">
@@ -311,8 +311,8 @@
 {{ activos_tipo_data|json_script:"activos-tipo-data" }}
 {{ cecos_labels|json_script:"cecos-labels" }}
 {{ cecos_data|json_script:"cecos-data" }}
-{{ colaboradores_area_labels|json_script:"colaboradores-area-labels" }}
-{{ colaboradores_area_data|json_script:"colaboradores-area-data" }}
+{{ activos_empresa_labels|json_script:"activos-empresa-labels" }}
+{{ activos_empresa_data|json_script:"activos-empresa-data" }}
 
 <script>
     (() => {
@@ -332,8 +332,8 @@
         const tipoData = readJSON("activos-tipo-data");
         const cecosLabels = readJSON("cecos-labels");
         const cecosData = readJSON("cecos-data");
-        const colaboradoresAreaLabels = readJSON("colaboradores-area-labels");
-        const colaboradoresAreaData = readJSON("colaboradores-area-data");
+        const activosEmpresaLabels = readJSON("activos-empresa-labels");
+        const activosEmpresaData = readJSON("activos-empresa-data");
         const activosListaUrl = "{% url 'activos:lista' %}";
 
         const palette = {
@@ -381,127 +381,139 @@
             },
         };
 
-        new Chart(document.getElementById("chartActivosEstado"), {
-            type: "doughnut",
-            data: {
-                labels: estadoLabels,
-                datasets: [{
-                    data: estadoData,
-                    backgroundColor: [
-                        palette.emerald,
-                        palette.cyan,
-                        palette.amber,
-                        palette.rose,
-                        palette.slate,
-                        "#8b5cf6",
-                    ],
-                    borderWidth: 0,
-                }],
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: "62%",
-                onClick: (_event, elements) => {
-                    if (!elements.length) {
-                        return;
-                    }
-
-                    const estadoId = estadoIds[elements[0].index];
-                    if (!estadoId) {
-                        return;
-                    }
-
-                    window.location.href = `${activosListaUrl}?estado=${encodeURIComponent(estadoId)}`;
+        const estadoCanvas = document.getElementById("chartActivosEstado");
+        if (estadoCanvas) {
+            new Chart(estadoCanvas, {
+                type: "doughnut",
+                data: {
+                    labels: estadoLabels,
+                    datasets: [{
+                        data: estadoData,
+                        backgroundColor: [
+                            palette.emerald,
+                            palette.cyan,
+                            palette.amber,
+                            palette.rose,
+                            palette.slate,
+                            "#8b5cf6",
+                        ],
+                        borderWidth: 0,
+                    }],
                 },
-                onHover: (_event, elements, chart) => {
-                    chart.canvas.style.cursor = elements.length ? "pointer" : "default";
-                },
-                plugins: {
-                    legend: {
-                        position: "bottom",
-                        labels: {
-                            color: "#334155",
-                            usePointStyle: true,
-                            boxWidth: 10,
-                            padding: 18,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: "62%",
+                    onClick: (_event, elements) => {
+                        if (!elements.length) {
+                            return;
+                        }
+
+                        const estadoId = estadoIds[elements[0].index];
+                        if (!estadoId) {
+                            return;
+                        }
+
+                        window.location.href = `${activosListaUrl}?estado=${encodeURIComponent(estadoId)}`;
+                    },
+                    onHover: (_event, elements, chart) => {
+                        chart.canvas.style.cursor = elements.length ? "pointer" : "default";
+                    },
+                    plugins: {
+                        legend: {
+                            position: "bottom",
+                            labels: {
+                                color: "#334155",
+                                usePointStyle: true,
+                                boxWidth: 10,
+                                padding: 18,
+                            },
                         },
                     },
                 },
-            },
-        });
+            });
+        }
 
-        new Chart(document.getElementById("chartCecos"), {
-            type: "bar",
-            data: {
-                labels: cecosLabels,
-                datasets: [{
-                    label: "Activos asignados",
-                    data: cecosData,
-                    backgroundColor: palette.emeraldSoft,
-                    borderColor: palette.emerald,
-                    borderWidth: 2,
-                    borderRadius: 10,
-                }],
-            },
-            options: {
-                ...baseOptions,
-                indexAxis: "y",
-                plugins: {
-                    legend: { display: false },
+        const cecoCanvas = document.getElementById("chartCecos");
+        if (cecoCanvas) {
+            new Chart(cecoCanvas, {
+                type: "bar",
+                data: {
+                    labels: cecosLabels,
+                    datasets: [{
+                        label: "Activos asignados",
+                        data: cecosData,
+                        backgroundColor: palette.emeraldSoft,
+                        borderColor: palette.emerald,
+                        borderWidth: 2,
+                        borderRadius: 10,
+                    }],
                 },
-            },
-        });
+                options: {
+                    ...baseOptions,
+                    indexAxis: "y",
+                    plugins: {
+                        legend: { display: false },
+                    },
+                },
+            });
+        }
 
-        new Chart(document.getElementById("chartActivosTipo"), {
-            type: "bar",
-            data: {
-                labels: tipoLabels,
-                datasets: [{
-                    label: "Activos",
-                    data: tipoData,
-                    backgroundColor: [
-                        palette.cyan,
-                        palette.emerald,
-                        palette.amber,
-                        palette.rose,
-                        palette.slate,
-                        "#8b5cf6",
-                        "#14b8a6",
-                        "#f97316",
-                    ],
-                    borderRadius: 10,
-                }],
-            },
-            options: {
-                ...baseOptions,
-                plugins: {
-                    legend: { display: false },
+        const tipoCanvas = document.getElementById("chartActivosTipo");
+        if (tipoCanvas) {
+            new Chart(tipoCanvas, {
+                type: "bar",
+                data: {
+                    labels: tipoLabels,
+                    datasets: [{
+                        label: "Activos",
+                        data: tipoData,
+                        backgroundColor: [
+                            palette.cyan,
+                            palette.emerald,
+                            palette.amber,
+                            palette.rose,
+                            palette.slate,
+                            "#8b5cf6",
+                            "#14b8a6",
+                            "#f97316",
+                        ],
+                        borderRadius: 10,
+                    }],
                 },
-            },
-        });
+                options: {
+                    ...baseOptions,
+                    plugins: {
+                        legend: { display: false },
+                    },
+                },
+            });
+        }
 
-        new Chart(document.getElementById("chartColaboradoresArea"), {
-            type: "bar",
-            data: {
-                labels: colaboradoresAreaLabels,
-                datasets: [{
-                    label: "Colaboradores",
-                    data: colaboradoresAreaData,
-                    backgroundColor: palette.amberSoft,
-                    borderColor: palette.amber,
-                    borderWidth: 2,
-                    borderRadius: 10,
-                }],
-            },
-            options: {
-                ...baseOptions,
-                indexAxis: "y",
-                plugins: {
-                    legend: { display: false },
+        const empresaCanvas = document.getElementById("chartActivosEmpresa");
+        if (empresaCanvas) {
+            new Chart(empresaCanvas, {
+                type: "bar",
+                data: {
+                    labels: activosEmpresaLabels,
+                    datasets: [{
+                        label: "Activos",
+                        data: activosEmpresaData,
+                        backgroundColor: palette.cyanSoft,
+                        borderColor: palette.cyan,
+                        borderWidth: 2,
+                        borderRadius: 10,
+                    }],
                 },
-            },
-        });
+                options: {
+                    ...baseOptions,
+                    indexAxis: "y",
+                    plugins: {
+                        legend: { display: false },
+                    },
+                },
+            });
+        }
     })();
 </script>
 {% endblock %}
