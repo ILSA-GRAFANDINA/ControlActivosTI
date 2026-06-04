@@ -4,6 +4,7 @@ from django.views.generic import TemplateView
 
 from apps.activos.models import Activo
 from apps.asignaciones.models import Asignacion, AsignacionDetalle
+from apps.catalogos.models import Empresa
 from apps.colaboradores.models import Colaborador
 
 ASIGNACIONES_ABIERTAS = [
@@ -73,10 +74,10 @@ class InicioView(LoginRequiredMixin, TemplateView):
             .annotate(total=Count("id"))
             .order_by("-total", "asignacion__centro_costo__codigo")[:10]
         )
-        colaboradores_por_area = list(
-            Colaborador.objects.values("area__nombre")
+        activos_por_empresa = list(
+            activos_vigentes.values("empresa__nombre")
             .annotate(total=Count("id"))
-            .order_by("-total", "area__nombre")[:8]
+            .order_by("-total", "empresa__nombre")[:8]
         )
 
         ultimas_asignaciones = (
@@ -141,11 +142,12 @@ class InicioView(LoginRequiredMixin, TemplateView):
                     self._formatear_ceco_label(item) for item in activos_por_ceco
                 ],
                 "cecos_data": [item["total"] for item in activos_por_ceco],
-                "colaboradores_area_labels": [
-                    item["area__nombre"] for item in colaboradores_por_area
+                "activos_empresa_labels": [
+                    item["empresa__nombre"] or "Sin empresa"
+                    for item in activos_por_empresa
                 ],
-                "colaboradores_area_data": [
-                    item["total"] for item in colaboradores_por_area
+                "activos_empresa_data": [
+                    item["total"] for item in activos_por_empresa
                 ],
             }
         )
