@@ -259,6 +259,46 @@ class PerfilUsuarioViewTests(TestCase):
         self.assertEqual(profile.cargo_visible, "Analista TI")
         self.assertEqual(profile.bio, "Encargada de soporte interno.")
 
+
+class LoginViewTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="loginuser",
+            password="secret123",
+        )
+
+    def test_login_with_remember_me_uses_persistent_session(self):
+        response = self.client.post(
+            reverse("accounts:login"),
+            {
+                "username": "loginuser",
+                "password": "secret123",
+                "remember_me": "1",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("dashboard-inicio"))
+
+        session = self.client.session
+        self.assertEqual(session.get_expire_at_browser_close(), False)
+        self.assertEqual(session.get_expiry_age(), 60 * 60 * 24 * 14)
+
+    def test_login_without_remember_me_expires_at_browser_close(self):
+        response = self.client.post(
+            reverse("accounts:login"),
+            {
+                "username": "loginuser",
+                "password": "secret123",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("dashboard-inicio"))
+
+        session = self.client.session
+        self.assertEqual(session.get_expire_at_browser_close(), True)
+
     def test_profile_photo_is_available_in_shared_layouts(self):
         media_root = make_test_media_root()
         try:

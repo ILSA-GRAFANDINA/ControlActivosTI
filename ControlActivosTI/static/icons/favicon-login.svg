@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="login-bg" x1="8" x2="56" y1="8" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3a3a3f"/>
+      <stop offset="1" stop-color="#111114"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#login-bg)"/>
+  <circle cx="32" cy="25" r="11" fill="none" stroke="#f2f2f2" stroke-width="2.5"/>
+  <path d="M16 49c3.8-8.4 10.8-13 16-13s12.2 4.6 16 13" fill="none" stroke="#d7d7d7" stroke-linecap="round" stroke-width="2.8"/>
+  <path d="M24 49h16" fill="none" stroke="#b8b8b8" stroke-linecap="round" stroke-width="2.8"/>
+  <rect x="38" y="38" width="12" height="10" rx="3" fill="none" stroke="#f2f2f2" stroke-width="2.2"/>
+  <path d="M41 38v-2.5a3 3 0 0 1 6 0V38" fill="none" stroke="#f2f2f2" stroke-linecap="round" stroke-width="2.2"/>
+</svg>

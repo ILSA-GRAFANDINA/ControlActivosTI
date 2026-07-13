@@ -4,164 +4,350 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#111111">
     <title>Iniciar sesión | ControlActivosTI</title>
-    <link rel="icon" type="image/svg+xml" href="{% static 'icons/favicon-app.svg' %}">
-    <link rel="alternate icon" href="{% static 'icons/favicon-app.svg' %}">
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="icon" type="image/svg+xml" href="{% static 'icons/favicon-login.svg' %}">
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg-base: #090909;
+            --bg-overlay: rgba(0, 0, 0, .52);
+            --card-start: rgba(33, 33, 36, .82);
+            --card-end: rgba(17, 17, 19, .90);
+            --card-border: rgba(255, 255, 255, .10);
+            --text-main: #f5f5f5;
+            --text-muted: #d0d0d0;
+            --text-soft: #a7a7a7;
+            --accent: #b8b8b8;
+            --accent-strong: #f2f2f2;
+            --input-bg: rgba(19, 19, 22, .62);
+            --input-border: rgba(255, 255, 255, .10);
+            --input-focus: rgba(255, 255, 255, .22);
+            --button-bg: linear-gradient(180deg, #f8f8f8 0%, #d7d7d7 100%);
+            --button-text: #161616;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            color: var(--text-main);
+            background: var(--bg-base) url("{% static 'images/wall_login.jpg' %}") center / cover fixed;
+        }
+
+        body::before {
+            position: fixed;
+            inset: 0;
+            content: "";
+            background:
+                radial-gradient(circle at 50% 32%, rgba(255, 255, 255, .08), transparent 28%),
+                radial-gradient(circle at 20% 15%, rgba(255, 255, 255, .04), transparent 24%),
+                linear-gradient(180deg, rgba(0, 0, 0, .18), var(--bg-overlay));
+            pointer-events: none;
+        }
+
+        .login-shell {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            min-height: 100vh;
+            place-items: center;
+            padding: 32px 20px;
+        }
+
+        .login-card {
+            position: relative;
+            width: min(100%, 510px);
+            padding: 38px 46px 34px;
+            border: 1px solid var(--card-border);
+            border-radius: 30px;
+            background: linear-gradient(145deg, var(--card-start), var(--card-end));
+            box-shadow:
+                0 30px 90px rgba(0, 0, 0, .58),
+                0 0 0 1px rgba(255, 255, 255, .04) inset,
+                inset 0 1px 0 rgba(255, 255, 255, .06);
+            backdrop-filter: blur(18px) saturate(112%);
+            -webkit-backdrop-filter: blur(18px) saturate(112%);
+            overflow: hidden;
+        }
+
+        .login-card::before {
+            position: absolute;
+            inset: 0 0 auto;
+            height: 2px;
+            content: "";
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .35), transparent);
+            pointer-events: none;
+        }
+
+        .brand-mark {
+            display: grid;
+            width: 62px;
+            height: 62px;
+            margin: 0 auto 12px;
+            place-items: center;
+            color: var(--accent-strong);
+            filter: drop-shadow(0 0 14px rgba(255, 255, 255, .14));
+        }
+
+        .brand-mark svg { width: 100%; height: 100%; }
+
+        h1 {
+            margin: 0;
+            font-size: clamp(2rem, 5vw, 2.75rem);
+            font-weight: 500;
+            letter-spacing: -.04em;
+            text-align: center;
+            text-shadow: 0 2px 18px rgba(24, 13, 8, .38);
+        }
+
+        .intro {
+            max-width: 390px;
+            margin: 10px auto 27px;
+            color: var(--text-muted);
+            font-size: .92rem;
+            line-height: 1.55;
+            text-align: center;
+        }
+
+        .alert {
+            margin-bottom: 18px;
+            padding: 12px 14px;
+            border: 1px solid rgba(255, 205, 140, .32);
+            border-radius: 14px;
+            background: rgba(67, 32, 14, .42);
+            color: #ffe7c8;
+            font-size: .85rem;
+        }
+
+        .alert.info {
+            border-color: rgba(255, 208, 153, .24);
+            background: rgba(61, 32, 16, .28);
+            color: #fff1df;
+        }
+
+        .field { margin-bottom: 18px; }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--accent-strong);
+            font-size: .82rem;
+            font-weight: 500;
+        }
+
+        .input-wrap { position: relative; }
+
+        .input-wrap input {
+            width: 100%;
+            min-height: 52px;
+            padding: 0 48px 0 17px !important;
+            border: 1px solid var(--input-border) !important;
+            border-radius: 15px !important;
+            outline: none;
+            color: var(--text-main) !important;
+            background: var(--input-bg) !important;
+            box-shadow: inset 0 1px 8px rgba(0, 0, 0, .2);
+            font: inherit;
+            font-size: .9rem;
+            transition: border-color .2s, box-shadow .2s, background .2s;
+        }
+
+        .input-wrap input::placeholder { color: var(--text-soft); }
+
+        .input-wrap input:focus {
+            border-color: var(--input-focus) !important;
+            background: rgba(40, 22, 16, .72) !important;
+            box-shadow: 0 0 0 4px rgba(245, 179, 91, .16), inset 0 1px 8px rgba(0, 0, 0, .12);
+        }
+
+        .toggle-password {
+            position: absolute;
+            top: 0;
+            right: 0;
+            display: grid;
+            width: 48px;
+            height: 52px;
+            padding: 0;
+            border: 0;
+            place-items: center;
+            color: var(--text-soft);
+            background: transparent;
+            cursor: pointer;
+        }
+
+        .toggle-password:hover, .toggle-password:focus-visible { color: var(--accent-strong); }
+        .toggle-password svg { width: 20px; height: 20px; }
+        .eye-off { display: none; }
+        .toggle-password.is-visible .eye-open { display: none; }
+        .toggle-password.is-visible .eye-off { display: block; }
+
+        .field-errors {
+            margin-top: 7px;
+            color: #ffc8a8;
+            font-size: .78rem;
+        }
+
+        .form-options {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin: 3px 0 22px;
+            font-size: .82rem;
+        }
+
+        .remember {
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            margin: 0;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+
+        .remember input {
+            width: 16px;
+            height: 16px;
+            margin: 0;
+            accent-color: var(--accent);
+        }
+
+        a { color: var(--accent-strong); text-decoration: none; }
+        a:hover { color: #fff6e7; text-decoration: underline; }
+
+        .submit-button {
+            width: 100%;
+            min-height: 53px;
+            border: 0;
+            border-radius: 16px;
+            color: var(--button-text);
+            background: var(--button-bg);
+            box-shadow: 0 16px 34px rgba(47, 24, 12, .36);
+            font: inherit;
+            font-size: .92rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform .2s, box-shadow .2s, background .2s;
+        }
+
+        .submit-button:hover {
+            transform: translateY(-1px);
+            background: linear-gradient(180deg, #fff8ea 0%, #f7d08b 100%);
+            box-shadow: 0 20px 40px rgba(47, 24, 12, .42);
+        }
+
+        .access-help {
+            margin: 22px 0 0;
+            color: var(--text-muted);
+            font-size: .8rem;
+            line-height: 1.5;
+            text-align: center;
+        }
+
+        .access-help strong { color: var(--accent-strong); font-weight: 600; }
+
+        @media (max-width: 560px) {
+            .login-shell { align-items: start; padding: 18px 14px; }
+            .login-card { padding: 28px 23px 25px; border-radius: 24px; }
+            .brand-mark { width: 54px; height: 54px; }
+            .intro { margin-bottom: 23px; }
+        }
+
+        @media (max-height: 760px) and (min-width: 561px) {
+            .login-card { padding-top: 25px; padding-bottom: 25px; }
+            .brand-mark { width: 48px; height: 48px; margin-bottom: 6px; }
+            .intro { margin-bottom: 20px; }
+            .field { margin-bottom: 14px; }
+        }
+    </style>
 </head>
-
-<body class="min-h-screen overflow-hidden bg-slate-950 text-white">
-    <div class="relative min-h-screen">
-        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.18),_transparent_26%),radial-gradient(circle_at_bottom_right,_rgba(99,102,241,0.22),_transparent_24%),linear-gradient(135deg,_#020617_0%,_#0f172a_45%,_#111827_100%)]"></div>
-        <div class="absolute -top-20 left-10 h-72 w-72 rounded-full bg-cyan-400/20 blur-3xl"></div>
-        <div class="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-indigo-500/20 blur-3xl"></div>
-        <div class="absolute left-1/2 top-1/3 h-56 w-56 -translate-x-1/2 rounded-full bg-sky-300/10 blur-3xl"></div>
-
-        <main class="relative z-10 flex min-h-screen items-center justify-center p-6 lg:p-10">
-            <div class="grid w-full max-w-6xl overflow-hidden rounded-[32px] border border-white/10 bg-white/8 shadow-[0_25px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl lg:grid-cols-2">
-                <!-- Panel izquierdo -->
-                <section class="hidden lg:flex flex-col justify-center border-r border-white/10 bg-white/5 p-10 xl:p-12">
-                    <div>
-                        <span class="inline-flex items-center rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-1 text-xs font-medium tracking-[0.18em] text-cyan-200 uppercase">
-                            Plataforma interna
-                        </span>
-
-                        <h1 class="mt-8 text-4xl font-semibold leading-tight text-white xl:text-5xl">
-                            Control de Activos
-                            <span class="bg-gradient-to-r from-cyan-300 via-sky-400 to-indigo-400 bg-clip-text text-transparent">
-                                ILSA y GRAFANDINA
-                            </span>
-                        </h1>
-
-                        <p class="mt-6 max-w-xl text-base leading-7 text-slate-300">
-                            Accede al sistema centralizado para gestionar activos, colaboradores y asignaciones.
-                        </p>
-                    </div>
-                </section>
-
-                <!-- Panel derecho -->
-                <section class="relative p-6 sm:p-8 lg:p-10 xl:p-12">
-                    <div class="mx-auto w-full max-w-md">
-                        <div class="mb-8">
-                            <span class="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium tracking-[0.16em] text-slate-300 uppercase">
-                                ControlActivosTI
-                            </span>
-
-                            <h2 class="mt-5 text-3xl font-semibold text-white">
-                                BIENVENIDO DE NUEVO
-                            </h2>
-
-                            <p class="mt-2 text-sm leading-6 text-slate-400">
-                                Ingresa con tus credenciales para acceder al panel del sistema.
-                            </p>
-                        </div>
-
-                        {% if form.non_field_errors %}
-                            <div class="mb-5 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
-                                {% for error in form.non_field_errors %}
-                                    <p>{{ error }}</p>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-
-                        {% if messages %}
-                            <div class="mb-5 space-y-3">
-                                {% for message in messages %}
-                                    <div class="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 px-4 py-3 text-sm text-cyan-100">
-                                        {{ message }}
-                                    </div>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-
-                        <form method="post" class="space-y-5">
-                            {% csrf_token %}
-                            {% if next %}
-                                <input type="hidden" name="next" value="{{ next }}">
-                            {% endif %}
-
-                            <div>
-                                <label for="{{ form.username.id_for_label }}" class="mb-2 block text-sm font-medium text-slate-200">
-                                    {{ form.username.label }}
-                                </label>
-
-                                <div class="relative">
-                                    <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6.75a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 19.5a7.5 7.5 0 0 1 15 0" />
-                                        </svg>
-                                    </span>
-                                    {{ form.username }}
-                                </div>
-
-                                {% if form.username.errors %}
-                                    <div class="mt-2 text-sm text-rose-300">
-                                        {% for error in form.username.errors %}
-                                            <p>{{ error }}</p>
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-                            </div>
-
-                            <div>
-                                <label for="{{ form.password.id_for_label }}" class="mb-2 block text-sm font-medium text-slate-200">
-                                    {{ form.password.label }}
-                                </label>
-
-                                <div class="relative">
-                                    <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V7.875a4.5 4.5 0 1 0-9 0V10.5m-1.5 0h12A1.5 1.5 0 0 1 19.5 12v6A1.5 1.5 0 0 1 18 19.5H6A1.5 1.5 0 0 1 4.5 18v-6A1.5 1.5 0 0 1 6 10.5Z" />
-                                        </svg>
-                                    </span>
-
-                                    {{ form.password }}
-
-                                    <button
-                                        type="button"
-                                        id="togglePassword"
-                                        class="absolute inset-y-0 right-0 flex items-center pr-4 text-xs font-medium text-slate-300 transition hover:text-white"
-                                    >
-                                        Mostrar
-                                    </button>
-                                </div>
-
-                                {% if form.password.errors %}
-                                    <div class="mt-2 text-sm text-rose-300">
-                                        {% for error in form.password.errors %}
-                                            <p>{{ error }}</p>
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-                            </div>
-
-                            <button
-                                type="submit"
-                                class="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-cyan-400 via-sky-500 to-indigo-500 px-4 py-3.5 text-sm font-semibold text-white shadow-lg shadow-cyan-900/30 transition duration-300 hover:-translate-y-0.5 hover:shadow-cyan-500/20"
-                            >
-                                <span class="relative z-10">Iniciar sesión</span>
-                                <span class="absolute inset-0 opacity-0 transition group-hover:opacity-100 bg-white/10"></span>
-                            </button>
-                        </form>
-
-                        <div class="mt-8 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center text-xs leading-5 text-slate-400">
-                            Acceso exclusivo para personal autorizado. Toda actividad dentro del sistema puede ser registrada para fines de control y auditoría.
-                        </div>
-                    </div>
-                </section>
+<body>
+    <main class="login-shell">
+        <section class="login-card" aria-labelledby="login-title">
+            <div class="brand-mark" aria-hidden="true">
+                <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="32" cy="22" r="11" stroke="currentColor" stroke-width="2.2"/>
+                    <path d="M14 52c3.8-9.2 11.2-14 18-14s14.2 4.8 18 14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+                    <path d="M24 52h16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" opacity=".85"/>
+                </svg>
             </div>
-        </main>
-    </div>
+
+            <h1 id="login-title">¡Bienvenido de nuevo!</h1>
+            <p class="intro">Administración de activos, consulta de asignaciones.</p>
+
+            {% if form.non_field_errors %}
+                <div class="alert" role="alert">
+                    {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+                </div>
+            {% endif %}
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert info" role="status">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+                {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+
+                <div class="field">
+                    <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+                    <div class="input-wrap">{{ form.username }}</div>
+                    {% if form.username.errors %}
+                        <div class="field-errors">{% for error in form.username.errors %}<div>{{ error }}</div>{% endfor %}</div>
+                    {% endif %}
+                </div>
+
+                <div class="field">
+                    <label for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+                    <div class="input-wrap">
+                        {{ form.password }}
+                        <button type="button" id="togglePassword" class="toggle-password" aria-label="Mostrar contraseña" aria-pressed="false">
+                            <svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+                                <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.7"/>
+                            </svg>
+                            <svg class="eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+                                <path d="m3 3 18 18M10.4 6.2A9.6 9.6 0 0 1 12 6c6 0 9.5 6 9.5 6a17 17 0 0 1-2.2 2.8M6.2 6.2C3.8 8 2.5 12 2.5 12s3.5 6 9.5 6c1.2 0 2.3-.2 3.3-.6M9.9 9.9a3 3 0 0 0 4.2 4.2"/>
+                            </svg>
+                        </button>
+                    </div>
+                    {% if form.password.errors %}
+                        <div class="field-errors">{% for error in form.password.errors %}<div>{{ error }}</div>{% endfor %}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-options">
+                    <label class="remember" for="remember_me">
+                        <input id="remember_me" name="remember_me" type="checkbox" value="1">
+                        <span>Recordarme</span>
+                    </label>
+                </div>
+
+                <button type="submit" class="submit-button">Iniciar sesión</button>
+            </form>
+
+            <p class="access-help" id="access-help">
+                ¿No tienes una cuenta o no puedes ingresar?<br>
+                <strong>Solicita acceso o recuperación al administrador de TI.</strong>
+            </p>
+        </section>
+    </main>
 
     <script>
         const passwordInput = document.getElementById("id_password");
         const togglePasswordButton = document.getElementById("togglePassword");
 
         if (passwordInput && togglePasswordButton) {
-            togglePasswordButton.addEventListener("click", () => {
-                const isPassword = passwordInput.getAttribute("type") === "password";
-                passwordInput.setAttribute("type", isPassword ? "text" : "password");
-                togglePasswordButton.textContent = isPassword ? "Ocultar" : "Mostrar";
+            togglePasswordButton.addEventListener("click", function () {
+                const showPassword = passwordInput.type === "password";
+                passwordInput.type = showPassword ? "text" : "password";
+                togglePasswordButton.classList.toggle("is-visible", showPassword);
+                togglePasswordButton.setAttribute("aria-pressed", String(showPassword));
+                togglePasswordButton.setAttribute("aria-label", showPassword ? "Ocultar contraseña" : "Mostrar contraseña");
             });
         }
     </script>

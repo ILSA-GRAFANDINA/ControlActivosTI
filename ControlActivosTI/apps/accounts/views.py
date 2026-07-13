@@ -17,6 +17,14 @@ class CustomLoginView(LoginView):
     def get_success_url(self):
         return reverse_lazy("dashboard-inicio")
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        if self.request.POST.get("remember_me"):
+            self.request.session.set_expiry(60 * 60 * 24 * 14)
+        else:
+            self.request.session.set_expiry(0)
+        return response
+
 
 class PerfilUsuarioView(LoginRequiredMixin, FormView):
     template_name = "accounts/perfil.html"
