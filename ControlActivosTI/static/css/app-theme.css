@@ -640,14 +640,124 @@ html.dark .app-content .bg-slate-900 {
     background-color: #252837 !important;
 }
 
-.app-content > .space-y-6 > section:first-child[class*="bg-"] {
-    border-color: rgba(255, 255, 255, .08) !important;
+/* Hero exclusivo del dashboard, inspirado en el degradado violeta de la referencia. */
+.app-content .dashboard-hero {
+    position: relative;
+    isolation: isolate;
+    border-color: rgba(255, 255, 255, .2) !important;
     border-radius: 28px !important;
-    box-shadow: 0 24px 60px rgba(23, 31, 55, .16) !important;
+    background:
+        radial-gradient(circle at 78% -45%, rgba(255, 255, 255, .3), transparent 42%),
+        linear-gradient(112deg, #4930e8 0%, #5b3df4 52%, #765dff 100%);
+    box-shadow: 0 24px 60px rgba(68, 49, 190, .24) !important;
+    transition: background .3s ease, border-color .3s ease, box-shadow .3s ease;
 }
 
-html.dark .app-content > .space-y-6 > section:first-child[class*="bg-"] {
-    background: radial-gradient(circle at top left, rgba(88, 111, 255, .2), transparent 38%), #151827 !important;
+.app-content .dashboard-hero::before,
+.app-content .dashboard-hero::after {
+    position: absolute;
+    z-index: -1;
+    content: "";
+    pointer-events: none;
+}
+
+.app-content .dashboard-hero::before {
+    top: -7rem;
+    right: 3%;
+    width: 18rem;
+    height: 18rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .09);
+}
+
+.app-content .dashboard-hero::after {
+    right: -3rem;
+    bottom: -7rem;
+    width: 20rem;
+    height: 13rem;
+    border-radius: 50%;
+    background: rgba(167, 139, 250, .2);
+    transform: rotate(-12deg);
+}
+
+html.dark .app-content .dashboard-hero {
+    border-color: rgba(167, 139, 250, .2) !important;
+    background:
+        radial-gradient(circle at 78% -45%, rgba(196, 181, 253, .18), transparent 42%),
+        linear-gradient(112deg, #24155f 0%, #352184 50%, #4b35ae 100%);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, .34) !important;
+}
+
+/*
+ * El dashboard responde al espacio real del contenido, no al ancho global de
+ * la ventana. Esto evita columnas comprimidas al usar zoom con el sidebar abierto.
+ */
+.dashboard-layout {
+    container: dashboard / inline-size;
+    min-width: 0;
+}
+
+.dashboard-hero-grid,
+.dashboard-hero-metrics,
+.dashboard-stat-grid,
+.dashboard-primary-grid,
+.dashboard-secondary-grid,
+.dashboard-primary-grid > *,
+.dashboard-secondary-grid > * {
+    min-width: 0;
+}
+
+.dashboard-hero-grid,
+.dashboard-hero-metrics,
+.dashboard-stat-grid,
+.dashboard-primary-grid,
+.dashboard-secondary-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.dashboard-layout canvas {
+    max-width: 100%;
+}
+
+@container dashboard (min-width: 34rem) {
+    .dashboard-hero-metrics,
+    .dashboard-stat-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+@container dashboard (min-width: 58rem) {
+    .dashboard-hero-grid {
+        grid-template-columns: minmax(0, 1.5fr) minmax(18rem, 1fr) !important;
+    }
+
+    .dashboard-stat-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+
+    .dashboard-primary-grid {
+        grid-template-columns: minmax(0, 1.4fr) minmax(18rem, 1fr) !important;
+    }
+
+    .dashboard-secondary-grid {
+        grid-template-columns: minmax(0, 1.45fr) minmax(18rem, 1fr) !important;
+    }
+}
+
+@container dashboard (min-width: 76rem) {
+    .dashboard-stat-grid {
+        grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+    }
+}
+
+@container dashboard (max-width: 33.999rem) {
+    .dashboard-hero {
+        padding: 1.25rem !important;
+    }
+
+    .dashboard-layout section[class*="grid"] {
+        gap: 1rem;
+    }
 }
 
 .app-body > .app-layout > .app-main > .app-content + .mb-6 {
