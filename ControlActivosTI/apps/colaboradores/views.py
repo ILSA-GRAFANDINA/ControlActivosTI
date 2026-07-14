@@ -27,8 +27,7 @@ class ColaboradorListView(LoginRequiredMixin, ListView):
     paginate_by = 10
 
     COLUMNAS_DISPONIBLES = [
-        ("apellidos", "Apellidos"),
-        ("nombres", "Nombres"),
+        ("nombre_completo", "Nombre completo"),
         ("cedula", "Cédula"),
         ("correo_corporativo", "Correo"),
         ("empresa", "Empresa"),
@@ -41,8 +40,7 @@ class ColaboradorListView(LoginRequiredMixin, ListView):
     ]
 
     COLUMNAS_POR_DEFECTO = [
-        "apellidos",
-        "nombres",
+        "nombre_completo",
         "cedula",
         "empresa",
         "area",

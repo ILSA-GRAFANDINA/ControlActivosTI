@@ -718,11 +718,15 @@ html.dark .app-content article.bg-white:hover {
     transition-duration: .2s;
 }
 
-.app-content .asset-code-link {
+.app-content .asset-code-link,
+.app-content .detail-entry-link,
+.app-content .collaborator-avatar-link {
     transition: color .2s ease, background-color .2s ease, border-color .2s ease, box-shadow .2s ease, transform .2s ease;
 }
 
-.app-content .asset-code-link:hover {
+.app-content .asset-code-link:hover,
+.app-content .detail-entry-link:hover,
+.app-content .collaborator-avatar-link:hover {
     border-color: var(--app-primary) !important;
     color: #ffffff !important;
     background: var(--app-primary) !important;
@@ -730,7 +734,9 @@ html.dark .app-content article.bg-white:hover {
     transform: translateY(-1px);
 }
 
-.app-content .asset-code-link:focus-visible {
+.app-content .asset-code-link:focus-visible,
+.app-content .detail-entry-link:focus-visible,
+.app-content .collaborator-avatar-link:focus-visible {
     border-color: var(--app-primary) !important;
     color: var(--app-primary-strong) !important;
     background: var(--app-primary-soft) !important;
@@ -808,8 +814,9 @@ html.dark .app-content .bg-slate-900 {
     background-color: #303154 !important;
 }
 
-/* Hero exclusivo del dashboard, inspirado en el degradado violeta de la referencia. */
-.app-content .dashboard-hero {
+/* Banners principales con el degradado violeta de la interfaz actual. */
+.app-content .dashboard-hero,
+.app-content .profile-banner {
     position: relative;
     isolation: isolate;
     border-color: rgba(255, 255, 255, .2) !important;
@@ -822,14 +829,17 @@ html.dark .app-content .bg-slate-900 {
 }
 
 .app-content .dashboard-hero::before,
-.app-content .dashboard-hero::after {
+.app-content .dashboard-hero::after,
+.app-content .profile-banner::before,
+.app-content .profile-banner::after {
     position: absolute;
     z-index: -1;
     content: "";
     pointer-events: none;
 }
 
-.app-content .dashboard-hero::before {
+.app-content .dashboard-hero::before,
+.app-content .profile-banner::before {
     top: -7rem;
     right: 3%;
     width: 18rem;
@@ -838,7 +848,8 @@ html.dark .app-content .bg-slate-900 {
     background: rgba(255, 255, 255, .09);
 }
 
-.app-content .dashboard-hero::after {
+.app-content .dashboard-hero::after,
+.app-content .profile-banner::after {
     right: -3rem;
     bottom: -7rem;
     width: 20rem;
@@ -848,7 +859,8 @@ html.dark .app-content .bg-slate-900 {
     transform: rotate(-12deg);
 }
 
-html.dark .app-content .dashboard-hero {
+html.dark .app-content .dashboard-hero,
+html.dark .app-content .profile-banner {
     border-color: rgba(176, 155, 255, .26) !important;
     background:
         radial-gradient(circle at 78% -45%, rgba(211, 199, 255, .22), transparent 42%),

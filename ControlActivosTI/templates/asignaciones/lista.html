@@ -146,7 +146,7 @@
                 {% for asignacion in asignaciones %}
                     <tr class="align-top text-slate-700">
                         <td class="px-4 py-3">
-                            <a href="{% url 'asignaciones:detalle' asignacion.pk %}" class="inline-flex rounded-lg bg-slate-100 px-3 py-1 text-xs font-semibold text-cyan-700 transition hover:bg-cyan-50 hover:text-cyan-900">
+                            <a href="{% url 'asignaciones:detalle' asignacion.pk %}" class="detail-entry-link inline-flex rounded-lg border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 focus:outline-none">
                                 {{ asignacion.codigo_asignacion }}
                             </a>
                         </td>

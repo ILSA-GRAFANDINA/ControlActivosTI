@@ -234,6 +234,7 @@ class PerfilUsuarioViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(PerfilUsuario.objects.filter(user=self.user).exists())
         self.assertContains(response, "Actualiza tu información básica")
+        self.assertContains(response, 'class="profile-banner')
 
     def test_authenticated_topbar_uses_user_dropdown(self):
         self.client.force_login(self.user)
