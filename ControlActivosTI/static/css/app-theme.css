@@ -134,35 +134,21 @@ html.dark .app-sidebar {
 
 .app-brand {
     display: grid;
-    grid-template-columns: 42px minmax(0, 1fr);
+    grid-template-columns: 52px minmax(0, 1fr);
     gap: .8rem;
-    align-items: start;
+    align-items: center;
     margin-bottom: 1.35rem !important;
     padding: .35rem .45rem 1.35rem !important;
     border-color: var(--app-border) !important;
 }
 
 .app-brand-mark {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 3px;
-    width: 38px;
-    height: 38px;
-    padding: 7px;
-    border-radius: 13px;
-    background: #111827;
-    box-shadow: 0 8px 22px rgba(53, 109, 243, .2);
-    transform: rotate(45deg);
+    display: block;
+    width: 52px;
+    height: 52px;
+    object-fit: contain;
+    filter: drop-shadow(0 8px 14px rgba(53, 109, 243, .24));
 }
-
-.app-brand-mark span {
-    border-radius: 2px 7px 2px 7px;
-    background: linear-gradient(135deg, #39d5ff, #356df3);
-}
-
-.app-brand-mark span:nth-child(2) { background: linear-gradient(135deg, #f43fcb, #854dff); }
-.app-brand-mark span:nth-child(3) { background: linear-gradient(135deg, #ffc83d, #ff7c43); }
-.app-brand-mark span:nth-child(4) { background: linear-gradient(135deg, #55e39c, #15b8a6); }
 
 .app-brand p:first-child {
     margin: 0 !important;
@@ -821,8 +807,8 @@ html.sidebar-collapsed .sidebar-theme-option > span {
 }
 
 html.sidebar-collapsed .app-brand-mark {
-    width: 40px;
-    height: 40px;
+    width: 46px;
+    height: 46px;
 }
 
 html.sidebar-collapsed .app-nav {
