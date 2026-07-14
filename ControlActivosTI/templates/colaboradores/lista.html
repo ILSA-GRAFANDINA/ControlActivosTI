@@ -7,7 +7,7 @@
 <div class="mb-6 flex items-center justify-between gap-4">
     <div>
         <h2 class="text-xl font-semibold text-slate-900">Listado de colaboradores</h2>
-        <p class="text-sm text-slate-500">Consulta rapidamente la informacion principal de cada colaborador y abre su ficha completa.</p>
+        <p class="text-sm text-slate-500">Consulta información de cada colaborador.</p>
     </div>
     <a href="{% url 'colaboradores:nuevo' %}" class="rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700">
         Agregar colaborador
@@ -18,12 +18,12 @@
     <form method="get" class="space-y-6" data-scroll-to-results>
         <div class="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(170px,0.65fr)_minmax(190px,0.75fr)]">
             <div>
-                <label class="mb-2 block text-sm font-semibold text-slate-700">Busqueda</label>
+                <label class="mb-2 block text-sm font-semibold text-slate-700">Búsqueda</label>
                 <input
                     type="text"
                     name="q"
                     value="{{ busqueda }}"
-                    placeholder="Buscar por nombre, apellido, cedula o correo"
+                    placeholder="Buscar por nombre, apellido, cédula o correo"
                     class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
                 >
             </div>
@@ -72,7 +72,7 @@
             </div>
 
             <div>
-                <label for="filtro-area" class="mb-2 block text-sm font-semibold text-slate-700">Area</label>
+                <label for="filtro-area" class="mb-2 block text-sm font-semibold text-slate-700">Área</label>
                 <select
                     id="filtro-area"
                     name="area"
@@ -86,7 +86,7 @@
             </div>
 
             <div>
-                <label for="filtro-ubicacion" class="mb-2 block text-sm font-semibold text-slate-700">Ubicacion</label>
+                <label for="filtro-ubicacion" class="mb-2 block text-sm font-semibold text-slate-700">Ubicación</label>
                 <select
                     id="filtro-ubicacion"
                     name="ubicacion"
@@ -180,16 +180,16 @@
                     </th>
                     {% if "apellidos" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Apellidos</th>{% endif %}
                     {% if "nombres" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Nombres</th>{% endif %}
-                    {% if "cedula" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Cedula</th>{% endif %}
+                    {% if "cedula" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Cédula</th>{% endif %}
                     {% if "correo_corporativo" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Correo</th>{% endif %}
                     {% if "empresa" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Empresa</th>{% endif %}
-                    {% if "area" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Area</th>{% endif %}
+                    {% if "area" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Área</th>{% endif %}
                     {% if "cargo" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Cargo</th>{% endif %}
-                    {% if "ubicacion" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Ubicacion</th>{% endif %}
+                    {% if "ubicacion" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Ubicación</th>{% endif %}
                     {% if "estado" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Estado</th>{% endif %}
                     {% if "activos_asignados" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Activos asignados</th>{% endif %}
                     {% if "fecha_ingreso" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Fecha de ingreso</th>{% endif %}
-                    <th class="px-4 py-3 font-semibold">Accion</th>
+                    <th class="px-4 py-3 font-semibold">Acción</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
