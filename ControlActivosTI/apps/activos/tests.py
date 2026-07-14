@@ -503,6 +503,18 @@ class ActivoListViewTests(TestCase):
         self.assertContains(response, reverse("activos:nuevo"))
         self.assertContains(response, "Agregar activo")
 
+    def test_asset_code_links_to_detail_without_action_column(self):
+        self.client.force_login(self.user)
+        activo = Activo.objects.get(serie="LAP-001")
+
+        response = self.client.get(reverse("activos:lista"))
+        detail_url = reverse("activos:detalle", args=[activo.pk])
+
+        self.assertContains(response, f'href="{detail_url}"', count=1)
+        self.assertContains(response, ">Código</th>")
+        self.assertNotContains(response, ">Acción</th>")
+        self.assertNotContains(response, ">Ver detalle</a>")
+
     def test_list_view_allows_search_by_codigo_sap(self):
         self.client.force_login(self.user)
 
@@ -530,6 +542,29 @@ class ActivoListViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, reverse("activos:exportar"))
         self.assertContains(response, "Exportar")
+
+    def test_export_button_offers_to_keep_or_clear_active_filters(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse("activos:lista"),
+            {"empresa": str(self.empresa_acme.pk)},
+        )
+
+        self.assertTrue(response.context["hay_filtros_para_exportar"])
+        self.assertContains(response, "¿Quiere conservar los filtros aplicados o empezar desde 0?")
+        self.assertContains(response, "Conservar filtros")
+        self.assertContains(response, "Empezar desde 0")
+        self.assertIn(f"empresa={self.empresa_acme.pk}", response.context["exportar_url"])
+        self.assertEqual(
+            response.context["exportar_sin_filtros_url"],
+            f"{reverse('activos:exportar')}?reset=1",
+        )
+
+        export_response = self.client.get(response.context["exportar_url"])
+        self.assertContains(export_response, "LAP-001")
+        self.assertContains(export_response, "PC-001")
+        self.assertNotContains(export_response, "MOU-001")
 
     def test_list_view_can_filter_by_empresa(self):
         self.client.force_login(self.user)

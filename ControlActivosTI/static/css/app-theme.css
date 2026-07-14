@@ -10,9 +10,9 @@
     --app-text: #171923;
     --app-text-soft: #62697a;
     --app-text-muted: #9299a9;
-    --app-primary: #356df3;
-    --app-primary-strong: #2558d8;
-    --app-primary-soft: #edf3ff;
+    --app-primary: #7657f6;
+    --app-primary-strong: #5e3ed8;
+    --app-primary-soft: #f1edff;
     --app-shadow: 0 16px 44px rgba(26, 32, 56, .07);
     --app-shadow-hover: 0 20px 50px rgba(26, 32, 56, .11);
     --app-radius: 24px;
@@ -147,7 +147,7 @@ html.dark .app-sidebar {
     width: 52px;
     height: 52px;
     object-fit: contain;
-    filter: drop-shadow(0 8px 14px rgba(53, 109, 243, .24));
+    filter: drop-shadow(0 8px 14px rgba(118, 87, 246, .24));
 }
 
 .app-brand p:first-child {
@@ -206,7 +206,7 @@ html.dark .app-sidebar {
 .app-nav a[class*="ring-inset"] {
     color: var(--app-primary-strong) !important;
     background: var(--app-primary-soft) !important;
-    border-color: rgba(79, 112, 246, .16);
+    border-color: color-mix(in srgb, var(--app-primary) 22%, var(--app-border));
     box-shadow: none !important;
 }
 
@@ -716,6 +716,25 @@ html.dark .app-content article.bg-white:hover {
 .app-content button,
 .app-content a {
     transition-duration: .2s;
+}
+
+.app-content .asset-code-link {
+    transition: color .2s ease, background-color .2s ease, border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+
+.app-content .asset-code-link:hover {
+    border-color: var(--app-primary) !important;
+    color: #ffffff !important;
+    background: var(--app-primary) !important;
+    box-shadow: 0 8px 18px color-mix(in srgb, var(--app-primary) 28%, transparent);
+    transform: translateY(-1px);
+}
+
+.app-content .asset-code-link:focus-visible {
+    border-color: var(--app-primary) !important;
+    color: var(--app-primary-strong) !important;
+    background: var(--app-primary-soft) !important;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--app-primary) 18%, transparent);
 }
 
 .app-content .bg-cyan-600,

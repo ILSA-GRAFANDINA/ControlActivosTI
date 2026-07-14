@@ -78,8 +78,8 @@ class ColaboradorListViewTests(TestCase):
 
         response = self.client.get(reverse("colaboradores:lista"), {"cols": ["apellidos"]})
 
-        self.assertEqual(response.context["total_columnas_tabla"], 3)
-        self.assertContains(response, 'colspan="3"')
+        self.assertEqual(response.context["total_columnas_tabla"], 2)
+        self.assertContains(response, 'colspan="2"')
 
     def test_list_view_uses_updated_default_columns(self):
         self.client.force_login(self.user)
@@ -115,6 +115,17 @@ class ColaboradorListViewTests(TestCase):
 
         for tone in ("cyan", "emerald", "amber", "rose", "violet"):
             self.assertContains(response, f'data-avatar-tone="{tone}"', count=1)
+
+    def test_avatar_and_surname_link_to_detail_without_action_column(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("colaboradores:lista"))
+        colaborador = Colaborador.objects.get(cedula="0102030405")
+        detail_url = reverse("colaboradores:detalle", args=[colaborador.pk])
+
+        self.assertContains(response, f'href="{detail_url}"', count=2)
+        self.assertNotContains(response, ">Acción</th>")
+        self.assertNotContains(response, ">Ver detalle</a>")
 
     def test_list_view_paginates_at_ten_items(self):
         self.client.force_login(self.user)

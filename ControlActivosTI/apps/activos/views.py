@@ -199,7 +199,6 @@ class ActivoListView(LoginRequiredMixin, ActivoFilterMixin, ListView):
     context_object_name = "activos"
 
     COLUMNAS_DISPONIBLES = [
-        ("codigo", "Código"),
         ("tipo_activo", "Tipo"),
         ("empresa", "Empresa"),
         ("marca", "Marca"),
@@ -216,7 +215,6 @@ class ActivoListView(LoginRequiredMixin, ActivoFilterMixin, ListView):
     ]
 
     COLUMNAS_POR_DEFECTO = [
-        "codigo",
         "tipo_activo",
         "empresa",
         "marca",
@@ -250,11 +248,21 @@ class ActivoListView(LoginRequiredMixin, ActivoFilterMixin, ListView):
         columnas_seleccionadas = self.get_selected_columns()
         context["columnas_disponibles"] = self.COLUMNAS_DISPONIBLES
         context["columnas_seleccionadas"] = columnas_seleccionadas
+        # El número de fila y el código enlazado son columnas fijas.
         context["total_columnas_tabla"] = len(columnas_seleccionadas) + 2
         context.update(self.get_filter_context())
         context["total_activos_filtrados"] = len(context.get("activos", []))
         context["exportar_url"] = f"{reverse('activos:exportar')}{self.get_export_querystring()}"
         context["tab_tipo_activa"] = self.active_tab_type_id
+        context["hay_filtros_para_exportar"] = bool(
+            context["busqueda"]
+            or context["estado_seleccionado"]
+            or context["tipos_seleccionados"]
+            or context["empresa_seleccionada"]
+            or context["ocultar_deshabilitados"]
+            or self.active_tab_type_id
+        )
+        context["exportar_sin_filtros_url"] = f"{reverse('activos:exportar')}?reset=1"
         context["tabs_tipo"] = self.build_tabs_context(
             reverse("activos:lista"),
             self.tab_type_summary,
