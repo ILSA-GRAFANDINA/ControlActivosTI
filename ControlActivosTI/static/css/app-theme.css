@@ -20,21 +20,21 @@
 
 html.dark {
     color-scheme: dark;
-    --app-bg: #0d0f1a;
-    --app-bg-glow: rgba(78, 104, 255, .12);
-    --app-surface: #171925;
-    --app-surface-soft: #1c1e2b;
-    --app-surface-muted: #242735;
-    --app-border: #292c3b;
-    --app-border-strong: #363a4c;
-    --app-text: #f5f6fb;
-    --app-text-soft: #b4b8c7;
-    --app-text-muted: #7c8295;
-    --app-primary: #6d8cff;
-    --app-primary-strong: #8aa2ff;
-    --app-primary-soft: rgba(83, 111, 255, .14);
-    --app-shadow: 0 18px 50px rgba(0, 0, 0, .22);
-    --app-shadow-hover: 0 24px 60px rgba(0, 0, 0, .3);
+    --app-bg: #17182d;
+    --app-bg-glow: rgba(112, 78, 255, .14);
+    --app-surface: #242543;
+    --app-surface-soft: #2c2d50;
+    --app-surface-muted: #35365d;
+    --app-border: #393a61;
+    --app-border-strong: #4a4b75;
+    --app-text: #f6f4ff;
+    --app-text-soft: #c9c6e1;
+    --app-text-muted: #8f8caf;
+    --app-primary: #7657f6;
+    --app-primary-strong: #9a84ff;
+    --app-primary-soft: rgba(118, 87, 246, .2);
+    --app-shadow: 0 14px 34px rgba(7, 8, 28, .22);
+    --app-shadow-hover: 0 22px 52px rgba(7, 8, 28, .34);
 }
 
 html,
@@ -71,6 +71,12 @@ body {
     box-shadow: var(--app-shadow);
     overflow: visible;
     transition: width .3s cubic-bezier(.2, .8, .2, 1), padding .3s ease, background-color .3s ease, border-color .3s ease, transform .3s ease;
+}
+
+html.dark .app-sidebar {
+    border-color: #20213f;
+    background: #0d0f25 !important;
+    box-shadow: 0 24px 70px rgba(6, 7, 25, .4);
 }
 
 .app-window-controls {
@@ -218,6 +224,13 @@ body {
     box-shadow: none !important;
 }
 
+html.dark .app-nav a[class*="ring-inset"] {
+    color: #ffffff !important;
+    border-color: rgba(168, 145, 255, .42);
+    background: linear-gradient(135deg, #5e3ed8, #7657f6) !important;
+    box-shadow: 0 10px 24px rgba(76, 52, 190, .3) !important;
+}
+
 .app-nav a::after {
     pointer-events: none;
 }
@@ -324,6 +337,12 @@ html.dark .sidebar-theme-option--light {
     background: color-mix(in srgb, var(--app-surface) 94%, transparent) !important;
     box-shadow: var(--app-shadow) !important;
     backdrop-filter: blur(16px);
+}
+
+html.dark .app-topbar {
+    border-color: #303156 !important;
+    background: rgba(29, 30, 55, .94) !important;
+    box-shadow: 0 18px 48px rgba(7, 8, 28, .28) !important;
 }
 
 .app-topbar h2 {
@@ -473,6 +492,16 @@ html.dark .theme-toggle__moon { color: #aebcff; }
 .app-content article.bg-white:hover {
     box-shadow: var(--app-shadow-hover) !important;
     transform: translateY(-2px);
+}
+
+html.dark .app-content article.bg-white,
+html.dark .app-content div.bg-white,
+html.dark .app-content section.bg-white {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .025), var(--app-shadow) !important;
+}
+
+html.dark .app-content article.bg-white:hover {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .035), var(--app-shadow-hover) !important;
 }
 
 .app-content .bg-slate-50,
@@ -637,7 +666,7 @@ html.dark .app-content .border-violet-200 { border-color: rgba(139, 92, 246, .28
 html.dark .app-content .bg-slate-700,
 html.dark .app-content .bg-slate-800,
 html.dark .app-content .bg-slate-900 {
-    background-color: #252837 !important;
+    background-color: #303154 !important;
 }
 
 /* Hero exclusivo del dashboard, inspirado en el degradado violeta de la referencia. */
@@ -681,11 +710,11 @@ html.dark .app-content .bg-slate-900 {
 }
 
 html.dark .app-content .dashboard-hero {
-    border-color: rgba(167, 139, 250, .2) !important;
+    border-color: rgba(176, 155, 255, .26) !important;
     background:
-        radial-gradient(circle at 78% -45%, rgba(196, 181, 253, .18), transparent 42%),
-        linear-gradient(112deg, #24155f 0%, #352184 50%, #4b35ae 100%);
-    box-shadow: 0 24px 64px rgba(0, 0, 0, .34) !important;
+        radial-gradient(circle at 78% -45%, rgba(211, 199, 255, .22), transparent 42%),
+        linear-gradient(112deg, #352477 0%, #5135b7 50%, #6d4ee6 100%);
+    box-shadow: 0 24px 64px rgba(12, 10, 48, .36) !important;
 }
 
 /*
