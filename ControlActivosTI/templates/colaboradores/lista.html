@@ -175,6 +175,9 @@
         <table class="min-w-full divide-y divide-slate-200 text-sm">
             <thead class="bg-slate-50 text-left text-slate-600">
                 <tr>
+                    <th class="w-[68px] px-4 py-3 font-semibold">
+                        <span class="sr-only">Identificador</span>
+                    </th>
                     {% if "apellidos" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Apellidos</th>{% endif %}
                     {% if "nombres" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Nombres</th>{% endif %}
                     {% if "cedula" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Cedula</th>{% endif %}
@@ -205,6 +208,14 @@
                         </tr>
                     {% endifchanged %}
                     <tr class="align-top text-slate-700">
+                        <td class="w-[68px] px-4 py-3">
+                            <span
+                                role="img"
+                                aria-label="Colaborador {{ colaborador.nombres }} {{ colaborador.apellidos }}"
+                                data-initials="{{ colaborador.nombres|first|upper }}{{ colaborador.apellidos|first|upper }}"
+                                class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-cyan-200 bg-cyan-100 text-xs font-bold tracking-wide text-cyan-700"
+                            >{{ colaborador.nombres|first|upper }}{{ colaborador.apellidos|first|upper }}</span>
+                        </td>
                         {% if "apellidos" in columnas_seleccionadas %}
                             <td class="px-4 py-3">
                                 <span class="inline-flex rounded-lg border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">

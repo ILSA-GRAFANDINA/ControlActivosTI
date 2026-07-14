@@ -73,13 +73,13 @@ class ColaboradorListViewTests(TestCase):
             response.content.decode().index("Beta Tech"),
         )
 
-    def test_table_colspan_matches_selected_columns_plus_action(self):
+    def test_table_colspan_matches_selected_columns_plus_fixed_columns(self):
         self.client.force_login(self.user)
 
         response = self.client.get(reverse("colaboradores:lista"), {"cols": ["apellidos"]})
 
-        self.assertEqual(response.context["total_columnas_tabla"], 2)
-        self.assertContains(response, 'colspan="2"')
+        self.assertEqual(response.context["total_columnas_tabla"], 3)
+        self.assertContains(response, 'colspan="3"')
 
     def test_list_view_uses_updated_default_columns(self):
         self.client.force_login(self.user)
@@ -93,6 +93,18 @@ class ColaboradorListViewTests(TestCase):
         self.assertContains(response, "inline-flex rounded-lg border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700")
         self.assertContains(response, "Zambrano")
         self.assertContains(response, 'font-semibold text-slate-900">Ana')
+
+    def test_list_view_shows_name_and_surname_initials(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse("colaboradores:lista"),
+            {"cols": ["apellidos"]},
+        )
+
+        self.assertContains(response, 'data-initials="AZ"')
+        self.assertContains(response, 'data-initials="LA"')
+        self.assertNotContains(response, ">Nombres</th>")
 
     def test_list_view_paginates_at_ten_items(self):
         self.client.force_login(self.user)
