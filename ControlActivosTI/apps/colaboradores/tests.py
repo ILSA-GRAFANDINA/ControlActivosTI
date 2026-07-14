@@ -106,6 +106,16 @@ class ColaboradorListViewTests(TestCase):
         self.assertContains(response, 'data-initials="LA"')
         self.assertNotContains(response, ">Nombres</th>")
 
+    def test_list_view_alternates_five_avatar_tones(self):
+        self.client.force_login(self.user)
+        for indice in range(3):
+            self._crear_colaborador_adicional(indice)
+
+        response = self.client.get(reverse("colaboradores:lista"))
+
+        for tone in ("cyan", "emerald", "amber", "rose", "violet"):
+            self.assertContains(response, f'data-avatar-tone="{tone}"', count=1)
+
     def test_list_view_paginates_at_ten_items(self):
         self.client.force_login(self.user)
 

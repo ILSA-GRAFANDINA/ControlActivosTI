@@ -194,6 +194,7 @@
             </thead>
             <tbody class="divide-y divide-slate-100">
                 {% for colaborador in colaboradores %}
+                    {% cycle 'cyan' 'emerald' 'amber' 'rose' 'violet' as avatar_tone silent %}
                     {% ifchanged colaborador.empresa_id %}
                         <tr class="bg-slate-50/80">
                             <td colspan="{{ total_columnas_tabla }}" class="px-4 py-3">
@@ -213,7 +214,8 @@
                                 role="img"
                                 aria-label="Colaborador {{ colaborador.nombres }} {{ colaborador.apellidos }}"
                                 data-initials="{{ colaborador.nombres|first|upper }}{{ colaborador.apellidos|first|upper }}"
-                                class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-cyan-200 bg-cyan-100 text-xs font-bold tracking-wide text-cyan-700"
+                                data-avatar-tone="{{ avatar_tone }}"
+                                class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-{{ avatar_tone }}-200 bg-{{ avatar_tone }}-50 text-xs font-bold tracking-wide text-{{ avatar_tone }}-700"
                             >{{ colaborador.nombres|first|upper }}{{ colaborador.apellidos|first|upper }}</span>
                         </td>
                         {% if "apellidos" in columnas_seleccionadas %}
