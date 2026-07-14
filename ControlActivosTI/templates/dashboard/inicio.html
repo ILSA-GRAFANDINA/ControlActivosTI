@@ -336,33 +336,77 @@
         const activosEmpresaData = readJSON("activos-empresa-data");
         const activosListaUrl = "{% url 'activos:lista' %}";
         const charts = [];
+        const chartIsDark = () => document.documentElement.classList.contains("dark");
         const chartTextColor = () => document.documentElement.classList.contains("dark") ? "#c9c6e1" : "#62697a";
         const chartGridColor = () => document.documentElement.classList.contains("dark") ? "rgba(143, 140, 175, 0.16)" : "rgba(148, 163, 184, 0.18)";
+        const chartPalette = () => chartIsDark()
+            ? { indigo: "#8583f5", yellow: "#f4cd68", cyan: "#65d0d4", rose: "#ef7b9a" }
+            : { indigo: "#6669d8", yellow: "#ffd978", cyan: "#72d5d8", rose: "#ef7898" };
+        const chartColor = (tone) => chartPalette()[tone] || chartPalette().indigo;
+        const chartToneSequence = ["indigo", "yellow", "cyan", "rose"];
 
-        const palette = {
-            cyan: "#06b6d4",
-            cyanSoft: "rgba(6, 182, 212, 0.18)",
-            emerald: "#10b981",
-            emeraldSoft: "rgba(16, 185, 129, 0.18)",
-            amber: "#f59e0b",
-            amberSoft: "rgba(245, 158, 11, 0.18)",
-            rose: "#f43f5e",
-            roseSoft: "rgba(244, 63, 94, 0.18)",
-            slate: "#475569",
-            slateSoft: "rgba(71, 85, 105, 0.18)",
+        const chartTooltipOptions = {
+            backgroundColor: () => chartIsDark() ? "rgba(23, 24, 45, .96)" : "rgba(255, 255, 255, .97)",
+            titleColor: () => chartIsDark() ? "#f6f4ff" : "#1e293b",
+            bodyColor: () => chartIsDark() ? "#c9c6e1" : "#475569",
+            borderColor: () => chartIsDark() ? "rgba(154, 132, 255, .3)" : "rgba(148, 163, 184, .28)",
+            borderWidth: 1,
+            cornerRadius: 8,
+            padding: 11,
+            displayColors: true,
+            boxPadding: 5,
+        };
+
+        const doughnutCenterLabel = {
+            id: "doughnutCenterLabel",
+            afterDraw(chart) {
+                if (chart.config.type !== "doughnut") {
+                    return;
+                }
+
+                const values = chart.data.datasets[0]?.data || [];
+                const total = values.reduce((sum, value) => sum + Number(value || 0), 0);
+                const firstArc = chart.getDatasetMeta(0).data[0];
+                const centerX = firstArc?.x ?? (chart.chartArea.left + chart.chartArea.right) / 2;
+                const centerY = firstArc?.y ?? (chart.chartArea.top + chart.chartArea.bottom) / 2;
+                const { ctx } = chart;
+
+                ctx.save();
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillStyle = chartIsDark() ? "#f6f4ff" : "#334155";
+                ctx.font = "700 20px Inter, system-ui, sans-serif";
+                ctx.fillText(total.toLocaleString("es-EC"), centerX, centerY - 7);
+                ctx.fillStyle = chartTextColor();
+                ctx.font = "600 11px Inter, system-ui, sans-serif";
+                ctx.fillText("Activos", centerX, centerY + 13);
+                ctx.restore();
+            },
         };
 
         const baseOptions = {
             responsive: true,
             maintainAspectRatio: false,
+            animation: {
+                duration: 700,
+                easing: "easeOutQuart",
+            },
+            elements: {
+                bar: {
+                    borderRadius: 5,
+                    borderSkipped: false,
+                },
+            },
             plugins: {
                 legend: {
                     labels: {
                         color: chartTextColor(),
                         usePointStyle: true,
                         boxWidth: 10,
+                        pointStyle: "rectRounded",
                     },
                 },
+                tooltip: chartTooltipOptions,
             },
             scales: {
                 x: {
@@ -388,25 +432,22 @@
         if (estadoCanvas) {
             charts.push(new Chart(estadoCanvas, {
                 type: "doughnut",
+                plugins: [doughnutCenterLabel],
                 data: {
                     labels: estadoLabels,
                     datasets: [{
                         data: estadoData,
-                        backgroundColor: [
-                            palette.emerald,
-                            palette.cyan,
-                            palette.amber,
-                            palette.rose,
-                            palette.slate,
-                            "#8b5cf6",
-                        ],
+                        backgroundColor: (context) => chartColor(
+                            chartToneSequence[context.dataIndex % chartToneSequence.length],
+                        ),
                         borderWidth: 0,
+                        hoverOffset: 5,
                     }],
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    cutout: "62%",
+                    cutout: "58%",
                     onClick: (_event, elements) => {
                         if (!elements.length) {
                             return;
@@ -423,12 +464,14 @@
                         chart.canvas.style.cursor = elements.length ? "pointer" : "default";
                     },
                     plugins: {
+                        tooltip: chartTooltipOptions,
                         legend: {
                             position: "bottom",
                             labels: {
                                 color: chartTextColor(),
                                 usePointStyle: true,
                                 boxWidth: 10,
+                                pointStyle: "rectRounded",
                                 padding: 18,
                             },
                         },
@@ -446,16 +489,16 @@
                     datasets: [{
                         label: "Activos asignados",
                         data: cecosData,
-                        backgroundColor: palette.emeraldSoft,
-                        borderColor: palette.emerald,
-                        borderWidth: 2,
-                        borderRadius: 10,
+                        backgroundColor: () => chartColor("indigo"),
+                        borderWidth: 0,
+                        maxBarThickness: 24,
                     }],
                 },
                 options: {
                     ...baseOptions,
                     indexAxis: "y",
                     plugins: {
+                        ...baseOptions.plugins,
                         legend: { display: false },
                     },
                 },
@@ -471,22 +514,17 @@
                     datasets: [{
                         label: "Activos",
                         data: tipoData,
-                        backgroundColor: [
-                            palette.cyan,
-                            palette.emerald,
-                            palette.amber,
-                            palette.rose,
-                            palette.slate,
-                            "#8b5cf6",
-                            "#14b8a6",
-                            "#f97316",
-                        ],
-                        borderRadius: 10,
+                        backgroundColor: (context) => chartColor(
+                            chartToneSequence[context.dataIndex % chartToneSequence.length],
+                        ),
+                        borderWidth: 0,
+                        maxBarThickness: 34,
                     }],
                 },
                 options: {
                     ...baseOptions,
                     plugins: {
+                        ...baseOptions.plugins,
                         legend: { display: false },
                     },
                 },
@@ -502,16 +540,16 @@
                     datasets: [{
                         label: "Activos",
                         data: activosEmpresaData,
-                        backgroundColor: palette.cyanSoft,
-                        borderColor: palette.cyan,
-                        borderWidth: 2,
-                        borderRadius: 10,
+                        backgroundColor: () => chartColor("cyan"),
+                        borderWidth: 0,
+                        maxBarThickness: 24,
                     }],
                 },
                 options: {
                     ...baseOptions,
                     indexAxis: "y",
                     plugins: {
+                        ...baseOptions.plugins,
                         legend: { display: false },
                     },
                 },

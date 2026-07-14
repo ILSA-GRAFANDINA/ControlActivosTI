@@ -235,6 +235,18 @@ class PerfilUsuarioViewTests(TestCase):
         self.assertTrue(PerfilUsuario.objects.filter(user=self.user).exists())
         self.assertContains(response, "Actualiza tu información básica")
 
+    def test_authenticated_topbar_uses_user_dropdown(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("accounts:perfil"))
+
+        self.assertContains(response, "data-user-menu")
+        self.assertContains(response, self.user.username)
+        self.assertContains(response, self.user.email)
+        self.assertContains(response, reverse("accounts:perfil"))
+        self.assertContains(response, reverse("accounts:logout"))
+        self.assertContains(response, "Cerrar sesión", count=1)
+
     def test_profile_view_updates_basic_data(self):
         self.client.force_login(self.user)
 

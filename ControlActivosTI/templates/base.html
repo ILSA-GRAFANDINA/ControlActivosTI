@@ -17,7 +17,7 @@
         })();
     </script>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <link rel="stylesheet" href="{% static 'css/app-theme.css' %}?v=20260714-7">
+    <link rel="stylesheet" href="{% static 'css/app-theme.css' %}?v=20260714-8">
     <style>
         html {
             scroll-behavior: smooth;
@@ -155,25 +155,43 @@
 
                 <div class="app-topbar-actions flex flex-col gap-3 sm:flex-row sm:items-center">
                     {% if user.is_authenticated %}
-                        <a href="{% url 'accounts:perfil' %}" class="inline-flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 transition hover:border-cyan-200 hover:bg-cyan-50/70">
-                            {% if current_user_profile and current_user_profile.foto %}
-                                <img src="{{ current_user_profile.foto.url }}" alt="Foto de perfil de {{ user.username }}" class="h-9 w-9 rounded-full object-cover ring-2 ring-cyan-100">
-                            {% else %}
-                                <span class="flex h-9 w-9 items-center justify-center rounded-full bg-cyan-100 text-sm font-bold text-cyan-700">
-                                    {{ user.username|first|upper }}
+                        <details class="app-user-menu" data-user-menu>
+                            <summary class="app-user-menu__trigger" data-user-menu-trigger aria-haspopup="menu" aria-expanded="false">
+                                {% if current_user_profile and current_user_profile.foto %}
+                                    <img src="{{ current_user_profile.foto.url }}" alt="Foto de perfil de {{ user.username }}" class="app-user-menu__avatar">
+                                {% else %}
+                                    <span class="app-user-menu__avatar app-user-menu__avatar--initial" aria-hidden="true">
+                                        {{ user.username|first|upper }}
+                                    </span>
+                                {% endif %}
+                                <span class="app-user-menu__identity">
+                                    <span class="app-user-menu__name">{{ user.username }}</span>
+                                    <span class="app-user-menu__email">{{ user.email|default:"Sin correo registrado" }}</span>
                                 </span>
-                            {% endif %}
-                            <div>
-                                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Mi perfil</p>
-                                <p class="text-sm font-semibold text-slate-700">{{ user.get_full_name|default:user.username }}</p>
+                                <svg class="app-user-menu__chevron" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="m8 10 4 4 4-4" />
+                                </svg>
+                            </summary>
+
+                            <div class="app-user-menu__dropdown" role="menu" aria-label="Opciones de usuario">
+                                <a href="{% url 'accounts:perfil' %}" class="app-user-menu__item" role="menuitem">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                        <circle cx="12" cy="8" r="3.25" />
+                                        <path d="M5.75 19c.5-3.35 2.58-5.25 6.25-5.25s5.75 1.9 6.25 5.25" />
+                                    </svg>
+                                    <span>Mi perfil</span>
+                                </a>
+                                <form method="post" action="{% url 'accounts:logout' %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="app-user-menu__item app-user-menu__item--logout" role="menuitem">
+                                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                                            <path d="M10 5H6.75A1.75 1.75 0 0 0 5 6.75v10.5A1.75 1.75 0 0 0 6.75 19H10M14.5 8.5 18 12l-3.5 3.5M18 12H9" />
+                                        </svg>
+                                        <span>Cerrar sesión</span>
+                                    </button>
+                                </form>
                             </div>
-                        </a>
-                        <form method="post" action="{% url 'accounts:logout' %}">
-                            {% csrf_token %}
-                            <button type="submit" class="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-                                Cerrar sesión
-                            </button>
-                        </form>
+                        </details>
                     {% endif %}
                 </div>
             </div>
@@ -193,7 +211,7 @@
             {% endif %}
         </main>
     </div>
-    <script src="{% static 'js/app-theme.js' %}?v=20260714-2"></script>
+    <script src="{% static 'js/app-theme.js' %}?v=20260714-3"></script>
     <script>
         document.addEventListener("submit", function (event) {
             if (event.target.matches("[data-scroll-to-results]")) {

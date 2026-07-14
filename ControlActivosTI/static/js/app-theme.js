@@ -10,6 +10,8 @@
     const sidebarClose = document.querySelector("[data-sidebar-close]");
     const sidebarToggle = document.querySelector("[data-sidebar-toggle]");
     const sidebarStorageKey = "controlactivos-sidebar";
+    const userMenu = document.querySelector("[data-user-menu]");
+    const userMenuTrigger = document.querySelector("[data-user-menu-trigger]");
 
     const currentTheme = () => root.classList.contains("dark") ? "dark" : "light";
 
@@ -68,9 +70,21 @@
         syncSidebarToggle();
     });
     sidebar?.querySelectorAll("a").forEach((link) => link.addEventListener("click", () => setSidebar(false)));
+    userMenu?.addEventListener("toggle", () => {
+        userMenuTrigger?.setAttribute("aria-expanded", String(userMenu.open));
+    });
+    document.addEventListener("pointerdown", (event) => {
+        if (userMenu?.open && !userMenu.contains(event.target)) {
+            userMenu.open = false;
+        }
+    });
     document.addEventListener("keydown", (event) => {
         if (event.key === "Escape") {
             setSidebar(false);
+            if (userMenu?.open) {
+                userMenu.open = false;
+                userMenuTrigger?.focus();
+            }
         }
     });
 

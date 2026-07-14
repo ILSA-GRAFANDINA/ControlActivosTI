@@ -343,31 +343,165 @@ html.dark .app-topbar {
     color: var(--app-text-muted) !important;
 }
 
-.app-topbar-actions > a {
-    border-color: var(--app-border) !important;
-    border-radius: 16px !important;
-    background: var(--app-surface-soft) !important;
+.app-user-menu {
+    position: relative;
+    min-width: 16rem;
 }
 
-.app-topbar-actions > a:hover {
-    border-color: color-mix(in srgb, var(--app-primary) 35%, var(--app-border)) !important;
-    background: var(--app-primary-soft) !important;
+.app-user-menu > summary {
+    list-style: none;
 }
 
-.app-topbar-actions > a p:last-child {
-    color: var(--app-text) !important;
+.app-user-menu > summary::-webkit-details-marker {
+    display: none;
 }
 
-.app-topbar-actions form button {
-    border-color: var(--app-border-strong) !important;
-    border-radius: 14px !important;
-    color: var(--app-text-soft) !important;
+.app-user-menu__trigger {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    align-items: center;
+    gap: .75rem;
+    padding: .65rem .8rem;
+    border: 1px solid var(--app-border);
+    border-radius: 16px;
+    color: var(--app-text);
+    background: var(--app-surface-soft);
+    cursor: pointer;
+    user-select: none;
+    transition: border-color .2s ease, background-color .2s ease, box-shadow .2s ease;
+}
+
+.app-user-menu__trigger:hover,
+.app-user-menu[open] .app-user-menu__trigger {
+    border-color: color-mix(in srgb, var(--app-primary) 38%, var(--app-border));
+    background: var(--app-primary-soft);
+}
+
+.app-user-menu[open] .app-user-menu__trigger {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-primary) 12%, transparent);
+}
+
+.app-user-menu__avatar {
+    width: 2.4rem;
+    height: 2.4rem;
+    flex: none;
+    border: 2px solid color-mix(in srgb, var(--app-primary) 24%, var(--app-surface));
+    border-radius: 999px;
+    object-fit: cover;
+}
+
+.app-user-menu__avatar--initial {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--app-primary-strong);
+    background: var(--app-primary-soft);
+    font-size: .82rem;
+    font-weight: 750;
+}
+
+.app-user-menu__identity {
+    display: grid;
+    min-width: 0;
+    flex: 1;
+    gap: .12rem;
+    text-align: left;
+}
+
+.app-user-menu__name,
+.app-user-menu__email {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-user-menu__name {
+    color: var(--app-text);
+    font-size: .84rem;
+    font-weight: 700;
+}
+
+.app-user-menu__email {
+    color: var(--app-text-muted);
+    font-size: .72rem;
+}
+
+.app-user-menu__chevron {
+    width: 1rem;
+    flex: none;
+    fill: none;
+    stroke: var(--app-text-muted);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2;
+    transition: transform .2s ease;
+}
+
+.app-user-menu[open] .app-user-menu__chevron {
+    transform: rotate(180deg);
+}
+
+.app-user-menu__dropdown {
+    position: absolute;
+    z-index: 50;
+    top: calc(100% + .55rem);
+    right: 0;
+    display: grid;
+    width: 100%;
+    min-width: 15rem;
+    gap: .3rem;
+    padding: .45rem;
+    border: 1px solid var(--app-border);
+    border-radius: 16px;
+    background: var(--app-surface);
+    box-shadow: var(--app-shadow-hover);
+}
+
+.app-user-menu__item {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: .7rem;
+    padding: .72rem .8rem;
+    border: 0;
+    border-radius: 11px;
+    color: var(--app-text-soft);
     background: transparent;
+    font-size: .82rem;
+    font-weight: 650;
+    text-align: left;
+    cursor: pointer;
 }
 
-.app-topbar-actions form button:hover {
-    color: var(--app-text) !important;
-    background: var(--app-surface-soft) !important;
+.app-user-menu__item:hover,
+.app-user-menu__item:focus-visible {
+    color: var(--app-text);
+    background: var(--app-surface-soft);
+    outline: none;
+}
+
+.app-user-menu__item--logout:hover,
+.app-user-menu__item--logout:focus-visible {
+    color: #e11d48;
+    background: rgba(244, 63, 94, .09);
+}
+
+html.dark .app-user-menu__item--logout:hover,
+html.dark .app-user-menu__item--logout:focus-visible {
+    color: #ff8297;
+}
+
+.app-user-menu__item svg {
+    width: 1.05rem;
+    height: 1.05rem;
+    flex: none;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.8;
 }
 
 .theme-toggle {
@@ -1055,16 +1189,13 @@ html.sidebar-collapsed .app-main {
         grid-template-columns: minmax(0, 1fr);
     }
 
-    .app-topbar-actions > a {
+    .app-user-menu {
+        width: 100%;
         min-width: 0;
     }
 
-    .app-topbar-actions form {
-        grid-column: auto;
-    }
-
-    .app-topbar-actions form button {
-        width: 100%;
+    .app-user-menu__dropdown {
+        width: min(18rem, calc(100vw - 2.5rem));
     }
 
     .app-content .rounded-2xl,
