@@ -127,6 +127,17 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# Scrypt usa memoria además de CPU y mantiene una protección sólida con una
+# latencia adecuada para un inicio de sesión interactivo. Los hashes anteriores
+# permanecen disponibles y Django los actualiza tras una autenticación exitosa.
+PASSWORD_HASHERS = [
+    'apps.accounts.hashers.ControlActivosScryptPasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
+]
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 

@@ -335,6 +335,9 @@
         const activosEmpresaLabels = readJSON("activos-empresa-labels");
         const activosEmpresaData = readJSON("activos-empresa-data");
         const activosListaUrl = "{% url 'activos:lista' %}";
+        const charts = [];
+        const chartTextColor = () => document.documentElement.classList.contains("dark") ? "#b4b8c7" : "#62697a";
+        const chartGridColor = () => document.documentElement.classList.contains("dark") ? "rgba(124, 130, 149, 0.18)" : "rgba(148, 163, 184, 0.18)";
 
         const palette = {
             cyan: "#06b6d4",
@@ -355,7 +358,7 @@
             plugins: {
                 legend: {
                     labels: {
-                        color: "#334155",
+                        color: chartTextColor(),
                         usePointStyle: true,
                         boxWidth: 10,
                     },
@@ -364,7 +367,7 @@
             scales: {
                 x: {
                     ticks: {
-                        color: "#64748b",
+                        color: chartTextColor(),
                         stepSize: 1,
                         precision: 0,
                     },
@@ -373,17 +376,17 @@
                 y: {
                     beginAtZero: true,
                     ticks: {
-                        color: "#64748b",
+                        color: chartTextColor(),
                         precision: 0,
                     },
-                    grid: { color: "rgba(148, 163, 184, 0.18)" },
+                    grid: { color: chartGridColor() },
                 },
             },
         };
 
         const estadoCanvas = document.getElementById("chartActivosEstado");
         if (estadoCanvas) {
-            new Chart(estadoCanvas, {
+            charts.push(new Chart(estadoCanvas, {
                 type: "doughnut",
                 data: {
                     labels: estadoLabels,
@@ -423,7 +426,7 @@
                         legend: {
                             position: "bottom",
                             labels: {
-                                color: "#334155",
+                                color: chartTextColor(),
                                 usePointStyle: true,
                                 boxWidth: 10,
                                 padding: 18,
@@ -431,12 +434,12 @@
                         },
                     },
                 },
-            });
+            }));
         }
 
         const cecoCanvas = document.getElementById("chartCecos");
         if (cecoCanvas) {
-            new Chart(cecoCanvas, {
+            charts.push(new Chart(cecoCanvas, {
                 type: "bar",
                 data: {
                     labels: cecosLabels,
@@ -456,12 +459,12 @@
                         legend: { display: false },
                     },
                 },
-            });
+            }));
         }
 
         const tipoCanvas = document.getElementById("chartActivosTipo");
         if (tipoCanvas) {
-            new Chart(tipoCanvas, {
+            charts.push(new Chart(tipoCanvas, {
                 type: "bar",
                 data: {
                     labels: tipoLabels,
@@ -487,12 +490,12 @@
                         legend: { display: false },
                     },
                 },
-            });
+            }));
         }
 
         const empresaCanvas = document.getElementById("chartActivosEmpresa");
         if (empresaCanvas) {
-            new Chart(empresaCanvas, {
+            charts.push(new Chart(empresaCanvas, {
                 type: "bar",
                 data: {
                     labels: activosEmpresaLabels,
@@ -512,8 +515,31 @@
                         legend: { display: false },
                     },
                 },
-            });
+            }));
         }
+
+        window.addEventListener("app:themechange", () => {
+            const textColor = chartTextColor();
+            const gridColor = chartGridColor();
+
+            charts.forEach((chart) => {
+                const legendLabels = chart.options.plugins?.legend?.labels;
+                if (legendLabels) {
+                    legendLabels.color = textColor;
+                }
+
+                Object.values(chart.options.scales || {}).forEach((scale) => {
+                    if (scale.ticks) {
+                        scale.ticks.color = textColor;
+                    }
+                    if (scale.grid && scale.grid.display !== false) {
+                        scale.grid.color = gridColor;
+                    }
+                });
+
+                chart.update("none");
+            });
+        });
     })();
 </script>
 {% endblock %}

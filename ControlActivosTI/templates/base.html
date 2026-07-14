@@ -7,7 +7,17 @@
     <title>{% block title %}ControlActivosTI{% endblock %}</title>
     <link rel="icon" type="image/svg+xml" href="{% static 'icons/favicon-app.svg' %}">
     <link rel="alternate icon" href="{% static 'icons/favicon-app.svg' %}">
+    <meta name="theme-color" content="#f4f6fb" data-theme-color>
+    <script>
+        (() => {
+            const savedTheme = localStorage.getItem("controlactivos-theme");
+            const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+            document.documentElement.classList.toggle("dark", savedTheme ? savedTheme === "dark" : prefersDark);
+            document.documentElement.classList.toggle("sidebar-collapsed", localStorage.getItem("controlactivos-sidebar") === "collapsed");
+        })();
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="{% static 'css/app-theme.css' %}?v=20260713-1">
     <style>
         html {
             scroll-behavior: smooth;
@@ -18,21 +28,32 @@
         }
     </style>
 </head>
-<body class="min-h-screen bg-slate-100 text-slate-800">
-    <div class="flex min-h-screen">
-        <aside class="sticky top-0 flex h-screen w-72 flex-none flex-col bg-slate-900 p-6 text-white">
-            <div class="mb-8 border-b border-slate-800 pb-6">
+<body class="app-body min-h-screen bg-slate-100 text-slate-800">
+    <div class="app-layout flex min-h-screen">
+        <div class="app-sidebar-backdrop" data-sidebar-close></div>
+        <aside class="app-sidebar sticky top-0 flex h-screen w-72 flex-none flex-col bg-slate-900 p-6 text-white" id="app-sidebar">
+            <div class="app-window-controls" aria-hidden="true"><span></span><span></span><span></span></div>
+            <button type="button" class="app-sidebar-toggle" data-sidebar-toggle aria-label="Contraer menú" aria-controls="app-sidebar" aria-expanded="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 7-5 5 5 5" /></svg>
+            </button>
+            <div class="app-brand mb-8 border-b border-slate-800 pb-6">
+                <div class="app-brand-mark" aria-hidden="true">
+                    <span></span><span></span><span></span><span></span>
+                </div>
+                <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">Sistema interno</p>
                 <h1 class="mt-3 text-2xl font-bold">ControlActivosTI</h1>
                 <p class="mt-2 text-sm text-slate-400">Inventario y asignaciones del área TI</p>
+                </div>
             </div>
 
-            <nav class="flex flex-1 flex-col justify-between">
+            <nav class="app-nav flex flex-1 flex-col justify-between">
                 <div>
                     <p class="mb-3 px-3 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Principal</p>
                     <a
                         href="/dashboard/"
-                        class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition {% if request.path == '/dashboard/' %}bg-cyan-500/15 text-cyan-200 ring-1 ring-inset ring-cyan-400/30{% else %}text-slate-200 hover:bg-slate-800 hover:text-white{% endif %}"
+                        data-nav-label="Dashboard"
+                        class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition {% if request.path == '/dashboard/' or request.path == '/' %}bg-cyan-500/15 text-cyan-200 ring-1 ring-inset ring-cyan-400/30{% else %}text-slate-200 hover:bg-slate-800 hover:text-white{% endif %}"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
                             <path d="M10.75 2.75a.75.75 0 0 0-1.5 0v6.5h-6.5a.75.75 0 0 0 0 1.5h6.5v6.5a.75.75 0 0 0 1.5 0v-6.5h6.5a.75.75 0 0 0 0-1.5h-6.5v-6.5Z" />
@@ -46,6 +67,7 @@
                     <div class="space-y-2">
                         <a
                             href="/activos/"
+                            data-nav-label="Activos"
                             class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition {% if request.path|slice:':9' == '/activos/' %}bg-cyan-500/15 text-cyan-200 ring-1 ring-inset ring-cyan-400/30{% else %}text-slate-200 hover:bg-slate-800 hover:text-white{% endif %}"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
@@ -55,6 +77,7 @@
                         </a>
                         <a
                             href="/colaboradores/"
+                            data-nav-label="Colaboradores"
                             class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition {% if request.path|slice:':15' == '/colaboradores/' %}bg-cyan-500/15 text-cyan-200 ring-1 ring-inset ring-cyan-400/30{% else %}text-slate-200 hover:bg-slate-800 hover:text-white{% endif %}"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
@@ -64,6 +87,7 @@
                         </a>
                         <a
                             href="/asignaciones/"
+                            data-nav-label="Asignaciones"
                             class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition {% if request.path|slice:':14' == '/asignaciones/' %}bg-cyan-500/15 text-cyan-200 ring-1 ring-inset ring-cyan-400/30{% else %}text-slate-200 hover:bg-slate-800 hover:text-white{% endif %}"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
@@ -79,6 +103,7 @@
                     <div class="space-y-2">
                         <a
                             href="/admin/"
+                            data-nav-label="Backoffice"
                             class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition {% if request.path|slice:':7' == '/admin/' %}bg-cyan-500/15 text-cyan-200 ring-1 ring-inset ring-cyan-400/30{% else %}text-slate-200 hover:bg-slate-800 hover:text-white{% endif %}"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
@@ -89,6 +114,7 @@
                         </a>
                         <a
                             href="/admin2/"
+                            data-nav-label="Admin2"
                             class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition {% if request.path|slice:':8' == '/admin2/' %}bg-cyan-500/15 text-cyan-200 ring-1 ring-inset ring-cyan-400/30{% else %}text-slate-200 hover:bg-slate-800 hover:text-white{% endif %}"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
@@ -99,17 +125,38 @@
                     </div>
                 </div>
             </nav>
+
+            <div class="app-sidebar-footer">
+                <button type="button" class="sidebar-theme-switch" data-theme-toggle aria-label="Cambiar tema" title="Cambiar tema">
+                    <span class="sidebar-theme-indicator" aria-hidden="true"></span>
+                    <span class="sidebar-theme-option sidebar-theme-option--light">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.64 5.64l1.42 1.42m9.88 9.88 1.42 1.42m0-12.72-1.42 1.42M7.06 16.94l-1.42 1.42"/><circle cx="12" cy="12" r="3.5"/></svg>
+                        <span>Claro</span>
+                    </span>
+                    <span class="sidebar-theme-option sidebar-theme-option--dark">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 15.2A8.4 8.4 0 0 1 8.8 4 8.4 8.4 0 1 0 20 15.2Z"/></svg>
+                        <span>Oscuro</span>
+                    </span>
+                </button>
+            </div>
         </aside>
 
-        <main class="min-w-0 flex-1 p-8">
-            <div class="mb-8 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-5 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+        <main class="app-main min-w-0 flex-1 p-8">
+            <div class="app-topbar mb-8 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-5 shadow-sm lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">ControlActivosTI</p>
-                    <h2 class="mt-2 text-3xl font-semibold text-slate-900">{% block page_title %}Panel{% endblock %}</h2>
+                    <div class="flex items-center gap-3">
+                        <button type="button" class="app-mobile-menu" data-sidebar-open aria-label="Abrir menú" aria-controls="app-sidebar" aria-expanded="false">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+                        </button>
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">ControlActivosTI</p>
+                            <h2 class="mt-2 text-3xl font-semibold text-slate-900">{% block page_title %}Panel{% endblock %}</h2>
+                        </div>
+                    </div>
                 </div>
 
-                {% if user.is_authenticated %}
-                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div class="app-topbar-actions flex flex-col gap-3 sm:flex-row sm:items-center">
+                    {% if user.is_authenticated %}
                         <a href="{% url 'accounts:perfil' %}" class="inline-flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 transition hover:border-cyan-200 hover:bg-cyan-50/70">
                             {% if current_user_profile and current_user_profile.foto %}
                                 <img src="{{ current_user_profile.foto.url }}" alt="Foto de perfil de {{ user.username }}" class="h-9 w-9 rounded-full object-cover ring-2 ring-cyan-100">
@@ -129,11 +176,13 @@
                                 Cerrar sesión
                             </button>
                         </form>
-                    </div>
-                {% endif %}
+                    {% endif %}
+                </div>
             </div>
 
-            {% block content %}{% endblock %}
+            <div class="app-content">
+                {% block content %}{% endblock %}
+            </div>
 
             {% if messages %}
                 <div class="mb-6 space-y-3">
@@ -146,6 +195,7 @@
             {% endif %}
         </main>
     </div>
+    <script src="{% static 'js/app-theme.js' %}?v=20260713-1"></script>
     <script>
         document.addEventListener("submit", function (event) {
             if (event.target.matches("[data-scroll-to-results]")) {

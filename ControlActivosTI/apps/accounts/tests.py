@@ -4,6 +4,7 @@ import shutil
 import uuid
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.hashers import PBKDF2PasswordHasher, identify_hasher
 from django.test import TestCase
 from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -298,6 +299,54 @@ class LoginViewTests(TestCase):
 
         session = self.client.session
         self.assertEqual(session.get_expire_at_browser_close(), True)
+
+    def test_successful_login_upgrades_a_legacy_password_hash(self):
+        legacy_hasher = PBKDF2PasswordHasher()
+        legacy_hasher.iterations = 1_000
+        self.user.password = legacy_hasher.encode("secret123", legacy_hasher.salt())
+        self.user.save(update_fields=["password"])
+
+        response = self.client.post(
+            reverse("accounts:login"),
+            {"username": "loginuser", "password": "secret123"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.user.refresh_from_db()
+        self.assertEqual(identify_hasher(self.user.password).algorithm, "scrypt")
+
+    def test_sql_injection_payloads_cannot_authenticate_or_modify_users(self):
+        payloads = [
+            "' OR '1'='1' --",
+            'loginuser" OR 1=1 --',
+            "'; DELETE FROM auth_user; --",
+        ]
+        initial_user_count = get_user_model().objects.count()
+
+        for payload in payloads:
+            with self.subTest(payload=payload):
+                response = self.client.post(
+                    reverse("accounts:login"),
+                    {"username": payload, "password": payload},
+                )
+
+                self.assertEqual(response.status_code, 200)
+                self.assertNotIn("_auth_user_id", self.client.session)
+                self.assertEqual(get_user_model().objects.count(), initial_user_count)
+
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("secret123"))
+
+    def test_login_rejects_usernames_longer_than_the_database_field(self):
+        response = self.client.post(
+            reverse("accounts:login"),
+            {"username": "a" * 151, "password": "secret123"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        username_error = response.context["form"].errors.as_data()["username"][0]
+        self.assertEqual(username_error.code, "max_length")
+        self.assertNotIn("_auth_user_id", self.client.session)
 
     def test_profile_photo_is_available_in_shared_layouts(self):
         media_root = make_test_media_root()

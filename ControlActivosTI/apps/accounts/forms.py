@@ -9,6 +9,7 @@ class CustomAuthenticationForm(AuthenticationForm):
 
     username = forms.CharField(
         label="Usuario",
+        max_length=150,
         widget=forms.TextInput(
             attrs={
                 "class": (
