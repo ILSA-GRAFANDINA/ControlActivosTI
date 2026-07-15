@@ -17,7 +17,7 @@
         })();
     </script>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <link rel="stylesheet" href="{% static 'css/app-theme.css' %}?v=20260714-12">
+    <link rel="stylesheet" href="{% static 'css/app-theme.css' %}?v=20260715-2">
     <style>
         html {
             scroll-behavior: smooth;
@@ -54,7 +54,8 @@
                         class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition {% if request.path == '/dashboard/' or request.path == '/' %}bg-cyan-500/15 text-cyan-200 ring-1 ring-inset ring-cyan-400/30{% else %}text-slate-200 hover:bg-slate-800 hover:text-white{% endif %}"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M10.75 2.75a.75.75 0 0 0-1.5 0v6.5h-6.5a.75.75 0 0 0 0 1.5h6.5v6.5a.75.75 0 0 0 1.5 0v-6.5h6.5a.75.75 0 0 0 0-1.5h-6.5v-6.5Z" />
+                            <path d="M3.25 2.5a.75.75 0 0 1 .75.75v12h12a.75.75 0 0 1 0 1.5H3.25a.75.75 0 0 1-.75-.75V3.25a.75.75 0 0 1 .75-.75Z" />
+                            <path d="M6 10.25a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 .75.75V14H6v-3.75ZM10.5 7a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 .75.75v7h-3V7ZM15 4.25a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 .75.75V14h-3V4.25Z" />
                         </svg>
                         <span>Dashboard</span>
                     </a>
@@ -106,7 +107,7 @@
                     </div>
                 </div>
 
-                <div>
+                <div class="app-nav-admin">
                     <p class="mb-3 px-3 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Administración</p>
                     <div class="space-y-2">
                         <a

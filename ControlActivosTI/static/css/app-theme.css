@@ -172,6 +172,7 @@ html.dark .app-sidebar {
 }
 
 .app-nav {
+    min-height: 0;
     justify-content: flex-start !important;
     gap: 1.25rem;
     overflow-y: auto;
@@ -240,14 +241,19 @@ html.dark .app-nav a[class*="ring-inset"] {
 
 .app-sidebar-footer {
     flex: none;
+    width: 100%;
+    min-width: 0;
     padding-top: .85rem;
     border-top: 1px solid var(--app-border);
+    box-sizing: border-box;
 }
 
 .sidebar-theme-switch {
     position: relative;
     display: grid;
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
     height: 44px;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     padding: 3px;
@@ -257,6 +263,13 @@ html.dark .app-nav a[class*="ring-inset"] {
     background: var(--app-surface-soft);
     cursor: pointer;
     isolation: isolate;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.app-nav-admin {
+    padding-top: 1rem;
+    border-top: 1px solid color-mix(in srgb, var(--app-border) 82%, transparent);
 }
 
 .sidebar-theme-indicator {
@@ -977,14 +990,24 @@ html.sidebar-collapsed .app-brand-mark {
 }
 
 html.sidebar-collapsed .app-nav {
-    gap: .75rem;
-    overflow: visible;
+    gap: .55rem;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+}
+
+html.sidebar-collapsed .app-nav::-webkit-scrollbar {
+    display: none;
 }
 
 html.sidebar-collapsed .app-nav > div,
 html.sidebar-collapsed .app-nav > div > div {
     display: grid;
-    gap: .55rem;
+    gap: .4rem;
+}
+
+html.sidebar-collapsed .app-nav > div > div > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0 !important;
 }
 
 html.sidebar-collapsed .app-nav a {
@@ -1041,6 +1064,7 @@ html.sidebar-collapsed .app-nav a[data-nav-label]:focus-visible::after {
 
 html.sidebar-collapsed .app-sidebar-footer {
     display: flex;
+    width: 100%;
     justify-content: center;
 }
 
@@ -1051,6 +1075,12 @@ html.sidebar-collapsed .sidebar-theme-switch {
     grid-template-columns: 1fr;
     border-radius: 15px;
     place-items: center;
+    flex: 0 0 46px;
+}
+
+html.sidebar-collapsed .app-nav-admin {
+    width: 100%;
+    padding-top: .8rem;
 }
 
 html.sidebar-collapsed .sidebar-theme-indicator {
