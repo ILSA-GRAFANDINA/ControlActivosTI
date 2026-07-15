@@ -8,6 +8,7 @@ from django.views.generic import CreateView, DetailView, ListView, TemplateView
 
 from apps.asignaciones.models import AsignacionDetalle
 from apps.catalogos.models import Empresa, EstadoActivo, TipoActivo
+from apps.facturas.models import FacturaCompra
 from apps.proveedores.models import Proveedor
 
 from .forms import ActivoAdminForm, FotoActivoCreateFormSet
@@ -17,7 +18,7 @@ from .services import build_activos_export_workbook
 
 class ActivoFilterMixin:
     FILTER_SESSION_KEY = "activos_filtros_guardados"
-    FILTER_FIELDS = ("q", "estado", "empresa", "proveedor", "ocultar_deshabilitados")
+    FILTER_FIELDS = ("q", "estado", "empresa", "proveedor", "factura", "ocultar_deshabilitados")
     FILTER_MULTI_FIELDS = ("tipo",)
     TAB_PARAM = "tab_tipo"
 
@@ -69,7 +70,7 @@ class ActivoFilterMixin:
 
     def get_filtered_queryset(self):
         queryset = (
-            Activo.objects.select_related("tipo_activo", "estado_activo", "empresa", "proveedor")
+            Activo.objects.select_related("tipo_activo", "estado_activo", "empresa", "proveedor", "factura_compra")
             .prefetch_related("fotos")
             .order_by("tipo_activo__nombre", "codigo")
         )
@@ -86,6 +87,7 @@ class ActivoFilterMixin:
                 | Q(proveedor__razon_social__icontains=busqueda)
                 | Q(proveedor__nombre_comercial__icontains=busqueda)
                 | Q(proveedor__identificacion__icontains=busqueda)
+                | Q(factura_compra__numero_factura__icontains=busqueda)
             )
 
         estado_id = self.get_filter_value("estado")
@@ -104,6 +106,12 @@ class ActivoFilterMixin:
         if proveedor_id.isdigit():
             queryset = queryset.filter(proveedor_id=proveedor_id)
 
+        factura_id = self.get_filter_value("factura")
+        if factura_id.isdigit():
+            queryset = queryset.filter(factura_compra_id=factura_id)
+        elif factura_id == "sin_factura":
+            queryset = queryset.filter(factura_compra__isnull=True)
+
         if self.get_filter_value("ocultar_deshabilitados") == "1":
             queryset = queryset.filter(activo=True)
 
@@ -117,11 +125,13 @@ class ActivoFilterMixin:
             "tipos_seleccionados": filtros["tipo"],
             "empresa_seleccionada": filtros["empresa"],
             "proveedor_seleccionado": filtros["proveedor"],
+            "factura_seleccionada": filtros["factura"],
             "ocultar_deshabilitados": filtros["ocultar_deshabilitados"] == "1",
             "estados_activo": EstadoActivo.objects.filter(activo=True).order_by("nombre"),
             "tipos_activo": TipoActivo.objects.filter(activo=True).order_by("nombre"),
             "empresas_activo": Empresa.objects.filter(activo=True).order_by("nombre"),
             "proveedores": Proveedor.objects.order_by("razon_social"),
+            "facturas_compra": FacturaCompra.objects.select_related("proveedor").order_by("-fecha_emision"),
         }
 
     def get_export_querystring(self):
@@ -133,6 +143,7 @@ class ActivoFilterMixin:
         params.setlist("tipo", filtros["tipo"])
         params["empresa"] = filtros["empresa"]
         params["proveedor"] = filtros["proveedor"]
+        params["factura"] = filtros["factura"]
         if filtros["ocultar_deshabilitados"] == "1":
             params["ocultar_deshabilitados"] = "1"
         else:
@@ -165,6 +176,7 @@ class ActivoFilterMixin:
         params.setlist("tipo", filtros["tipo"])
         params["empresa"] = filtros["empresa"]
         params["proveedor"] = filtros["proveedor"]
+        params["factura"] = filtros["factura"]
         if filtros["ocultar_deshabilitados"] == "1":
             params["ocultar_deshabilitados"] = "1"
 
@@ -214,6 +226,7 @@ class ActivoListView(LoginRequiredMixin, ActivoFilterMixin, ListView):
         ("tipo_activo", "Tipo"),
         ("empresa", "Empresa"),
         ("proveedor", "Proveedor"),
+        ("factura", "Factura"),
         ("marca", "Marca"),
         ("modelo", "Modelo"),
         ("serie", "Serie"),
@@ -274,6 +287,7 @@ class ActivoListView(LoginRequiredMixin, ActivoFilterMixin, ListView):
             or context["tipos_seleccionados"]
             or context["empresa_seleccionada"]
             or context["proveedor_seleccionado"]
+            or context["factura_seleccionada"]
             or context["ocultar_deshabilitados"]
             or self.active_tab_type_id
         )
@@ -363,7 +377,7 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
             return None
 
         return (
-            Activo.objects.select_related("tipo_activo", "estado_activo", "empresa", "proveedor")
+            Activo.objects.select_related("tipo_activo", "estado_activo", "empresa", "proveedor", "factura_compra")
             .prefetch_related("fotos")
             .filter(pk=raw_pk)
             .first()
@@ -459,7 +473,7 @@ class ActivoDetailView(LoginRequiredMixin, DetailView):
 
     def get_queryset(self):
         return (
-            Activo.objects.select_related("tipo_activo", "estado_activo", "empresa", "proveedor")
+            Activo.objects.select_related("tipo_activo", "estado_activo", "empresa", "proveedor", "factura_compra", "factura_compra__proveedor", "factura_compra__empresa")
             .prefetch_related(
                 Prefetch(
                     "fotos",

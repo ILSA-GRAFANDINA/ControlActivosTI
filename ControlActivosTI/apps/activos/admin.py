@@ -32,6 +32,7 @@ class ActivoAdmin(admin.ModelAdmin):
         "tipo_activo",
         "empresa",
         "proveedor",
+        "factura_compra",
         "marca",
         "modelo",
         "serie",
@@ -52,6 +53,7 @@ class ActivoAdmin(admin.ModelAdmin):
         "empresa__nombre",
         "proveedor__razon_social",
         "proveedor__identificacion",
+        "factura_compra__numero_factura",
         "codigo_sap",
         "cpu",
         "ram",
@@ -61,13 +63,14 @@ class ActivoAdmin(admin.ModelAdmin):
         "tipo_activo",
         "empresa",
         "proveedor",
+        "factura_compra",
         "estado_activo",
         "activo",
         "marca",
         "sistema_operativo",
         "fecha_compra",
     )
-    list_select_related = ("tipo_activo", "empresa", "proveedor", "estado_activo")
+    list_select_related = ("tipo_activo", "empresa", "proveedor", "factura_compra", "estado_activo")
     inlines = [FotoActivoInline]
 
     class Media:

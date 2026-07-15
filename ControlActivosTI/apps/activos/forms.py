@@ -5,6 +5,7 @@ from pathlib import Path
 from django.db.models import Q
 
 from apps.proveedores.models import Proveedor
+from apps.facturas.models import FacturaCompra
 
 from .models import (
     Activo,
@@ -60,6 +61,7 @@ class ActivoAdminForm(forms.ModelForm):
             "tipo_activo": "Tipo de activo",
             "empresa": "Empresa",
             "proveedor": "Proveedor de adquisicion",
+            "factura_compra": "Factura de compra",
             "marca": "Marca",
             "modelo": "Modelo",
             "serie": "Serie",
@@ -139,6 +141,22 @@ class ActivoAdminForm(forms.ModelForm):
             self.fields["proveedor"].required = False
             self.fields["proveedor"].help_text = "Opcional. En altas solo se muestran proveedores activos."
 
+        if "factura_compra" in self.fields:
+            factura_actual_id = self.instance.factura_compra_id if self.instance and self.instance.pk else None
+            proveedor_id = self.data.get("proveedor") or getattr(self.instance, "proveedor_id", None)
+            empresa_id = self.data.get("empresa") or getattr(self.instance, "empresa_id", None)
+            filtro_factura = Q(activa=True)
+            if factura_actual_id:
+                filtro_factura |= Q(pk=factura_actual_id)
+            facturas = FacturaCompra.objects.filter(filtro_factura).select_related("proveedor", "empresa")
+            if str(proveedor_id or "").isdigit():
+                facturas = facturas.filter(proveedor_id=proveedor_id)
+            if str(empresa_id or "").isdigit():
+                facturas = facturas.filter(empresa_id=empresa_id)
+            self.fields["factura_compra"].queryset = facturas.order_by("-fecha_emision", "numero_factura")
+            self.fields["factura_compra"].required = False
+            self.fields["factura_compra"].help_text = "Opcional. Solo se muestran facturas compatibles con proveedor y empresa."
+
     def clean(self):
         cleaned_data = super().clean()
         tipo_activo = cleaned_data.get("tipo_activo")
@@ -162,6 +180,21 @@ class ActivoAdminForm(forms.ModelForm):
         proveedor_actual_id = self.instance.proveedor_id if self.instance and self.instance.pk else None
         if proveedor and not proveedor.activo and proveedor.pk != proveedor_actual_id:
             self.add_error("proveedor", "El proveedor seleccionado esta inactivo.")
+
+        factura = cleaned_data.get("factura_compra")
+        empresa = cleaned_data.get("empresa")
+        factura_actual_id = self.instance.factura_compra_id if self.instance and self.instance.pk else None
+        if factura:
+            if not factura.activa and factura.pk != factura_actual_id:
+                self.add_error("factura_compra", "La factura seleccionada esta archivada.")
+            if proveedor and factura.proveedor_id != proveedor.pk:
+                self.add_error("factura_compra", "La factura no corresponde al proveedor seleccionado.")
+            if empresa and factura.empresa_id != empresa.pk:
+                self.add_error("factura_compra", "La factura no corresponde a la empresa seleccionada.")
+            if not proveedor:
+                cleaned_data["proveedor"] = factura.proveedor
+            if not empresa:
+                cleaned_data["empresa"] = factura.empresa
 
         return cleaned_data
 

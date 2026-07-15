@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}{% if object %}Editar{% else %}Registrar{% endif %} factura - ControlActivosTI{% endblock %}
+{% block page_title %}{% if object %}Editar factura{% else %}Registrar factura{% endif %}{% endblock %}
+{% block content %}
+<section class="mx-auto max-w-4xl rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
+    <form method="post" enctype="multipart/form-data" class="space-y-6" data-upload-form>
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{{ form.non_field_errors }}</div>{% endif %}
+        <div class="grid gap-5 md:grid-cols-2">
+            {% for field in form %}<label class="{% if field.name == 'observaciones' or field.name == 'archivo' %}md:col-span-2{% endif %}"><span class="mb-2 block text-sm font-semibold text-slate-700">{{ field.label }}{% if field.field.required %} *{% endif %}</span>{{ field }}{% if field.help_text %}<span class="mt-2 block text-xs text-slate-500">{{ field.help_text }}</span>{% endif %}{% for error in field.errors %}<span class="mt-2 block text-sm text-red-600">{{ error }}</span>{% endfor %}</label>{% endfor %}
+        </div>
+        {% if object %}<div class="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">El PDF no se reemplaza desde este formulario. Utiliza la operación protegida de reemplazo para conservar trazabilidad.</div>{% endif %}
+        <div class="flex flex-wrap gap-3"><button type="submit" class="rounded-xl bg-violet-600 px-6 py-3 font-semibold text-white hover:bg-violet-700" data-submit-button>Guardar factura</button><a href="{% if object %}{% url 'facturas:detalle' object.pk %}{% else %}{% url 'facturas:lista' %}{% endif %}" class="rounded-xl border border-slate-300 px-6 py-3 font-semibold text-slate-600">Cancelar</a><span class="hidden items-center gap-2 text-sm text-slate-500" data-upload-indicator>Validando y optimizando el PDF…</span></div>
+    </form>
+</section>
+<script>document.querySelector("[data-upload-form]")?.addEventListener("submit",()=>{document.querySelector("[data-submit-button]").disabled=true;document.querySelector("[data-upload-indicator]")?.classList.remove("hidden")});</script>
+{% endblock %}
+

@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block title %}Reemplazar PDF - {{ factura.numero_factura }}{% endblock %}
+{% block page_title %}Reemplazar documento{% endblock %}
+{% block content %}<section class="mx-auto max-w-3xl rounded-3xl border border-amber-200 bg-white p-7 shadow-sm"><div class="mb-6 rounded-xl bg-amber-50 p-4 text-sm text-amber-800">El documento actual se conservará en el historial. Esta operación queda asociada a tu usuario y requiere un motivo.</div><form method="post" enctype="multipart/form-data" class="space-y-5">{% csrf_token %}{% for field in form %}<label class="block"><span class="mb-2 block font-semibold text-slate-700">{{ field.label }}</span>{{ field }}{% for error in field.errors %}<span class="mt-2 block text-sm text-red-600">{{ error }}</span>{% endfor %}</label>{% endfor %}<div class="flex gap-3"><button class="rounded-xl bg-amber-600 px-6 py-3 font-semibold text-white" onclick="return confirm('¿Confirmas el reemplazo del documento?')">Reemplazar PDF</button><a href="{% url 'facturas:detalle' factura.pk %}" class="rounded-xl border border-slate-300 px-6 py-3 font-semibold text-slate-600">Cancelar</a></div></form></section>{% endblock %}
+

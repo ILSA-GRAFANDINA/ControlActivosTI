@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'apps.catalogos',
     'apps.colaboradores',
     'apps.proveedores',
+    'apps.facturas',
     'apps.activos',
     'apps.asignaciones',
     'apps.actas',
@@ -145,8 +146,23 @@ PASSWORD_HASHERS = [
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    # Este alias no expone URL publica. En produccion puede reemplazarse por un
+    # backend privado remoto sin modificar modelos ni vistas.
+    "facturas": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+        "OPTIONS": {"location": BASE_DIR / "private_media"},
+    },
+}
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# Limites centralizados para documentos de facturas de compra.
+FACTURAS_PDF_MAX_SIZE = config('FACTURAS_PDF_MAX_SIZE', default=15 * 1024 * 1024, cast=int)
+FACTURAS_PDF_MAX_PAGES = config('FACTURAS_PDF_MAX_PAGES', default=300, cast=int)
 
 LOGIN_URL = "accounts:login"
 LOGIN_REDIRECT_URL = "/dashboard/"

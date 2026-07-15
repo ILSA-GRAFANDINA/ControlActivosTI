@@ -113,7 +113,10 @@ class ProveedorDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailVie
     context_object_name = "proveedor"
 
     def get_queryset(self):
-        return Proveedor.objects.annotate(activos_count=Count("activos", distinct=True))
+        return Proveedor.objects.annotate(
+            activos_count=Count("activos", distinct=True),
+            facturas_count=Count("facturas", distinct=True),
+        ).prefetch_related("facturas__empresa", "facturas__activos")
 
 
 class ProveedorEstadoView(LoginRequiredMixin, PermissionRequiredMixin, View):
@@ -140,7 +143,7 @@ class ProveedorDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteVie
         try:
             response = super().form_valid(form)
         except ProtectedError:
-            messages.error(self.request, "No se puede eliminar el proveedor porque tiene activos relacionados. Desactivalo en su lugar.")
+            messages.error(self.request, "No se puede eliminar el proveedor porque tiene activos o facturas relacionados. Desactivalo en su lugar.")
             return HttpResponseRedirect(reverse("proveedores:detalle", args=[self.object.pk]))
         messages.success(self.request, "Proveedor eliminado correctamente.")
         return response

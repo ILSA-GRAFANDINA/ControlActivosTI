@@ -95,6 +95,14 @@ class Activo(models.Model):
         blank=True,
         help_text="Proveedor de adquisicion del activo.",
     )
+    factura_compra = models.ForeignKey(
+        "facturas.FacturaCompra",
+        on_delete=models.PROTECT,
+        related_name="activos",
+        null=True,
+        blank=True,
+        help_text="Factura de compra asociada al activo.",
+    )
     marca = models.CharField(max_length=80)
     modelo = models.CharField(max_length=80)
     serie = models.CharField(
@@ -209,6 +217,24 @@ class Activo(models.Model):
     def clean(self):
         super().clean()
 
+        if self.factura_compra_id:
+            factura = self.factura_compra
+            errores = {}
+            if self.proveedor_id and self.proveedor_id != factura.proveedor_id:
+                errores["factura_compra"] = "La factura pertenece a un proveedor diferente al del activo."
+            if self.empresa_id and self.empresa_id != factura.empresa_id:
+                errores["factura_compra"] = "La factura pertenece a una empresa compradora diferente."
+            if not factura.activa:
+                factura_anterior_id = None
+                if self.pk:
+                    factura_anterior_id = type(self).objects.filter(pk=self.pk).values_list(
+                        "factura_compra_id", flat=True
+                    ).first()
+                if factura_anterior_id != factura.pk:
+                    errores["factura_compra"] = "La factura seleccionada esta archivada."
+            if errores:
+                raise ValidationError(errores)
+
         if self.codigo_sap:
             self.codigo_sap = self.codigo_sap.strip().upper()
         else:
@@ -238,6 +264,11 @@ class Activo(models.Model):
             self.serie = "S/N"
         self.limpiar_especificaciones_no_aplicables()
         self.limpiar_codigo_sap_no_aplicable()
+        if self.factura_compra_id:
+            if not self.proveedor_id:
+                self.proveedor_id = self.factura_compra.proveedor_id
+            if not self.empresa_id:
+                self.empresa_id = self.factura_compra.empresa_id
         if not self.codigo:
             self.codigo = self._generar_codigo()
         self.full_clean()

@@ -106,6 +106,14 @@
                     {% for proveedor in proveedores %}<option value="{{ proveedor.pk }}" {% if proveedor_seleccionado == proveedor.pk|stringformat:"s" %}selected{% endif %}>{{ proveedor }}</option>{% endfor %}
                 </select>
             </div>
+            <div>
+                <label for="filtro-factura" class="mb-2 block text-sm font-semibold text-slate-700">Factura</label>
+                <select id="filtro-factura" name="factura" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
+                    <option value="">Todas las facturas</option>
+                    <option value="sin_factura" {% if factura_seleccionada == 'sin_factura' %}selected{% endif %}>Sin factura registrada</option>
+                    {% for factura in facturas_compra %}<option value="{{ factura.pk }}" {% if factura_seleccionada == factura.pk|stringformat:"s" %}selected{% endif %}>{{ factura.numero_factura }} · {{ factura.proveedor }}</option>{% endfor %}
+                </select>
+            </div>
         </div>
 
         <div class="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
@@ -184,6 +192,7 @@
         {% endfor %}
         <input type="hidden" name="empresa" value="{{ empresa_seleccionada }}">
         <input type="hidden" name="proveedor" value="{{ proveedor_seleccionado }}">
+        <input type="hidden" name="factura" value="{{ factura_seleccionada }}">
         {% if tab_tipo_activa %}
             <input type="hidden" name="tab_tipo" value="{{ tab_tipo_activa }}">
         {% endif %}
@@ -287,6 +296,7 @@
             tipos: [{% for tipo_id in tipos_seleccionados %}"{{ tipo_id|escapejs }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
             empresa: "{{ empresa_seleccionada|escapejs }}",
             proveedor: "{{ proveedor_seleccionado|escapejs }}",
+            factura: "{{ factura_seleccionada|escapejs }}",
             ocultar: "{{ ocultar_deshabilitados|yesno:'1,0' }}",
         });
         const selectionKey = `activos-export-selection:${window.location.pathname}:${currentFilterSignature}`;

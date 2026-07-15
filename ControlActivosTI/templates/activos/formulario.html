@@ -59,6 +59,12 @@
                 {% if form.proveedor.help_text %}<p class="mt-2 text-xs text-slate-500">{{ form.proveedor.help_text }}</p>{% endif %}
                 {% if form.proveedor.errors %}<p class="mt-2 text-sm text-red-600">{{ form.proveedor.errors|join:", " }}</p>{% endif %}
             </div>
+            <div>
+                <label class="mb-2 block text-sm font-semibold text-slate-700">Factura de compra</label>
+                {{ form.factura_compra }}
+                {% if form.factura_compra.help_text %}<p class="mt-2 text-xs text-slate-500">{{ form.factura_compra.help_text }}</p>{% endif %}
+                {% if form.factura_compra.errors %}<p class="mt-2 text-sm text-red-600">{{ form.factura_compra.errors|join:", " }}</p>{% endif %}
+            </div>
             <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                 <label class="flex cursor-pointer items-start gap-3 text-sm font-semibold text-slate-700" for="{{ form.activo.id_for_label }}">
                     {{ form.activo }}

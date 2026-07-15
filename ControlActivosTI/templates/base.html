@@ -17,7 +17,7 @@
         })();
     </script>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <link rel="stylesheet" href="{% static 'css/app-theme.css' %}?v=20260715-4">
+    <link rel="stylesheet" href="{% static 'css/app-theme.css' %}?v=20260715-5">
     <style>
         html {
             scroll-behavior: smooth;
@@ -82,6 +82,16 @@
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 20 20" fill="currentColor"><path d="M2.5 5.75A2.25 2.25 0 0 1 4.75 3.5h10.5a2.25 2.25 0 0 1 2.25 2.25v8.5a2.25 2.25 0 0 1-2.25 2.25H4.75a2.25 2.25 0 0 1-2.25-2.25v-8.5Zm3-.75v2h9V5h-9Zm9 3.5h-9V15h9V8.5Z"/></svg>
                             <span>Proveedores</span>
+                        </a>
+                        {% endif %}
+                        {% if perms.facturas.view_facturacompra %}
+                        <a
+                            href="{% url 'facturas:lista' %}"
+                            data-nav-label="Facturas"
+                            class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition {% if request.path|slice:':10' == '/facturas/' %}bg-cyan-500/15 text-cyan-200 ring-1 ring-inset ring-cyan-400/30{% else %}text-slate-200 hover:bg-slate-800 hover:text-white{% endif %}"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 20 20" fill="currentColor"><path d="M5.25 2.5A2.25 2.25 0 0 0 3 4.75v10.5a2.25 2.25 0 0 0 2.25 2.25h9.5A2.25 2.25 0 0 0 17 15.25V7.31a2.25 2.25 0 0 0-.659-1.591L13.78 3.159A2.25 2.25 0 0 0 12.19 2.5H5.25Zm6.5 1.55c.36.08.69.26.951.52l2.73 2.73c.26.26.44.59.52.95H13.5a1.75 1.75 0 0 1-1.75-1.75V4.05ZM6 10.25a.75.75 0 0 1 .75-.75h6.5a.75.75 0 0 1 0 1.5h-6.5a.75.75 0 0 1-.75-.75Zm0 3a.75.75 0 0 1 .75-.75h6.5a.75.75 0 0 1 0 1.5h-6.5a.75.75 0 0 1-.75-.75Z"/></svg>
+                            <span>Facturas</span>
                         </a>
                         {% endif %}
                         <a

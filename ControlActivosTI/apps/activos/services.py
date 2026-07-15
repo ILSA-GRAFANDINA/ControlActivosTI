@@ -23,6 +23,7 @@ EXPORT_HEADERS = [
     "Creado el",
     "Actualizado el",
     "Proveedor",
+    "Factura de compra",
 ]
 
 
@@ -47,6 +48,7 @@ def _activo_to_row(activo):
         activo.created_at.replace(tzinfo=None) if activo.created_at else None,
         activo.updated_at.replace(tzinfo=None) if activo.updated_at else None,
         str(activo.proveedor) if activo.proveedor_id else "",
+        activo.factura_compra.numero_factura if activo.factura_compra_id else "",
     ]
 
 
