@@ -106,6 +106,9 @@ class ProveedorViewsTests(TestCase):
         )
         self.assertContains(response, "Vista de tabla")
         self.assertContains(response, "TE")
+        self.assertContains(response, "border-cyan-200")
+        self.assertNotContains(response, "{% cycle")
+        self.assertNotContains(response, "{{ proveedor.pais")
 
         response = self.client.get(
             reverse("proveedores:lista"),

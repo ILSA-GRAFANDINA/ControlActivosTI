@@ -1,0 +1,2 @@
+# Las plantillas usan sintaxis Django que Prettier HTML puede fragmentar.
+templates/**/*.html

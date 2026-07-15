@@ -1,11 +1,117 @@
 {% extends "base.html" %}
+
 {% block title %}{{ proveedor.nombre_visible }} - ControlActivosTI{% endblock %}
 {% block page_title %}Detalle del proveedor{% endblock %}
-{% block content %}<div class="space-y-6">
-<div class="flex flex-wrap items-center justify-between gap-3"><a href="{% url 'proveedores:lista' %}" class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">Volver a proveedores</a><div class="flex flex-wrap gap-2">
-{% if perms.proveedores.change_proveedor %}<a href="{% url 'proveedores:editar' proveedor.pk %}" class="rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-700">Editar</a>{% endif %}
-{% if perms.proveedores.change_proveedor_status %}<form method="post" action="{% url 'proveedores:estado' proveedor.pk %}" onsubmit="return confirm('{% if proveedor.activo %}¿Desactivar este proveedor? Dejara de estar disponible para nuevos activos.{% else %}¿Activar este proveedor?{% endif %}')">{% csrf_token %}<button class="rounded-xl border px-4 py-2 text-sm font-semibold {% if proveedor.activo %}border-amber-200 bg-amber-50 text-amber-700{% else %}border-emerald-200 bg-emerald-50 text-emerald-700{% endif %}">{% if proveedor.activo %}Desactivar{% else %}Activar{% endif %}</button></form>{% endif %}
-{% if perms.proveedores.delete_proveedor %}<a href="{% url 'proveedores:eliminar' proveedor.pk %}" class="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700">Eliminar</a>{% endif %}</div></div>
-<div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"><div class="flex flex-wrap items-start justify-between gap-4"><div><p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{ proveedor.get_tipo_proveedor_display }}</p><h2 class="mt-1 text-2xl font-bold text-slate-900">{{ proveedor.nombre_visible }}</h2><p class="mt-1 text-sm text-slate-500">{{ proveedor.razon_social }}</p></div><span class="rounded-full px-3 py-1 text-xs font-semibold {% if proveedor.activo %}bg-emerald-50 text-emerald-700{% else %}bg-slate-100 text-slate-600{% endif %}">{{ proveedor.activo|yesno:"Activo,Inactivo" }}</span></div>
-<div class="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3"><div><p class="text-sm text-slate-500">Identificacion</p><p class="font-medium text-slate-900">{{ proveedor.get_tipo_identificacion_display }} {{ proveedor.identificacion }}</p></div><div><p class="text-sm text-slate-500">Contacto</p><p class="font-medium text-slate-900">{{ proveedor.nombre_contacto|default:"-" }}</p></div><div><p class="text-sm text-slate-500">Correo</p><p class="font-medium text-slate-900">{{ proveedor.correo_electronico|default:"-" }}</p></div><div><p class="text-sm text-slate-500">Telefono</p><p class="font-medium text-slate-900">{{ proveedor.telefono|default:"-" }}</p></div><div><p class="text-sm text-slate-500">Ciudad / Pais</p><p class="font-medium text-slate-900">{{ proveedor.ciudad|default:"-" }} / {{ proveedor.pais }}</p></div><div><p class="text-sm text-slate-500">Activos relacionados</p><a href="{% url 'activos:lista' %}?proveedor={{ proveedor.pk }}" class="font-semibold text-cyan-700 hover:underline">{{ proveedor.activos_count }} activos</a></div><div class="md:col-span-2 xl:col-span-3"><p class="text-sm text-slate-500">Direccion</p><p class="font-medium text-slate-900">{{ proveedor.direccion|default:"-" }}</p></div><div class="md:col-span-2 xl:col-span-3"><p class="text-sm text-slate-500">Observaciones</p><p class="font-medium text-slate-900">{{ proveedor.observaciones|default:"-" }}</p></div></div>
-<div class="mt-6 border-t border-slate-100 pt-4 text-xs text-slate-500">Creado {{ proveedor.created_at }} · Ultima modificacion {{ proveedor.updated_at }}</div></div></div>{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <a
+      href="{% url 'proveedores:lista' %}"
+      class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700"
+      >Volver a proveedores</a
+    >
+    <div class="flex flex-wrap gap-2">
+      {% if perms.proveedores.change_proveedor %}<a
+        href="{% url 'proveedores:editar' proveedor.pk %}"
+        class="rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-700"
+        >Editar</a
+      >{% endif %} {% if perms.proveedores.change_proveedor_status %}
+      <form
+        method="post"
+        action="{% url 'proveedores:estado' proveedor.pk %}"
+        onsubmit="
+          return confirm(
+            '{% if proveedor.activo %}¿Desactivar este proveedor? Dejara de estar disponible para nuevos activos.{% else %}¿Activar este proveedor?{% endif %}',
+          );
+        "
+      >
+        {% csrf_token %}<button
+          class="rounded-xl border px-4 py-2 text-sm font-semibold {% if proveedor.activo %}border-amber-200 bg-amber-50 text-amber-700{% else %}border-emerald-200 bg-emerald-50 text-emerald-700{% endif %}"
+        >
+          {% if proveedor.activo %}Desactivar{% else %}Activar{% endif %}
+        </button>
+      </form>
+      {% endif %} {% if perms.proveedores.delete_proveedor %}<a
+        href="{% url 'proveedores:eliminar' proveedor.pk %}"
+        class="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700"
+        >Eliminar</a
+      >{% endif %}
+    </div>
+  </div>
+  <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          {{ proveedor.get_tipo_proveedor_display }}
+        </p>
+        <h2 class="mt-1 text-2xl font-bold text-slate-900">
+          {{ proveedor.nombre_visible }}
+        </h2>
+        <p class="mt-1 text-sm text-slate-500">{{ proveedor.razon_social }}</p>
+      </div>
+      <span
+        class="rounded-full px-3 py-1 text-xs font-semibold {% if proveedor.activo %}bg-emerald-50 text-emerald-700{% else %}bg-slate-100 text-slate-600{% endif %}"
+        >{{ proveedor.activo|yesno:"Activo,Inactivo" }}</span
+      >
+    </div>
+    <div class="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+      <div>
+        <p class="text-sm text-slate-500">Identificación</p>
+        <p class="font-medium text-slate-900">
+          {{ proveedor.get_tipo_identificacion_display }} {{
+          proveedor.identificacion }}
+        </p>
+      </div>
+      <div>
+        <p class="text-sm text-slate-500">Contacto</p>
+        <p class="font-medium text-slate-900">
+          {{ proveedor.nombre_contacto|default:"-" }}
+        </p>
+      </div>
+      <div>
+        <p class="text-sm text-slate-500">Correo</p>
+        <p class="font-medium text-slate-900">
+          {{ proveedor.correo_electronico|default:"-" }}
+        </p>
+      </div>
+      <div>
+        <p class="text-sm text-slate-500">Teléfono</p>
+        <p class="font-medium text-slate-900">
+          {{ proveedor.telefono|default:"-" }}
+        </p>
+      </div>
+      <div>
+        <p class="text-sm text-slate-500">Ciudad / Pais</p>
+        <p class="font-medium text-slate-900">
+          {{ proveedor.ciudad|default:"-" }} / {{ proveedor.pais }}
+        </p>
+      </div>
+      <div>
+        <p class="text-sm text-slate-500">Activos relacionados</p>
+        <a
+          href="{% url 'activos:lista' %}?proveedor={{ proveedor.pk }}"
+          class="font-semibold text-cyan-700 hover:underline"
+          >{{ proveedor.activos_count }} activos</a
+        >
+      </div>
+      <div class="md:col-span-2 xl:col-span-3">
+        <p class="text-sm text-slate-500">Dirección</p>
+        <p class="font-medium text-slate-900">
+          {{ proveedor.direccion|default:"-" }}
+        </p>
+      </div>
+      <div class="md:col-span-2 xl:col-span-3">
+        <p class="text-sm text-slate-500">Observaciones</p>
+        <p class="font-medium text-slate-900">
+          {{ proveedor.observaciones|default:"-" }}
+        </p>
+      </div>
+    </div>
+    <div class="mt-6 border-t border-slate-100 pt-4 text-xs text-slate-500">
+      Creado {{ proveedor.created_at }} · Ultima modificacion {{
+      proveedor.updated_at }}
+    </div>
+  </div>
+</div>
+{% endblock %}
