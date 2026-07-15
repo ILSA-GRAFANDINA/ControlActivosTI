@@ -96,6 +96,27 @@ class ProveedorViewsTests(TestCase):
         proveedor.refresh_from_db()
         self.assertTrue(proveedor.activo)
 
+    def test_columnas_predeterminadas_y_vista_de_tabla_personalizada(self):
+        Proveedor.objects.create(**datos_proveedor())
+
+        response = self.client.get(reverse("proveedores:lista"))
+        self.assertEqual(
+            response.context["columnas_seleccionadas"],
+            ["proveedor", "identificacion", "ubicacion", "estado", "activos"],
+        )
+        self.assertContains(response, "Vista de tabla")
+        self.assertContains(response, "TE")
+
+        response = self.client.get(
+            reverse("proveedores:lista"),
+            {"cols": ["proveedor", "contacto", "telefono"]},
+        )
+        self.assertEqual(
+            response.context["columnas_seleccionadas"],
+            ["proveedor", "contacto", "telefono"],
+        )
+        self.assertContains(response, "Ana Torres")
+
     def test_restringe_usuario_sin_permisos(self):
         otro = get_user_model().objects.create_user("sinpermiso", password="testpass123")
         self.client.force_login(otro)

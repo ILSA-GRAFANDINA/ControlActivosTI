@@ -54,6 +54,13 @@ class Proveedor(models.Model):
     def nombre_visible(self):
         return self.nombre_comercial.strip() or self.razon_social
 
+    @property
+    def iniciales(self):
+        palabras = self.nombre_visible.split()
+        if len(palabras) >= 2:
+            return f"{palabras[0][0]}{palabras[1][0]}".upper()
+        return self.nombre_visible[:2].upper()
+
     def __str__(self):
         return self.nombre_visible
 

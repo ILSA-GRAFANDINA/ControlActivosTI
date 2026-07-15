@@ -20,6 +20,34 @@ class ProveedorListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     context_object_name = "proveedores"
     paginate_by = 10
 
+    COLUMNAS_DISPONIBLES = [
+        ("proveedor", "Proveedor"),
+        ("identificacion", "Identificacion"),
+        ("tipo_proveedor", "Tipo de proveedor"),
+        ("contacto", "Contacto"),
+        ("correo", "Correo"),
+        ("telefono", "Telefono"),
+        ("ubicacion", "Ubicacion"),
+        ("estado", "Estado"),
+        ("activos", "Activos"),
+        ("actualizado", "Ultima modificacion"),
+    ]
+    COLUMNAS_POR_DEFECTO = [
+        "proveedor",
+        "identificacion",
+        "ubicacion",
+        "estado",
+        "activos",
+    ]
+
+    def get_selected_columns(self):
+        columnas_validas = {key for key, _ in self.COLUMNAS_DISPONIBLES}
+        seleccionadas = [
+            columna for columna in self.request.GET.getlist("cols")
+            if columna in columnas_validas
+        ]
+        return seleccionadas or self.COLUMNAS_POR_DEFECTO
+
     def get_queryset(self):
         queryset = Proveedor.objects.annotate(activos_count=Count("activos", distinct=True))
         q = self.request.GET.get("q", "").strip()
@@ -35,6 +63,10 @@ class ProveedorListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        columnas_seleccionadas = self.get_selected_columns()
+        context["columnas_disponibles"] = self.COLUMNAS_DISPONIBLES
+        context["columnas_seleccionadas"] = columnas_seleccionadas
+        context["total_columnas_tabla"] = len(columnas_seleccionadas) + 1
         context["busqueda"] = self.request.GET.get("q", "").strip()
         context["estado_seleccionado"] = self.request.GET.get("estado", "").strip()
         params = self.request.GET.copy()
