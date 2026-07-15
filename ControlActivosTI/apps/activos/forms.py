@@ -2,6 +2,9 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.forms import modelformset_factory
 from pathlib import Path
+from django.db.models import Q
+
+from apps.proveedores.models import Proveedor
 
 from .models import (
     Activo,
@@ -56,6 +59,7 @@ class ActivoAdminForm(forms.ModelForm):
         etiquetas = {
             "tipo_activo": "Tipo de activo",
             "empresa": "Empresa",
+            "proveedor": "Proveedor de adquisicion",
             "marca": "Marca",
             "modelo": "Modelo",
             "serie": "Serie",
@@ -126,6 +130,15 @@ class ActivoAdminForm(forms.ModelForm):
         if "codigo_sap" in self.fields:
             self.fields["codigo_sap"].help_text = ayuda_codigo_sap
 
+        if "proveedor" in self.fields:
+            proveedor_actual_id = self.instance.proveedor_id if self.instance and self.instance.pk else None
+            filtro = Q(activo=True)
+            if proveedor_actual_id:
+                filtro |= Q(pk=proveedor_actual_id)
+            self.fields["proveedor"].queryset = Proveedor.objects.filter(filtro).order_by("razon_social")
+            self.fields["proveedor"].required = False
+            self.fields["proveedor"].help_text = "Opcional. En altas solo se muestran proveedores activos."
+
     def clean(self):
         cleaned_data = super().clean()
         tipo_activo = cleaned_data.get("tipo_activo")
@@ -144,6 +157,11 @@ class ActivoAdminForm(forms.ModelForm):
             cleaned_data["codigo_sap"] = codigo_sap.upper()
         else:
             cleaned_data["codigo_sap"] = None
+
+        proveedor = cleaned_data.get("proveedor")
+        proveedor_actual_id = self.instance.proveedor_id if self.instance and self.instance.pk else None
+        if proveedor and not proveedor.activo and proveedor.pk != proveedor_actual_id:
+            self.add_error("proveedor", "El proveedor seleccionado esta inactivo.")
 
         return cleaned_data
 

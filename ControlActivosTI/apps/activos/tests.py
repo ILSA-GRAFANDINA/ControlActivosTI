@@ -298,6 +298,7 @@ class EventoActivoAdminViewTests(TestCase):
         )
         self.estado = EstadoActivo.objects.create(nombre="Disponible", permite_asignacion=True)
         self.tipo_laptop = TipoActivo.objects.create(nombre="Laptop")
+        self.empresa = Empresa.objects.create(nombre="Acme")
         self.activo = Activo.objects.create(
             tipo_activo=self.tipo_laptop,
             empresa=self.empresa,
@@ -334,6 +335,7 @@ class EventoActivoImpactoTests(TestCase):
         )
         self.tipo_laptop = TipoActivo.objects.create(nombre="Laptop")
         self.tipo_mouse = TipoActivo.objects.create(nombre="Mouse")
+        self.empresa = Empresa.objects.create(nombre="Acme")
         self.tipo_evento = TipoEventoActivo.objects.create(nombre="Cambio de RAM")
         self.tipo_mantenimiento = TipoEventoActivo.objects.create(nombre="Mantenimiento")
 
@@ -952,6 +954,7 @@ class ActivoDetailViewTests(TestCase):
         )
         self.activo = Activo.objects.create(
             tipo_activo=self.tipo_laptop,
+            empresa=self.empresa,
             marca="Dell",
             modelo="Latitude",
             serie="LAP-001",

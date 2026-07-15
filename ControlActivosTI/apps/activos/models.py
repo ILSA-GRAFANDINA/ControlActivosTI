@@ -87,6 +87,14 @@ class Activo(models.Model):
         null=True,
         blank=True,
     )
+    proveedor = models.ForeignKey(
+        "proveedores.Proveedor",
+        on_delete=models.PROTECT,
+        related_name="activos",
+        null=True,
+        blank=True,
+        help_text="Proveedor de adquisicion del activo.",
+    )
     marca = models.CharField(max_length=80)
     modelo = models.CharField(max_length=80)
     serie = models.CharField(

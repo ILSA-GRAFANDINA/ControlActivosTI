@@ -8,6 +8,7 @@ from django.views.generic import CreateView, DetailView, ListView, TemplateView
 
 from apps.asignaciones.models import AsignacionDetalle
 from apps.catalogos.models import Empresa, EstadoActivo, TipoActivo
+from apps.proveedores.models import Proveedor
 
 from .forms import ActivoAdminForm, FotoActivoCreateFormSet
 from .models import Activo, EventoActivo, FotoActivo
@@ -16,7 +17,7 @@ from .services import build_activos_export_workbook
 
 class ActivoFilterMixin:
     FILTER_SESSION_KEY = "activos_filtros_guardados"
-    FILTER_FIELDS = ("q", "estado", "empresa", "ocultar_deshabilitados")
+    FILTER_FIELDS = ("q", "estado", "empresa", "proveedor", "ocultar_deshabilitados")
     FILTER_MULTI_FIELDS = ("tipo",)
     TAB_PARAM = "tab_tipo"
 
@@ -68,7 +69,7 @@ class ActivoFilterMixin:
 
     def get_filtered_queryset(self):
         queryset = (
-            Activo.objects.select_related("tipo_activo", "estado_activo", "empresa")
+            Activo.objects.select_related("tipo_activo", "estado_activo", "empresa", "proveedor")
             .prefetch_related("fotos")
             .order_by("tipo_activo__nombre", "codigo")
         )
@@ -82,6 +83,9 @@ class ActivoFilterMixin:
                 | Q(serie__icontains=busqueda)
                 | Q(codigo_sap__icontains=busqueda)
                 | Q(empresa__nombre__icontains=busqueda)
+                | Q(proveedor__razon_social__icontains=busqueda)
+                | Q(proveedor__nombre_comercial__icontains=busqueda)
+                | Q(proveedor__identificacion__icontains=busqueda)
             )
 
         estado_id = self.get_filter_value("estado")
@@ -96,6 +100,10 @@ class ActivoFilterMixin:
         if empresa_id.isdigit():
             queryset = queryset.filter(empresa_id=empresa_id)
 
+        proveedor_id = self.get_filter_value("proveedor")
+        if proveedor_id.isdigit():
+            queryset = queryset.filter(proveedor_id=proveedor_id)
+
         if self.get_filter_value("ocultar_deshabilitados") == "1":
             queryset = queryset.filter(activo=True)
 
@@ -108,10 +116,12 @@ class ActivoFilterMixin:
             "estado_seleccionado": filtros["estado"],
             "tipos_seleccionados": filtros["tipo"],
             "empresa_seleccionada": filtros["empresa"],
+            "proveedor_seleccionado": filtros["proveedor"],
             "ocultar_deshabilitados": filtros["ocultar_deshabilitados"] == "1",
             "estados_activo": EstadoActivo.objects.filter(activo=True).order_by("nombre"),
             "tipos_activo": TipoActivo.objects.filter(activo=True).order_by("nombre"),
             "empresas_activo": Empresa.objects.filter(activo=True).order_by("nombre"),
+            "proveedores": Proveedor.objects.order_by("razon_social"),
         }
 
     def get_export_querystring(self):
@@ -122,6 +132,7 @@ class ActivoFilterMixin:
         params["estado"] = filtros["estado"]
         params.setlist("tipo", filtros["tipo"])
         params["empresa"] = filtros["empresa"]
+        params["proveedor"] = filtros["proveedor"]
         if filtros["ocultar_deshabilitados"] == "1":
             params["ocultar_deshabilitados"] = "1"
         else:
@@ -153,6 +164,7 @@ class ActivoFilterMixin:
         params["estado"] = filtros["estado"]
         params.setlist("tipo", filtros["tipo"])
         params["empresa"] = filtros["empresa"]
+        params["proveedor"] = filtros["proveedor"]
         if filtros["ocultar_deshabilitados"] == "1":
             params["ocultar_deshabilitados"] = "1"
 
@@ -201,6 +213,7 @@ class ActivoListView(LoginRequiredMixin, ActivoFilterMixin, ListView):
     COLUMNAS_DISPONIBLES = [
         ("tipo_activo", "Tipo"),
         ("empresa", "Empresa"),
+        ("proveedor", "Proveedor"),
         ("marca", "Marca"),
         ("modelo", "Modelo"),
         ("serie", "Serie"),
@@ -217,6 +230,7 @@ class ActivoListView(LoginRequiredMixin, ActivoFilterMixin, ListView):
     COLUMNAS_POR_DEFECTO = [
         "tipo_activo",
         "empresa",
+        "proveedor",
         "marca",
         "modelo",
         "serie",
@@ -259,6 +273,7 @@ class ActivoListView(LoginRequiredMixin, ActivoFilterMixin, ListView):
             or context["estado_seleccionado"]
             or context["tipos_seleccionados"]
             or context["empresa_seleccionada"]
+            or context["proveedor_seleccionado"]
             or context["ocultar_deshabilitados"]
             or self.active_tab_type_id
         )
@@ -348,7 +363,7 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
             return None
 
         return (
-            Activo.objects.select_related("tipo_activo", "estado_activo", "empresa")
+            Activo.objects.select_related("tipo_activo", "estado_activo", "empresa", "proveedor")
             .prefetch_related("fotos")
             .filter(pk=raw_pk)
             .first()
@@ -444,7 +459,7 @@ class ActivoDetailView(LoginRequiredMixin, DetailView):
 
     def get_queryset(self):
         return (
-            Activo.objects.select_related("tipo_activo", "estado_activo", "empresa")
+            Activo.objects.select_related("tipo_activo", "estado_activo", "empresa", "proveedor")
             .prefetch_related(
                 Prefetch(
                     "fotos",

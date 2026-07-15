@@ -73,6 +73,16 @@
                             </svg>
                             <span>Activos</span>
                         </a>
+                        {% if perms.proveedores.view_proveedor %}
+                        <a
+                            href="{% url 'proveedores:lista' %}"
+                            data-nav-label="Proveedores"
+                            class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition {% if request.path|slice:':13' == '/proveedores/' %}bg-cyan-500/15 text-cyan-200 ring-1 ring-inset ring-cyan-400/30{% else %}text-slate-200 hover:bg-slate-800 hover:text-white{% endif %}"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 20 20" fill="currentColor"><path d="M2.5 5.75A2.25 2.25 0 0 1 4.75 3.5h10.5a2.25 2.25 0 0 1 2.25 2.25v8.5a2.25 2.25 0 0 1-2.25 2.25H4.75a2.25 2.25 0 0 1-2.25-2.25v-8.5Zm3-.75v2h9V5h-9Zm9 3.5h-9V15h9V8.5Z"/></svg>
+                            <span>Proveedores</span>
+                        </a>
+                        {% endif %}
                         <a
                             href="/colaboradores/"
                             data-nav-label="Colaboradores"

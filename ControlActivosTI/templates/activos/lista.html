@@ -84,7 +84,7 @@
         {% if tab_tipo_activa %}
             <input type="hidden" name="tab_tipo" value="{{ tab_tipo_activa }}">
         {% endif %}
-        <div class="grid gap-4 lg:grid-cols-4">
+        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
             <div>
                 <label class="mb-2 block text-sm font-semibold text-slate-700">Búsqueda</label>
                 <input
@@ -166,6 +166,14 @@
             </div>
         </div>
 
+        <div>
+            <label for="filtro-proveedor" class="mb-2 block text-sm font-semibold text-slate-700">Proveedor</label>
+            <select id="filtro-proveedor" name="proveedor" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
+                <option value="">Todos los proveedores</option>
+                {% for proveedor in proveedores %}<option value="{{ proveedor.pk }}" {% if proveedor_seleccionado == proveedor.pk|stringformat:"s" %}selected{% endif %}>{{ proveedor }}</option>{% endfor %}
+            </select>
+        </div>
+
         <div class="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
             <label class="inline-flex cursor-pointer items-center gap-3 text-sm font-semibold text-slate-700">
                 <input
@@ -180,7 +188,7 @@
             <span class="text-xs text-slate-500">Solo muestra activos vigentes en el listado.</span>
         </div>
 
-        {% if busqueda or estado_seleccionado or tipos_seleccionados or empresa_seleccionada or ocultar_deshabilitados %}
+        {% if busqueda or estado_seleccionado or tipos_seleccionados or empresa_seleccionada or proveedor_seleccionado or ocultar_deshabilitados %}
             <div class="flex flex-wrap items-center gap-2">
                 <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Filtros activos</span>
                 {% if busqueda %}
@@ -207,6 +215,7 @@
                         {% endif %}
                     {% endfor %}
                 {% endif %}
+                {% if proveedor_seleccionado %}{% for proveedor in proveedores %}{% if proveedor_seleccionado == proveedor.pk|stringformat:"s" %}<span class="rounded-full border border-teal-200 bg-teal-50 px-3 py-1 text-xs font-medium text-teal-700">Proveedor: {{ proveedor }}</span>{% endif %}{% endfor %}{% endif %}
                 {% if ocultar_deshabilitados %}
                     <span class="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">Deshabilitados ocultos</span>
                 {% endif %}
@@ -270,6 +279,7 @@
                     <th class="px-4 py-3 font-semibold">Código</th>
                     {% if "tipo_activo" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Tipo</th>{% endif %}
                     {% if "empresa" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Empresa</th>{% endif %}
+                    {% if "proveedor" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Proveedor</th>{% endif %}
                     {% if "marca" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Marca</th>{% endif %}
                     {% if "modelo" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Modelo</th>{% endif %}
                     {% if "serie" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Serie</th>{% endif %}
@@ -311,6 +321,7 @@
                         </td>
                         {% if "tipo_activo" in columnas_seleccionadas %}<td class="px-4 py-3">{{ activo.tipo_activo }}</td>{% endif %}
                         {% if "empresa" in columnas_seleccionadas %}<td class="px-4 py-3">{{ activo.empresa|default:"-" }}</td>{% endif %}
+                        {% if "proveedor" in columnas_seleccionadas %}<td class="px-4 py-3">{{ activo.proveedor|default:"-" }}</td>{% endif %}
                         {% if "marca" in columnas_seleccionadas %}<td class="px-4 py-3 font-medium text-slate-900">{{ activo.marca }}</td>{% endif %}
                         {% if "modelo" in columnas_seleccionadas %}<td class="px-4 py-3">{{ activo.modelo }}</td>{% endif %}
                         {% if "serie" in columnas_seleccionadas %}<td class="px-4 py-3">{{ activo.serie }}</td>{% endif %}

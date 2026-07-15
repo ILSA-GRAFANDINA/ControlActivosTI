@@ -22,6 +22,7 @@ EXPORT_HEADERS = [
     "Observaciones",
     "Creado el",
     "Actualizado el",
+    "Proveedor",
 ]
 
 
@@ -45,6 +46,7 @@ def _activo_to_row(activo):
         activo.observaciones,
         activo.created_at.replace(tzinfo=None) if activo.created_at else None,
         activo.updated_at.replace(tzinfo=None) if activo.updated_at else None,
+        str(activo.proveedor) if activo.proveedor_id else "",
     ]
 
 

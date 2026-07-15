@@ -31,6 +31,7 @@ class ActivoAdmin(admin.ModelAdmin):
         "codigo",
         "tipo_activo",
         "empresa",
+        "proveedor",
         "marca",
         "modelo",
         "serie",
@@ -49,6 +50,8 @@ class ActivoAdmin(admin.ModelAdmin):
         "modelo",
         "serie",
         "empresa__nombre",
+        "proveedor__razon_social",
+        "proveedor__identificacion",
         "codigo_sap",
         "cpu",
         "ram",
@@ -57,13 +60,14 @@ class ActivoAdmin(admin.ModelAdmin):
     list_filter = (
         "tipo_activo",
         "empresa",
+        "proveedor",
         "estado_activo",
         "activo",
         "marca",
         "sistema_operativo",
         "fecha_compra",
     )
-    list_select_related = ("tipo_activo", "empresa", "estado_activo")
+    list_select_related = ("tipo_activo", "empresa", "proveedor", "estado_activo")
     inlines = [FotoActivoInline]
 
     class Media:

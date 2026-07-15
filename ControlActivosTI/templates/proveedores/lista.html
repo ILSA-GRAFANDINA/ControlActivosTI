@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Proveedores - ControlActivosTI{% endblock %}
+{% block page_title %}Proveedores{% endblock %}
+{% block content %}
+<div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+  <div><h2 class="text-xl font-semibold text-slate-900">Listado de proveedores</h2><p class="text-sm text-slate-500">Empresas y personas que suministran activos tecnologicos.</p></div>
+  {% if perms.proveedores.add_proveedor %}<a href="{% url 'proveedores:nuevo' %}" class="rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white hover:bg-cyan-700">Registrar proveedor</a>{% endif %}
+</div>
+<form method="get" class="mb-6 grid gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:grid-cols-[1fr_14rem_auto]">
+  <div><label for="q" class="mb-2 block text-sm font-semibold text-slate-700">Buscar</label><input id="q" name="q" value="{{ busqueda }}" placeholder="Identificacion, nombre o contacto" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900"></div>
+  <div><label for="estado" class="mb-2 block text-sm font-semibold text-slate-700">Estado</label><select id="estado" name="estado" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900"><option value="">Todos</option><option value="activo" {% if estado_seleccionado == 'activo' %}selected{% endif %}>Activos</option><option value="inactivo" {% if estado_seleccionado == 'inactivo' %}selected{% endif %}>Inactivos</option></select></div>
+  <div class="flex items-end gap-2"><button class="rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white">Filtrar</button><a href="{% url 'proveedores:lista' %}" class="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700">Limpiar</a></div>
+</form>
+<div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"><div class="overflow-x-auto"><table class="min-w-full divide-y divide-slate-200 text-sm">
+<thead class="bg-slate-50 text-left text-slate-600"><tr><th class="px-4 py-3">Identificacion</th><th class="px-4 py-3">Proveedor</th><th class="px-4 py-3">Contacto</th><th class="px-4 py-3">Ubicacion</th><th class="px-4 py-3">Estado</th><th class="px-4 py-3 text-right">Activos</th></tr></thead>
+<tbody class="divide-y divide-slate-100">{% for proveedor in proveedores %}<tr class="text-slate-700"><td class="px-4 py-4 font-medium">{{ proveedor.identificacion }}</td><td class="px-4 py-4"><a href="{% url 'proveedores:detalle' proveedor.pk %}" class="font-semibold text-cyan-700 hover:underline">{{ proveedor.nombre_visible }}</a><div class="text-xs text-slate-500">{{ proveedor.razon_social }}</div></td><td class="px-4 py-4">{{ proveedor.nombre_contacto|default:"-" }}</td><td class="px-4 py-4">{{ proveedor.ciudad|default:"-" }}, {{ proveedor.pais }}</td><td class="px-4 py-4"><span class="rounded-full px-3 py-1 text-xs font-semibold {% if proveedor.activo %}bg-emerald-50 text-emerald-700{% else %}bg-slate-100 text-slate-600{% endif %}">{{ proveedor.activo|yesno:"Activo,Inactivo" }}</span></td><td class="px-4 py-4 text-right"><a href="{% url 'activos:lista' %}?proveedor={{ proveedor.pk }}" class="font-semibold text-cyan-700">{{ proveedor.activos_count }}</a></td></tr>{% empty %}<tr><td colspan="6" class="px-6 py-12 text-center text-slate-500">No se encontraron proveedores.</td></tr>{% endfor %}</tbody>
+</table></div></div>
+{% if is_paginated %}<nav class="mt-5 flex flex-wrap justify-center gap-2">{% for numero in page_numbers %}{% if numero == page_obj.paginator.ELLIPSIS %}<span class="px-3 py-2">{{ numero }}</span>{% else %}<a href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ numero }}" class="rounded-lg border px-3 py-2 text-sm {% if numero == page_obj.number %}border-cyan-600 bg-cyan-600 text-white{% else %}border-slate-200 bg-white{% endif %}">{{ numero }}</a>{% endif %}{% endfor %}</nav>{% endif %}
+{% endblock %}

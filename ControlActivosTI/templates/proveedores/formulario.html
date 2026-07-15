@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{% if object %}Editar{% else %}Registrar{% endif %} proveedor - ControlActivosTI{% endblock %}
+{% block page_title %}{% if object %}Editar proveedor{% else %}Registrar proveedor{% endif %}{% endblock %}
+{% block content %}
+<div class="mb-6 flex items-center justify-between gap-4"><div><h2 class="text-xl font-semibold text-slate-900">{% if object %}Actualizar informacion{% else %}Nuevo proveedor{% endif %}</h2><p class="text-sm text-slate-500">Los campos razon social e identificacion son obligatorios.</p></div><a href="{% if object %}{% url 'proveedores:detalle' object.pk %}{% else %}{% url 'proveedores:lista' %}{% endif %}" class="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700">Volver</a></div>
+<form method="post" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">{% csrf_token %}
+{% if form.non_field_errors %}<div class="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{{ form.non_field_errors }}</div>{% endif %}
+<div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{% for field in form %}<div class="{% if field.name == 'direccion' or field.name == 'observaciones' %}md:col-span-2 xl:col-span-3{% endif %}"><label for="{{ field.id_for_label }}" class="mb-2 block text-sm font-semibold text-slate-700">{{ field.label }}{% if field.field.required %} *{% endif %}</label>{{ field }}{% if field.help_text %}<p class="mt-1 text-xs text-slate-500">{{ field.help_text }}</p>{% endif %}{% for error in field.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}</div>{% endfor %}</div>
+<div class="mt-6 flex justify-end"><button type="submit" class="rounded-xl bg-cyan-600 px-6 py-3 text-sm font-semibold text-white hover:bg-cyan-700">Guardar proveedor</button></div></form>
+{% endblock %}

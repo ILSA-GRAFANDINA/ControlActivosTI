@@ -99,6 +99,13 @@
                     {% endfor %}
                 </select>
             </div>
+            <div>
+                <label for="filtro-proveedor" class="mb-2 block text-sm font-semibold text-slate-700">Proveedor</label>
+                <select id="filtro-proveedor" name="proveedor" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
+                    <option value="">Todos los proveedores</option>
+                    {% for proveedor in proveedores %}<option value="{{ proveedor.pk }}" {% if proveedor_seleccionado == proveedor.pk|stringformat:"s" %}selected{% endif %}>{{ proveedor }}</option>{% endfor %}
+                </select>
+            </div>
         </div>
 
         <div class="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
@@ -176,6 +183,7 @@
             <input type="hidden" name="tipo" value="{{ tipo_id }}">
         {% endfor %}
         <input type="hidden" name="empresa" value="{{ empresa_seleccionada }}">
+        <input type="hidden" name="proveedor" value="{{ proveedor_seleccionado }}">
         {% if tab_tipo_activa %}
             <input type="hidden" name="tab_tipo" value="{{ tab_tipo_activa }}">
         {% endif %}
@@ -199,6 +207,7 @@
                             <th class="px-4 py-3 font-semibold">Codigo</th>
                             <th class="px-4 py-3 font-semibold">Tipo</th>
                             <th class="px-4 py-3 font-semibold">Empresa</th>
+                            <th class="px-4 py-3 font-semibold">Proveedor</th>
                             <th class="px-4 py-3 font-semibold">Marca / Modelo</th>
                             <th class="px-4 py-3 font-semibold">Serie</th>
                             <th class="px-4 py-3 font-semibold">Codigo SAP</th>
@@ -223,6 +232,7 @@
                                 <td class="px-4 py-3 font-semibold text-slate-900">{{ activo.codigo }}</td>
                                 <td class="px-4 py-3">{{ activo.tipo_activo }}</td>
                                 <td class="px-4 py-3">{{ activo.empresa|default:"-" }}</td>
+                                <td class="px-4 py-3">{{ activo.proveedor|default:"-" }}</td>
                                 <td class="px-4 py-3">{{ activo.marca }} {{ activo.modelo }}</td>
                                 <td class="px-4 py-3">{{ activo.serie|default:"-" }}</td>
                                 <td class="px-4 py-3">{{ activo.codigo_sap|default:"-" }}</td>
@@ -276,6 +286,7 @@
             estado: "{{ estado_seleccionado|escapejs }}",
             tipos: [{% for tipo_id in tipos_seleccionados %}"{{ tipo_id|escapejs }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
             empresa: "{{ empresa_seleccionada|escapejs }}",
+            proveedor: "{{ proveedor_seleccionado|escapejs }}",
             ocultar: "{{ ocultar_deshabilitados|yesno:'1,0' }}",
         });
         const selectionKey = `activos-export-selection:${window.location.pathname}:${currentFilterSignature}`;
