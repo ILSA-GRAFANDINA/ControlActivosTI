@@ -267,11 +267,6 @@ html.dark .app-nav a[class*="ring-inset"] {
     box-sizing: border-box;
 }
 
-.app-nav-admin {
-    padding-top: 1rem;
-    border-top: 1px solid color-mix(in srgb, var(--app-border) 82%, transparent);
-}
-
 .sidebar-theme-indicator {
     position: absolute;
     z-index: 0;
@@ -1076,11 +1071,6 @@ html.sidebar-collapsed .sidebar-theme-switch {
     border-radius: 15px;
     place-items: center;
     flex: 0 0 46px;
-}
-
-html.sidebar-collapsed .app-nav-admin {
-    width: 100%;
-    padding-top: .8rem;
 }
 
 html.sidebar-collapsed .sidebar-theme-indicator {
