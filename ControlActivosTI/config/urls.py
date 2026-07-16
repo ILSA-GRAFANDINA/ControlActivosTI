@@ -15,13 +15,14 @@ from .admin2_views import (
     Admin2SeguridadView,
     Admin2UsuariosView,
 )
-from .views import InicioView
+from .views import HealthView, InicioView, ProtectedImageView
 
 admin.site.site_header = "ControlActivosTI"
 admin.site.site_title = "ControlActivosTI Admin"
 admin.site.index_title = "Administración interna"
 
 urlpatterns = [
+    path("health/", HealthView.as_view(), name="health"),
     path("admin/", admin.site.urls),
     path("admin2/", Admin2HomeView.as_view(), name="admin2-inicio"),
     path("admin2/usuarios/", Admin2UsuariosView.as_view(), name="admin2-usuarios"),
@@ -42,7 +43,13 @@ urlpatterns = [
     path("facturas/", include("apps.facturas.urls")),
     path("asignaciones/", include("apps.asignaciones.urls")),
     path("actas/", include("apps.actas.urls")),
+    path("media/<path:path>", ProtectedImageView.as_view(), name="protected-image"),
 ]
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+handler400 = "config.error_views.error_400"
+handler403 = "config.error_views.error_403"
+handler404 = "config.error_views.error_404"
+handler500 = "config.error_views.error_500"

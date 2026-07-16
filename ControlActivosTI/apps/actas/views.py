@@ -1,11 +1,17 @@
-from django.contrib.auth.mixins import LoginRequiredMixin
+import logging
+
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.http import FileResponse, Http404
 from django.views import View
 
 from .models import ActaEntrega
 
+logger = logging.getLogger("controlactivos")
 
-class DescargarActaPorAsignacionView(LoginRequiredMixin, View):
+
+class DescargarActaPorAsignacionView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = "actas.view_actaentrega"
+    raise_exception = True
     def get(self, request, asignacion_id, tipo, *args, **kwargs):
         tipo = tipo.upper()
         if tipo not in ActaEntrega.TipoActa.values:
@@ -21,10 +27,13 @@ class DescargarActaPorAsignacionView(LoginRequiredMixin, View):
 
         archivo = acta.archivo.open("rb")
         nombre = acta.nombre_archivo or f"acta_{acta.asignacion.codigo_asignacion}.docx"
+        logger.info("Acta descargada acta_id=%s usuario_id=%s ip=%s", acta.pk, request.user.pk, request.META.get("REMOTE_ADDR", ""))
         return FileResponse(archivo, as_attachment=True, filename=nombre)
 
 
-class DescargarActaPorDevolucionView(LoginRequiredMixin, View):
+class DescargarActaPorDevolucionView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = "actas.view_actaentrega"
+    raise_exception = True
     def get(self, request, devolucion_id, *args, **kwargs):
         acta = (
             ActaEntrega.objects.select_related("asignacion", "devolucion")
@@ -36,4 +45,5 @@ class DescargarActaPorDevolucionView(LoginRequiredMixin, View):
 
         archivo = acta.archivo.open("rb")
         nombre = acta.nombre_archivo or f"acta_{acta.devolucion.codigo_devolucion}.docx"
+        logger.info("Acta devolucion descargada acta_id=%s usuario_id=%s ip=%s", acta.pk, request.user.pk, request.META.get("REMOTE_ADDR", ""))
         return FileResponse(archivo, as_attachment=True, filename=nombre)

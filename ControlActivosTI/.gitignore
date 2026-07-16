@@ -1,1 +1,10 @@
 private_media/
+.env
+.env.*
+!.env.example
+media/
+staticfiles/
+logs/
+*.log
+__pycache__/
+*.py[cod]

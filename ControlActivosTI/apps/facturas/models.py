@@ -141,6 +141,7 @@ class EventoFactura(models.Model):
         REEMPLAZO = "reemplazo", "Reemplazo de documento"
         ESTADO = "estado", "Cambio de estado"
         ELIMINACION = "eliminacion", "Eliminacion"
+        DESCARGA = "descarga", "Descarga de documento"
 
     factura = models.ForeignKey(
         FacturaCompra, on_delete=models.SET_NULL, related_name="eventos", null=True, blank=True

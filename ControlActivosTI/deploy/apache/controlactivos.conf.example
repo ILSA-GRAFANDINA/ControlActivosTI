@@ -1,0 +1,21 @@
+# Incluir desde C:/Apache24/conf/httpd.conf despues de habilitar
+# mod_proxy, mod_proxy_http, mod_headers y mod_rewrite.
+Listen 80
+<VirtualHost *:80>
+    ServerName 10.10.1.253
+    ProxyPreserveHost On
+    ProxyPass /static/ !
+    Alias /static/ "D:/ControlActivosTI/static/"
+    <Directory "D:/ControlActivosTI/static/">
+        Require all granted
+        Options -Indexes
+    </Directory>
+
+    RequestHeader set X-Forwarded-Proto "http"
+    RequestHeader set X-Forwarded-Port "80"
+    ProxyPass / http://127.0.0.1:8000/ connectiontimeout=5 timeout=120
+    ProxyPassReverse / http://127.0.0.1:8000/
+
+    ErrorLog "logs/controlactivos-error.log"
+    CustomLog "logs/controlactivos-access.log" combined
+</VirtualHost>

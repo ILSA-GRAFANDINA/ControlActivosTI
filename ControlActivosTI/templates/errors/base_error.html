@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Error {{ status_code }} | ControlActivosTI{% endblock %}
+{% block content %}
+<section class="mx-auto max-w-2xl rounded-2xl bg-white p-8 text-center shadow-sm">
+  <p class="text-sm font-semibold text-cyan-700">Error {{ status_code }}</p>
+  <h1 class="mt-2 text-2xl font-bold text-slate-900">{{ error_message }}</h1>
+  <p class="mt-3 text-slate-600">Si el problema persiste, contacte al administrador del sistema.</p>
+  <a class="mt-6 inline-block rounded-xl bg-cyan-700 px-5 py-3 font-semibold text-white" href="/dashboard/">Volver al inicio</a>
+</section>
+{% endblock %}

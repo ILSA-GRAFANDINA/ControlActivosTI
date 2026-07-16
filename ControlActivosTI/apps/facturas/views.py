@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 from django.contrib import messages
@@ -18,6 +19,13 @@ from apps.proveedores.models import Proveedor
 
 from .forms import AsociarActivosForm, FacturaCompraForm, ReemplazarDocumentoForm
 from .models import EventoFactura, FacturaCompra, ReemplazoDocumentoFactura
+
+logger = logging.getLogger("controlactivos")
+
+
+def ip_cliente(request):
+    forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
+    return forwarded.split(",", 1)[0].strip() if forwarded else request.META.get("REMOTE_ADDR", "")
 
 
 def registrar_evento(factura, accion, usuario, detalle=None):
@@ -233,6 +241,10 @@ class FacturaDocumentoView(LoginRequiredMixin, PermissionRequiredMixin, View):
             filename=nombre,
         )
         response["X-Content-Type-Options"] = "nosniff"
+        registrar_evento(factura, EventoFactura.Accion.DESCARGA, request.user, {
+            "ip": ip_cliente(request), "modo": "descarga" if descargar else "visualizacion",
+        })
+        logger.info("Documento factura consultado factura_id=%s usuario_id=%s ip=%s", pk, request.user.pk, ip_cliente(request))
         return response
 
 

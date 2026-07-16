@@ -1,5 +1,12 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Count, Q, Sum
+from django.db import connection
+import mimetypes
+
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.files.storage import default_storage
+from django.http import FileResponse, Http404, JsonResponse
+from django.views import View
 from django.views.generic import TemplateView
 
 from apps.activos.models import Activo
@@ -24,6 +31,37 @@ ESTADO_ASIGNADO_Q = ACTIVO_VIGENTE_Q & Q(estado_activo__nombre__iexact="Asignado
 
 class InicioView(LoginRequiredMixin, TemplateView):
     template_name = "dashboard/inicio.html"
+
+
+class HealthView(View):
+    """Sonda minima; deliberadamente no expone configuracion ni excepciones."""
+
+    def get(self, request):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1")
+                cursor.fetchone()
+        except Exception:
+            return JsonResponse({"status": "unavailable", "database": "unavailable"}, status=503)
+        return JsonResponse({"status": "ok", "database": "ok", "version": "1.0"})
+
+
+class ProtectedImageView(LoginRequiredMixin, View):
+    """Entrega solo imagenes funcionales; nunca documentos del MEDIA_ROOT."""
+
+    allowed_prefixes = ("activos/", "perfiles/")
+
+    def get(self, request, path):
+        normalized = path.replace("\\", "/").lstrip("/")
+        if ".." in normalized.split("/") or not normalized.startswith(self.allowed_prefixes):
+            raise Http404
+        content_type, _ = mimetypes.guess_type(normalized)
+        if not content_type or not content_type.startswith("image/") or not default_storage.exists(normalized):
+            raise Http404
+        response = FileResponse(default_storage.open(normalized, "rb"), content_type=content_type)
+        response["X-Content-Type-Options"] = "nosniff"
+        response["Cache-Control"] = "private, max-age=3600"
+        return response
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
