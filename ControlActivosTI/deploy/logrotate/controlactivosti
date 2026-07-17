@@ -1,0 +1,13 @@
+/var/log/controlactivosti/*.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 controlactivos controlactivos
+    sharedscripts
+    postrotate
+        systemctl kill -s HUP controlactivosti.service >/dev/null 2>&1 || true
+    endscript
+}

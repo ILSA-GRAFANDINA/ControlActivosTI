@@ -1,0 +1,27 @@
+[Unit]
+Description=ControlActivosTI Gunicorn
+After=network-online.target postgresql.service
+Wants=network-online.target
+Requires=postgresql.service
+
+[Service]
+Type=notify
+User=controlactivos
+Group=controlactivos
+WorkingDirectory=/opt/controlactivosti/app
+EnvironmentFile=/etc/controlactivosti/controlactivosti.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/controlactivosti/venv/bin/gunicorn config.wsgi:application --bind 127.0.0.1:8000 --workers 5 --timeout 120 --access-logfile - --error-logfile - --capture-output
+ExecReload=/bin/kill -s HUP $MAINPID
+KillSignal=SIGQUIT
+TimeoutStopSec=30
+Restart=on-failure
+RestartSec=5
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+NoNewPrivileges=true
+ReadWritePaths=/var/www/controlactivosti/media /var/www/controlactivosti/private /var/log/controlactivosti
+
+[Install]
+WantedBy=multi-user.target

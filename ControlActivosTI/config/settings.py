@@ -24,7 +24,7 @@ SECRET_KEY = required("SECRET_KEY") or "django-insecure-development-only-change-
 DEBUG = env_bool("DEBUG", default=not IS_PRODUCTION)
 if IS_PRODUCTION and DEBUG:
     raise ImproperlyConfigured("DEBUG debe ser False en produccion.")
-ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="10.10.1.253,127.0.0.1,localhost" if IS_PRODUCTION else "127.0.0.1,localhost,testserver", cast=Csv())
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="" if IS_PRODUCTION else "127.0.0.1,localhost,testserver", cast=Csv())
 CSRF_TRUSTED_ORIGINS = config("CSRF_TRUSTED_ORIGINS", default="", cast=Csv())
 
 INSTALLED_APPS = [
@@ -65,11 +65,11 @@ AUTH_PASSWORD_VALIDATORS = [
 PASSWORD_HASHERS = ["apps.accounts.hashers.ControlActivosScryptPasswordHasher", "django.contrib.auth.hashers.PBKDF2PasswordHasher", "django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher", "django.contrib.auth.hashers.Argon2PasswordHasher", "django.contrib.auth.hashers.BCryptSHA256PasswordHasher"]
 
 STATIC_URL = "/static/"
-STATIC_ROOT = Path(config("STATIC_ROOT", default=str(BASE_DIR / "staticfiles")))
+STATIC_ROOT = Path(config("STATIC_ROOT", default="/var/www/controlactivosti/static" if IS_PRODUCTION else str(BASE_DIR / "staticfiles")))
 STATICFILES_DIRS = [BASE_DIR / "static"]
 MEDIA_URL = "/media/"
-MEDIA_ROOT = Path(config("MEDIA_ROOT", default=str(BASE_DIR / "media")))
-PRIVATE_MEDIA_ROOT = Path(config("PRIVATE_MEDIA_ROOT", default=str(BASE_DIR / "private_media")))
+MEDIA_ROOT = Path(config("MEDIA_ROOT", default="/var/www/controlactivosti/media" if IS_PRODUCTION else str(BASE_DIR / "media")))
+PRIVATE_MEDIA_ROOT = Path(config("PRIVATE_MEDIA_ROOT", default="/var/www/controlactivosti/private" if IS_PRODUCTION else str(BASE_DIR / "private_media")))
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
@@ -93,7 +93,7 @@ SESSION_COOKIE_SAMESITE = CSRF_COOKIE_SAMESITE = "Lax"
 SECURE_REFERRER_POLICY = "same-origin"
 X_FRAME_OPTIONS = "DENY"
 
-LOG_DIR = Path(config("LOG_DIR", default=str(BASE_DIR / "logs")))
+LOG_DIR = Path(config("LOG_DIR", default="/var/log/controlactivosti" if IS_PRODUCTION else str(BASE_DIR / "logs")))
 if IS_PRODUCTION:
     try:
         LOG_DIR.mkdir(parents=True, exist_ok=True)

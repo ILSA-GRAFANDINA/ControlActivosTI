@@ -9,4 +9,4 @@ python-docx==1.2.0
 python-decouple==3.8
 sqlparse==0.5.5
 tzdata==2025.3
-waitress==3.0.2
+gunicorn==23.0.0

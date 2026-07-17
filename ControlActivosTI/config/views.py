@@ -194,3 +194,13 @@ class ProtectedImageView(LoginRequiredMixin, View):
         codigo = item["asignacion__centro_costo__codigo"] or "Sin CECO"
         nombre = item["asignacion__centro_costo__nombre"]
         return f"{codigo} - {nombre}" if nombre else codigo
+
+
+# El contexto del dashboard se conserva separado de la entrega protegida de
+# imágenes. La clase se declara aquí porque sus consultas están implementadas
+# arriba y se reutilizan sin duplicar lógica.
+class InicioView(ProtectedImageView, TemplateView):
+    template_name = "dashboard/inicio.html"
+
+    def get(self, request, *args, **kwargs):
+        return TemplateView.get(self, request, *args, **kwargs)
