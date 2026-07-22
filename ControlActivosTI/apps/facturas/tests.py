@@ -264,6 +264,9 @@ class FacturaViewsTests(FacturaBaseTests):
         self.assertContains(response, factura.numero_factura)
         response = self.client.get(reverse("facturas:detalle", args=[factura.pk]))
         self.assertContains(response, "SER-001")
+        self.assertContains(response, "Ocultar SHA-256")
+        self.assertContains(response, 'id="factura-sha256"')
+        self.assertContains(response, "hidden")
 
     def test_descarga_protegida_y_autorizada(self):
         factura = self.crear_factura()
