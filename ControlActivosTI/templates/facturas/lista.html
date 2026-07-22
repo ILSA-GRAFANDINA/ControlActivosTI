@@ -34,7 +34,7 @@
                 <tbody class="divide-y divide-slate-100">
                     {% for factura in facturas %}
                     <tr class="transition hover:bg-slate-50">
-                        <td class="px-6 py-4"><a href="{% url 'facturas:detalle' factura.pk %}" class="font-semibold text-violet-700 hover:underline">{{ factura.numero_factura }}</a></td>
+                        <td class="px-6 py-4"><a href="{% url 'facturas:detalle' factura.pk %}" class="asset-code-link inline-flex rounded-lg border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 focus:outline-none">{{ factura.numero_factura }}</a></td>
                         <td class="px-6 py-4"><a href="{% url 'proveedores:detalle' factura.proveedor_id %}" class="text-slate-700 hover:text-violet-700">{{ factura.proveedor }}</a></td>
                         <td class="px-6 py-4 text-slate-600">{{ factura.empresa }}</td>
                         <td class="px-6 py-4 text-slate-600">{{ factura.fecha_emision|date:"d/m/Y" }}</td>
@@ -50,4 +50,3 @@
     </section>
 </div>
 {% endblock %}
-
