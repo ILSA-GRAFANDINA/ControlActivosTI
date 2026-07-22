@@ -9,7 +9,7 @@ from django.views.generic import CreateView, DetailView, ListView
 
 from apps.activos.models import FotoActivo
 from apps.asignaciones.models import Asignacion, AsignacionDetalle
-from apps.catalogos.models import Area, Empresa, Ubicacion
+from apps.catalogos.models import Area, Ubicacion
 
 from .forms import ColaboradorForm
 from .models import Colaborador
@@ -25,6 +25,32 @@ class ColaboradorListView(LoginRequiredMixin, ListView):
     template_name = "colaboradores/lista.html"
     context_object_name = "colaboradores"
     paginate_by = 10
+
+    ORDENES = {
+        "nombre_asc": ("empresa__nombre", "nombres", "apellidos", "id"),
+        "nombre_desc": ("empresa__nombre", "-nombres", "-apellidos", "-id"),
+        "ingreso_reciente": (
+            "empresa__nombre",
+            "-fecha_ingreso",
+            "nombres",
+            "apellidos",
+            "id",
+        ),
+        "ingreso_antiguo": (
+            "empresa__nombre",
+            "fecha_ingreso",
+            "nombres",
+            "apellidos",
+            "id",
+        ),
+    }
+
+    ORDENES_CHOICES = [
+        ("nombre_asc", "Nombre: A a Z"),
+        ("nombre_desc", "Nombre: Z a A"),
+        ("ingreso_reciente", "Ingreso más reciente"),
+        ("ingreso_antiguo", "Ingreso más antiguo"),
+    ]
 
     COLUMNAS_DISPONIBLES = [
         ("nombre_completo", "Nombre completo"),
@@ -55,6 +81,61 @@ class ColaboradorListView(LoginRequiredMixin, ListView):
         ]
         return seleccionadas or self.COLUMNAS_POR_DEFECTO
 
+    def get_company_tab_summary(self, queryset):
+        colaboradores_filtrados = Colaborador.objects.filter(
+            pk__in=queryset.values("pk")
+        )
+        return list(
+            colaboradores_filtrados.values("empresa_id", "empresa__nombre")
+            .annotate(total=Count("pk"))
+            .order_by("empresa__nombre")
+        )
+
+    def get_selected_company(self, summary):
+        empresa_solicitada = self.request.GET.get("empresa", "").strip()
+        empresas_disponibles = {
+            "sin_empresa" if item["empresa_id"] is None else str(item["empresa_id"])
+            for item in summary
+        }
+        return empresa_solicitada if empresa_solicitada in empresas_disponibles else ""
+
+    def build_company_tabs(self, summary):
+        base_params = self.request.GET.copy()
+        base_params.pop("page", None)
+        base_params.pop("empresa", None)
+        base_url = reverse("colaboradores:lista")
+
+        def build_url(empresa_id=""):
+            params = base_params.copy()
+            if empresa_id:
+                params["empresa"] = empresa_id
+            query_string = params.urlencode()
+            return f"{base_url}?{query_string}" if query_string else base_url
+
+        tabs = [
+            {
+                "id": "",
+                "nombre": "Todos",
+                "total": sum(item["total"] for item in summary),
+                "activa": not self.empresa_seleccionada,
+                "url": build_url(),
+            }
+        ]
+        for item in summary:
+            empresa_id = (
+                "sin_empresa" if item["empresa_id"] is None else str(item["empresa_id"])
+            )
+            tabs.append(
+                {
+                    "id": empresa_id,
+                    "nombre": item["empresa__nombre"] or "Sin empresa",
+                    "total": item["total"],
+                    "activa": self.empresa_seleccionada == empresa_id,
+                    "url": build_url(empresa_id),
+                }
+            )
+        return tabs
+
     def get_queryset(self):
         queryset = (
             Colaborador.objects.select_related("empresa", "area", "cargo", "ubicacion")
@@ -68,7 +149,6 @@ class ColaboradorListView(LoginRequiredMixin, ListView):
                     distinct=True,
                 )
             )
-            .order_by("empresa__nombre", "apellidos", "nombres")
         )
 
         busqueda = self.request.GET.get("q", "").strip()
@@ -85,10 +165,6 @@ class ColaboradorListView(LoginRequiredMixin, ListView):
         if estado in estados_validos:
             queryset = queryset.filter(estado=estado)
 
-        empresa_id = self.request.GET.get("empresa", "").strip()
-        if empresa_id.isdigit():
-            queryset = queryset.filter(empresa_id=empresa_id)
-
         area_id = self.request.GET.get("area", "").strip()
         if area_id.isdigit():
             queryset = queryset.filter(area_id=area_id)
@@ -103,7 +179,17 @@ class ColaboradorListView(LoginRequiredMixin, ListView):
         elif activos == "sin":
             queryset = queryset.filter(activos_asignados_count=0)
 
-        return queryset
+        self.company_tab_summary = self.get_company_tab_summary(queryset)
+        self.empresa_seleccionada = self.get_selected_company(self.company_tab_summary)
+        if self.empresa_seleccionada == "sin_empresa":
+            queryset = queryset.filter(empresa__isnull=True)
+        elif self.empresa_seleccionada:
+            queryset = queryset.filter(empresa_id=self.empresa_seleccionada)
+
+        orden = self.request.GET.get("orden", "nombre_asc").strip()
+        campos_orden = self.ORDENES.get(orden, self.ORDENES["nombre_asc"])
+
+        return queryset.order_by(*campos_orden)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -114,12 +200,17 @@ class ColaboradorListView(LoginRequiredMixin, ListView):
         context["total_columnas_tabla"] = len(columnas_seleccionadas) + 1
         context["busqueda"] = self.request.GET.get("q", "").strip()
         context["estado_seleccionado"] = self.request.GET.get("estado", "").strip()
-        context["empresa_seleccionada"] = self.request.GET.get("empresa", "").strip()
+        context["empresa_seleccionada"] = self.empresa_seleccionada
+        context["tabs_empresa"] = self.build_company_tabs(self.company_tab_summary)
         context["area_seleccionada"] = self.request.GET.get("area", "").strip()
         context["ubicacion_seleccionada"] = self.request.GET.get("ubicacion", "").strip()
         context["activos_seleccionado"] = self.request.GET.get("activos", "").strip()
+        orden_solicitado = self.request.GET.get("orden", "nombre_asc").strip()
+        context["orden_seleccionado"] = (
+            orden_solicitado if orden_solicitado in self.ORDENES else "nombre_asc"
+        )
+        context["ordenes_disponibles"] = self.ORDENES_CHOICES
         context["estados_colaborador"] = Colaborador.EstadoColaborador.choices
-        context["empresas"] = Empresa.objects.filter(activo=True).order_by("nombre")
         context["areas"] = Area.objects.filter(activo=True).order_by("nombre")
         context["ubicaciones"] = Ubicacion.objects.filter(activo=True).order_by("nombre")
         query_params = self.request.GET.copy()

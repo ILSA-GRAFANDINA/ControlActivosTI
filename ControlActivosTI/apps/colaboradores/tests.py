@@ -153,6 +153,86 @@ class ColaboradorListViewTests(TestCase):
         self.assertFalse(second_page.context["page_obj"].has_next())
         self.assertContains(second_page, "Mostrando 11 a 11 de 11 colaboradores")
     
+    def test_company_tabs_filter_and_paginate_each_company_independently(self):
+        self.client.force_login(self.user)
+        for indice in range(1, 11):
+            self._crear_colaborador_adicional(indice)
+
+        response = self.client.get(reverse("colaboradores:lista"))
+        tabs = {tab["nombre"]: tab for tab in response.context["tabs_empresa"]}
+
+        self.assertEqual(tabs["Todos"]["total"], 12)
+        self.assertEqual(tabs["Andes Corp"]["total"], 11)
+        self.assertEqual(tabs["Beta Tech"]["total"], 1)
+        self.assertTrue(tabs["Todos"]["activa"])
+        self.assertContains(response, 'aria-label="Colaboradores por empresa"')
+
+        response = self.client.get(
+            reverse("colaboradores:lista"),
+            {"empresa": self.empresa_a.pk, "orden": "nombre_desc"},
+        )
+
+        self.assertEqual(response.context["empresa_seleccionada"], str(self.empresa_a.pk))
+        self.assertEqual(response.context["paginator"].count, 11)
+        self.assertEqual(len(list(response.context["colaboradores"])), 10)
+        self.assertTrue(
+            all(
+                colaborador.empresa_id == self.empresa_a.pk
+                for colaborador in response.context["colaboradores"]
+            )
+        )
+        tab_activa = next(tab for tab in response.context["tabs_empresa"] if tab["activa"])
+        self.assertEqual(tab_activa["nombre"], "Andes Corp")
+        tab_beta = next(
+            tab for tab in response.context["tabs_empresa"] if tab["nombre"] == "Beta Tech"
+        )
+        self.assertIn("orden=nombre_desc", tab_beta["url"])
+        self.assertIn(f"empresa={self.empresa_b.pk}", tab_beta["url"])
+
+    def test_list_view_orders_collaborators_with_validated_options(self):
+        self.client.force_login(self.user)
+        Colaborador.objects.create(
+            nombres="Aaron",
+            apellidos="Zuluaga",
+            cedula="0304050607",
+            correo_corporativo="aaron@example.com",
+            empresa=self.empresa_a,
+            cargo=self.cargo,
+            area=self.area,
+            ubicacion=self.ubicacion,
+            fecha_ingreso=date(2024, 3, 1),
+        )
+        zoey = Colaborador.objects.create(
+            nombres="Zoey",
+            apellidos="Abad",
+            cedula="0405060708",
+            correo_corporativo="zoey@example.com",
+            empresa=self.empresa_a,
+            cargo=self.cargo,
+            area=self.area,
+            ubicacion=self.ubicacion,
+            fecha_ingreso=date(2024, 3, 1),
+        )
+
+        response = self.client.get(
+            reverse("colaboradores:lista"),
+            {"orden": "nombre_desc"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["orden_seleccionado"], "nombre_desc")
+        self.assertContains(response, 'name="orden"')
+        self.assertContains(response, "Nombre: Z a A")
+        colaboradores = list(response.context["colaboradores"])
+        self.assertEqual(colaboradores[0], zoey)
+        self.assertIn("orden=nombre_desc", response.context["query_string"])
+
+        response = self.client.get(
+            reverse("colaboradores:lista"),
+            {"orden": "campo_no_permitido"},
+        )
+        self.assertEqual(response.context["orden_seleccionado"], "nombre_asc")
+
     def test_list_view_shows_add_colaborador_button(self):
         self.client.force_login(self.user)
 

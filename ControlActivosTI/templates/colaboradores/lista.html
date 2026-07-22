@@ -16,6 +16,7 @@
 
 <div class="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
     <form method="get" class="space-y-6" data-scroll-to-results>
+        {% if empresa_seleccionada %}<input type="hidden" name="empresa" value="{{ empresa_seleccionada }}">{% endif %}
         <div class="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(170px,0.65fr)_minmax(190px,0.75fr)]">
             <div>
                 <label class="mb-2 block text-sm font-semibold text-slate-700">Búsqueda</label>
@@ -56,21 +57,7 @@
             </div>
         </div>
 
-        <div class="grid gap-4 md:grid-cols-3">
-            <div>
-                <label for="filtro-empresa" class="mb-2 block text-sm font-semibold text-slate-700">Empresa</label>
-                <select
-                    id="filtro-empresa"
-                    name="empresa"
-                    class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
-                >
-                    <option value="">Todas las empresas</option>
-                    {% for empresa in empresas %}
-                        <option value="{{ empresa.pk }}" {% if empresa_seleccionada == empresa.pk|stringformat:"s" %}selected{% endif %}>{{ empresa.nombre }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
+        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <div>
                 <label for="filtro-area" class="mb-2 block text-sm font-semibold text-slate-700">Área</label>
                 <select
@@ -98,9 +85,10 @@
                     {% endfor %}
                 </select>
             </div>
+
         </div>
 
-        {% if busqueda or estado_seleccionado or activos_seleccionado or empresa_seleccionada or area_seleccionada or ubicacion_seleccionada %}
+        {% if busqueda or estado_seleccionado or activos_seleccionado or area_seleccionada or ubicacion_seleccionada or orden_seleccionado != "nombre_asc" %}
             <div class="flex flex-wrap items-center gap-2">
                 <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Filtros activos</span>
                 {% if busqueda %}
@@ -116,13 +104,6 @@
                 {% if activos_seleccionado %}
                     <span class="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-medium text-cyan-700">Activos: {% if activos_seleccionado == "con" %}Con activos{% else %}Sin activos{% endif %}</span>
                 {% endif %}
-                {% if empresa_seleccionada %}
-                    {% for empresa in empresas %}
-                        {% if empresa_seleccionada == empresa.pk|stringformat:"s" %}
-                            <span class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">Empresa: {{ empresa.nombre }}</span>
-                        {% endif %}
-                    {% endfor %}
-                {% endif %}
                 {% if area_seleccionada %}
                     {% for area in areas %}
                         {% if area_seleccionada == area.pk|stringformat:"s" %}
@@ -134,6 +115,13 @@
                     {% for ubicacion in ubicaciones %}
                         {% if ubicacion_seleccionada == ubicacion.pk|stringformat:"s" %}
                             <span class="rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700">Ubicacion: {{ ubicacion.nombre }}</span>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+                {% if orden_seleccionado != "nombre_asc" %}
+                    {% for value, label in ordenes_disponibles %}
+                        {% if orden_seleccionado == value %}
+                            <span class="rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700">Orden: {{ label }}</span>
                         {% endif %}
                     {% endfor %}
                 {% endif %}
@@ -159,16 +147,47 @@
             </div>
         </details>
 
-        <div class="flex flex-wrap gap-3">
-            <button type="submit" class="rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700">
-                Aplicar
-            </button>
-            <a href="{% url 'colaboradores:lista' %}" class="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-                Restablecer
-            </a>
+        <div class="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 lg:flex-row lg:items-end lg:justify-between">
+            <div class="w-full lg:max-w-sm">
+                <label for="filtro-orden" class="mb-2 block text-sm font-semibold text-slate-700">Orden de los colaboradores</label>
+                <select
+                    id="filtro-orden"
+                    name="orden"
+                    class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+                >
+                    {% for value, label in ordenes_disponibles %}
+                        <option value="{{ value }}" {% if orden_seleccionado == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex flex-wrap gap-3">
+                <button type="submit" class="rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700">
+                    Aplicar filtros
+                </button>
+                <a href="{% url 'colaboradores:lista' %}" class="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
+                    Restablecer
+                </a>
+            </div>
         </div>
     </form>
 </div>
+
+{% if tabs_empresa %}
+    <nav class="mb-4 overflow-x-auto pb-2" aria-label="Colaboradores por empresa">
+        <div class="inline-flex min-w-full gap-2">
+            {% for tab in tabs_empresa %}
+                <a
+                    href="{{ tab.url }}#resultados"
+                    class="inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-semibold transition {% if tab.activa %}border-cyan-200 bg-cyan-50 text-cyan-700 shadow-sm{% else %}border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50{% endif %}"
+                    {% if tab.activa %}aria-current="page"{% endif %}
+                >
+                    <span>{{ tab.nombre }}</span>
+                    <span class="rounded-full {% if tab.activa %}bg-cyan-100 text-cyan-700{% else %}bg-slate-100 text-slate-500{% endif %} px-2 py-0.5 text-xs font-bold">{{ tab.total }}</span>
+                </a>
+            {% endfor %}
+        </div>
+    </nav>
+{% endif %}
 
 <div id="resultados" class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
     <div class="overflow-x-auto">
