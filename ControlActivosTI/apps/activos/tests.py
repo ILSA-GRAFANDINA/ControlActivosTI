@@ -545,6 +545,56 @@ class ActivoListViewTests(TestCase):
         self.assertContains(response, reverse("activos:exportar"))
         self.assertContains(response, "Exportar")
 
+    def test_list_view_can_filter_available_assets_from_dashboard(self):
+        estado_asignado = EstadoActivo.objects.create(
+            nombre="Asignado",
+            permite_asignacion=False,
+        )
+        Activo.objects.create(
+            tipo_activo=self.tipo_laptop,
+            marca="Dell",
+            modelo="Asignado",
+            serie="LAP-ASIGNADO",
+            estado_activo=estado_asignado,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse("activos:lista"),
+            {"disponibilidad": "disponibles"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["disponibilidad_seleccionada"], "disponibles")
+        self.assertContains(response, "Disponibilidad: Disponibles")
+        self.assertContains(response, "LAP-001")
+        self.assertNotContains(response, "LAP-ASIGNADO")
+        self.assertNotContains(response, "MOU-002")
+
+    def test_list_view_can_filter_assigned_assets_from_dashboard(self):
+        estado_asignado = EstadoActivo.objects.create(
+            nombre="Asignado",
+            permite_asignacion=False,
+        )
+        Activo.objects.create(
+            tipo_activo=self.tipo_laptop,
+            marca="Dell",
+            modelo="Asignado",
+            serie="LAP-ASIGNADO",
+            estado_activo=estado_asignado,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse("activos:lista"),
+            {"disponibilidad": "asignados"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Disponibilidad: Asignados")
+        self.assertContains(response, "LAP-ASIGNADO")
+        self.assertNotContains(response, "LAP-001")
+
     def test_export_button_offers_to_keep_or_clear_active_filters(self):
         self.client.force_login(self.user)
 

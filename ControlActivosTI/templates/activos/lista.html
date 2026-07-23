@@ -113,6 +113,19 @@
             </div>
 
             <div>
+                <label for="filtro-disponibilidad" class="mb-2 block text-sm font-semibold text-slate-700">Disponibilidad</label>
+                <select
+                    id="filtro-disponibilidad"
+                    name="disponibilidad"
+                    class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+                >
+                    <option value="">Todas</option>
+                    <option value="disponibles" {% if disponibilidad_seleccionada == "disponibles" %}selected{% endif %}>Disponibles</option>
+                    <option value="asignados" {% if disponibilidad_seleccionada == "asignados" %}selected{% endif %}>Asignados</option>
+                </select>
+            </div>
+
+            <div>
                 <label class="mb-2 block text-sm font-semibold text-slate-700">Tipo</label>
                 <details class="relative">
                     <summary class="flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition duration-200 hover:border-cyan-400 hover:bg-slate-50 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
@@ -197,7 +210,7 @@
             <span class="text-xs text-slate-500">Solo muestra activos vigentes en el listado.</span>
         </div>
 
-        {% if busqueda or estado_seleccionado or tipos_seleccionados or empresa_seleccionada or proveedor_seleccionado or factura_seleccionada or ocultar_deshabilitados %}
+        {% if busqueda or estado_seleccionado or disponibilidad_seleccionada or tipos_seleccionados or empresa_seleccionada or proveedor_seleccionado or factura_seleccionada or ocultar_deshabilitados %}
             <div class="flex flex-wrap items-center gap-2">
                 <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Filtros activos</span>
                 {% if busqueda %}
@@ -209,6 +222,11 @@
                             <span class="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-medium text-cyan-700">Estado: {{ estado.nombre }}</span>
                         {% endif %}
                     {% endfor %}
+                {% endif %}
+                {% if disponibilidad_seleccionada == "disponibles" %}
+                    <span class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">Disponibilidad: Disponibles</span>
+                {% elif disponibilidad_seleccionada == "asignados" %}
+                    <span class="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-medium text-cyan-700">Disponibilidad: Asignados</span>
                 {% endif %}
                 {% if tipos_seleccionados %}
                     {% for tipo in tipos_activo %}

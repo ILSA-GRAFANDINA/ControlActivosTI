@@ -34,6 +34,7 @@
                     class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
                 >
                     <option value="">Todos los estados</option>
+                    <option value="ABIERTAS" {% if estado_seleccionado == "ABIERTAS" %}selected{% endif %}>Abiertas (activas y parciales)</option>
                     <option value="ACTIVA" {% if estado_seleccionado == "ACTIVA" %}selected{% endif %}>Activa</option>
                     <option value="PARCIAL" {% if estado_seleccionado == "PARCIAL" %}selected{% endif %}>Parcial</option>
                     <option value="CERRADA" {% if estado_seleccionado == "CERRADA" %}selected{% endif %}>Cerrada</option>
@@ -96,7 +97,7 @@
                     <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">Búsqueda: {{ busqueda }}</span>
                 {% endif %}
                 {% if estado_seleccionado %}
-                    <span class="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-medium text-cyan-700">Estado: {{ estado_seleccionado|title }}</span>
+                    <span class="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-medium text-cyan-700">Estado: {% if estado_seleccionado == "ABIERTAS" %}Abiertas (activas y parciales){% else %}{{ estado_seleccionado|title }}{% endif %}</span>
                 {% endif %}
                 {% if acta_seleccionada == "con" %}
                     <span class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">Con acta</span>

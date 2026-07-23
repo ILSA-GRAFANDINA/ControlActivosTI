@@ -187,6 +187,7 @@
         {% csrf_token %}
         <input type="hidden" name="q" value="{{ busqueda }}">
         <input type="hidden" name="estado" value="{{ estado_seleccionado }}">
+        <input type="hidden" name="disponibilidad" value="{{ disponibilidad_seleccionada }}">
         {% for tipo_id in tipos_seleccionados %}
             <input type="hidden" name="tipo" value="{{ tipo_id }}">
         {% endfor %}
@@ -293,6 +294,7 @@
         const currentFilterSignature = JSON.stringify({
             q: "{{ busqueda|escapejs }}",
             estado: "{{ estado_seleccionado|escapejs }}",
+            disponibilidad: "{{ disponibilidad_seleccionada|escapejs }}",
             tipos: [{% for tipo_id in tipos_seleccionados %}"{{ tipo_id|escapejs }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
             empresa: "{{ empresa_seleccionada|escapejs }}",
             proveedor: "{{ proveedor_seleccionado|escapejs }}",

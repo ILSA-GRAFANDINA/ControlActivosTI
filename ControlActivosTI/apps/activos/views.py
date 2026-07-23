@@ -18,7 +18,15 @@ from .services import build_activos_export_workbook
 
 class ActivoFilterMixin:
     FILTER_SESSION_KEY = "activos_filtros_guardados"
-    FILTER_FIELDS = ("q", "estado", "empresa", "proveedor", "factura", "ocultar_deshabilitados")
+    FILTER_FIELDS = (
+        "q",
+        "estado",
+        "disponibilidad",
+        "empresa",
+        "proveedor",
+        "factura",
+        "ocultar_deshabilitados",
+    )
     FILTER_MULTI_FIELDS = ("tipo",)
     TAB_PARAM = "tab_tipo"
 
@@ -94,6 +102,22 @@ class ActivoFilterMixin:
         if estado_id.isdigit():
             queryset = queryset.filter(estado_activo_id=estado_id)
 
+        disponibilidad = self.get_filter_value("disponibilidad")
+        if disponibilidad == "disponibles":
+            queryset = (
+                queryset.filter(
+                    activo=True,
+                    estado_activo__permite_asignacion=True,
+                )
+                .exclude(estado_activo__nombre__icontains="repar")
+                .exclude(estado_activo__nombre__icontains="cuarentena")
+            )
+        elif disponibilidad == "asignados":
+            queryset = queryset.filter(
+                activo=True,
+                estado_activo__nombre__iexact="Asignado",
+            )
+
         tipo_ids = self.get_active_filters().get("tipo", [])
         if tipo_ids:
             queryset = queryset.filter(tipo_activo_id__in=tipo_ids)
@@ -122,6 +146,7 @@ class ActivoFilterMixin:
         return {
             "busqueda": filtros["q"],
             "estado_seleccionado": filtros["estado"],
+            "disponibilidad_seleccionada": filtros["disponibilidad"],
             "tipos_seleccionados": filtros["tipo"],
             "empresa_seleccionada": filtros["empresa"],
             "proveedor_seleccionado": filtros["proveedor"],
@@ -140,6 +165,7 @@ class ActivoFilterMixin:
         params.pop("cols", None)
         params["q"] = filtros["q"]
         params["estado"] = filtros["estado"]
+        params["disponibilidad"] = filtros["disponibilidad"]
         params.setlist("tipo", filtros["tipo"])
         params["empresa"] = filtros["empresa"]
         params["proveedor"] = filtros["proveedor"]
@@ -173,6 +199,7 @@ class ActivoFilterMixin:
         params = QueryDict("", mutable=True)
         params["q"] = filtros["q"]
         params["estado"] = filtros["estado"]
+        params["disponibilidad"] = filtros["disponibilidad"]
         params.setlist("tipo", filtros["tipo"])
         params["empresa"] = filtros["empresa"]
         params["proveedor"] = filtros["proveedor"]
@@ -284,6 +311,7 @@ class ActivoListView(LoginRequiredMixin, ActivoFilterMixin, ListView):
         context["hay_filtros_para_exportar"] = bool(
             context["busqueda"]
             or context["estado_seleccionado"]
+            or context["disponibilidad_seleccionada"]
             or context["tipos_seleccionados"]
             or context["empresa_seleccionada"]
             or context["proveedor_seleccionado"]

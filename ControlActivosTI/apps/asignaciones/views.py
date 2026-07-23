@@ -58,7 +58,14 @@ class AsignacionListView(LoginRequiredMixin, ListView):
             )
 
         estado = self.request.GET.get("estado", "").strip()
-        if estado in {
+        if estado == "ABIERTAS":
+            queryset = queryset.filter(
+                estado_asignacion__in=[
+                    Asignacion.EstadoAsignacion.ACTIVA,
+                    Asignacion.EstadoAsignacion.PARCIAL,
+                ]
+            )
+        elif estado in {
             Asignacion.EstadoAsignacion.ACTIVA,
             Asignacion.EstadoAsignacion.PARCIAL,
             Asignacion.EstadoAsignacion.CERRADA,

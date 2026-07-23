@@ -32,36 +32,36 @@
     </section>
 
     <section class="dashboard-stat-grid grid grid-cols-1 gap-4">
-        <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <a href="{% url 'activos:lista' %}?ocultar_deshabilitados=1" aria-label="Ver todos los activos vigentes" class="group block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-cyan-300 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-cyan-100">
             <p class="text-sm text-slate-500">Total activos</p>
             <p class="mt-3 text-3xl font-bold text-slate-900">{{ total_activos }}</p>
             <p class="mt-2 text-xs text-slate-500">Base total del inventario vigente.</p>
-        </article>
-        <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        </a>
+        <a href="{% url 'activos:lista' %}?disponibilidad=disponibles" aria-label="Ver activos disponibles" class="group block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-emerald-100">
             <p class="text-sm text-slate-500">Activos disponibles</p>
             <p class="mt-3 text-3xl font-bold text-emerald-600">{{ activos_disponibles }}</p>
             <p class="mt-2 text-xs text-slate-500">Equipos listos para una nueva entrega.</p>
-        </article>
-        <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        </a>
+        <a href="{% url 'activos:lista' %}?disponibilidad=asignados" aria-label="Ver activos asignados" class="group block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-cyan-300 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-cyan-100">
             <p class="text-sm text-slate-500">Activos asignados</p>
             <p class="mt-3 text-3xl font-bold text-cyan-600">{{ activos_asignados }}</p>
             <p class="mt-2 text-xs text-slate-500">Inventario actualmente en uso.</p>
-        </article>
-        <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        </a>
+        <a href="{% url 'asignaciones:lista' %}?estado=ABIERTAS" aria-label="Ver asignaciones activas y parciales" class="group block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-rose-300 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-rose-100">
             <p class="text-sm text-slate-500">Asignaciones activas</p>
             <p class="mt-3 text-3xl font-bold text-rose-600">{{ asignaciones_activas }}</p>
             <p class="mt-2 text-xs text-slate-500">Procesos abiertos pendientes de cierre.</p>
-        </article>
-        <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        </a>
+        <a href="{% url 'colaboradores:lista' %}" aria-label="Ver todos los colaboradores" class="group block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-cyan-300 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-cyan-100">
             <p class="text-sm text-slate-500">Colaboradores</p>
             <p class="mt-3 text-3xl font-bold text-slate-900">{{ total_colaboradores }}</p>
             <p class="mt-2 text-xs text-slate-500">Registros totales del personal.</p>
-        </article>
-        <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        </a>
+        <a href="{% url 'colaboradores:lista' %}?estado=ACTIVO" aria-label="Ver colaboradores activos" class="group block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-amber-100">
             <p class="text-sm text-slate-500">Colaboradores activos</p>
             <p class="mt-3 text-3xl font-bold text-amber-600">{{ total_colaboradores_activos }}</p>
             <p class="mt-2 text-xs text-slate-500">Personal habilitado para asignaciones.</p>
-        </article>
+        </a>
     </section>
 
     <section class="dashboard-primary-grid grid gap-6">

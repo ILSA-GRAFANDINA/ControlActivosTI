@@ -541,6 +541,26 @@ class AsignacionListViewTests(TestCase):
         asignaciones = list(response.context["asignaciones"])
         self.assertEqual(asignaciones, [self.asignacion_cerrada])
 
+    def test_list_view_filters_open_assignments_from_dashboard(self):
+        asignacion_parcial = self._crear_asignacion_adicional(1, date(2026, 4, 18))
+        Asignacion.objects.filter(pk=asignacion_parcial.pk).update(
+            estado_asignacion=Asignacion.EstadoAsignacion.PARCIAL
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse("asignaciones:lista"),
+            {"estado": "ABIERTAS"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            set(response.context["asignaciones"]),
+            {self.asignacion_activa, asignacion_parcial},
+        )
+        self.assertNotIn(self.asignacion_cerrada, response.context["asignaciones"])
+        self.assertContains(response, "Abiertas (activas y parciales)")
+
     def test_list_view_filters_by_acta(self):
         self.client.force_login(self.user)
 

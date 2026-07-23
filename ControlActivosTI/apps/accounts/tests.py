@@ -123,6 +123,24 @@ class Admin2ViewsTests(TestCase):
         self.assertEqual(resumen_por_tipo["Teclado"]["asignados"], 0)
         self.assertEqual(resumen_por_tipo["Teclado"]["total"], 1)
 
+    def test_dashboard_metric_cards_link_to_corresponding_filtered_lists(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("dashboard-inicio"))
+
+        self.assertEqual(response.status_code, 200)
+        expected_urls = [
+            f"{reverse('activos:lista')}?ocultar_deshabilitados=1",
+            f"{reverse('activos:lista')}?disponibilidad=disponibles",
+            f"{reverse('activos:lista')}?disponibilidad=asignados",
+            f"{reverse('asignaciones:lista')}?estado=ABIERTAS",
+            reverse("colaboradores:lista"),
+            f"{reverse('colaboradores:lista')}?estado=ACTIVO",
+        ]
+        for url in expected_urls:
+            with self.subTest(url=url):
+                self.assertContains(response, f'href="{url}"')
+
     def test_admin2_home_uses_practical_section_names(self):
         self.client.force_login(self.user)
 
