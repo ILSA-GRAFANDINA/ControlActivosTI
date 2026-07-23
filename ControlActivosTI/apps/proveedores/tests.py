@@ -85,6 +85,8 @@ class ProveedorViewsTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(all(item.activo for item in response.context["proveedores"]))
         self.assertContains(response, "7 proveedores encontrados")
+        self.assertContains(response, "data-compact-filters")
+        self.assertContains(response, "data-filter-actions")
         response = self.client.get(reverse("proveedores:lista"))
         self.assertTrue(response.context["is_paginated"])
         self.assertContains(response, "12 proveedores encontrados")

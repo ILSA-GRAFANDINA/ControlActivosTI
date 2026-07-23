@@ -12,7 +12,7 @@
 </div>
 
 <div class="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-    <form method="get" class="space-y-6" data-scroll-to-results>
+    <form method="get" class="space-y-4" data-scroll-to-results data-compact-filters>
         {% if empresa_seleccionada %}<input type="hidden" name="empresa" value="{{ empresa_seleccionada }}">{% endif %}
         <div class="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(170px,0.65fr)_minmax(190px,0.75fr)]">
             <div>
@@ -54,7 +54,7 @@
             </div>
         </div>
 
-        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(220px,1fr)_auto] xl:items-end">
             <div>
                 <label for="filtro-area" class="mb-2 block text-sm font-semibold text-slate-700">Área</label>
                 <select
@@ -83,6 +83,27 @@
                 </select>
             </div>
 
+            <div>
+                <label for="filtro-orden" class="mb-2 block text-sm font-semibold text-slate-700">Orden</label>
+                <select
+                    id="filtro-orden"
+                    name="orden"
+                    class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+                >
+                    {% for value, label in ordenes_disponibles %}
+                        <option value="{{ value }}" {% if orden_seleccionado == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="flex flex-wrap justify-end gap-3 md:col-span-2 xl:col-span-1 xl:flex-nowrap" data-filter-actions>
+                <button type="submit" class="rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700">
+                    Aplicar
+                </button>
+                <a href="{% url 'colaboradores:lista' %}" class="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
+                    Restablecer
+                </a>
+            </div>
         </div>
 
         {% if busqueda or estado_seleccionado or activos_seleccionado or area_seleccionada or ubicacion_seleccionada or orden_seleccionado != "nombre_asc" %}
@@ -144,28 +165,6 @@
             </div>
         </details>
 
-        <div class="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 lg:flex-row lg:items-end lg:justify-between">
-            <div class="w-full lg:max-w-sm">
-                <label for="filtro-orden" class="mb-2 block text-sm font-semibold text-slate-700">Orden de los colaboradores</label>
-                <select
-                    id="filtro-orden"
-                    name="orden"
-                    class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
-                >
-                    {% for value, label in ordenes_disponibles %}
-                        <option value="{{ value }}" {% if orden_seleccionado == value %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="flex flex-wrap gap-3">
-                <button type="submit" class="rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700">
-                    Aplicar filtros
-                </button>
-                <a href="{% url 'colaboradores:lista' %}" class="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
-                    Restablecer
-                </a>
-            </div>
-        </div>
     </form>
 </div>
 

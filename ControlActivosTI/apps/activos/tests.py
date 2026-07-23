@@ -494,6 +494,7 @@ class ActivoListViewTests(TestCase):
         self.assertContains(response, "Mouse")
         self.assertContains(response, 'text-[11px] font-semibold uppercase')
         self.assertContains(response, "data-scroll-to-results")
+        self.assertContains(response, "data-compact-filters")
         self.assertContains(response, 'id="resultados"')
 
     def test_list_view_shows_add_active_button(self):

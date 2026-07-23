@@ -74,7 +74,7 @@
 {% endif %}
 
 <div class="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-    <form method="get" class="space-y-6" data-scroll-to-results>
+    <form method="get" class="space-y-4" data-scroll-to-results data-compact-filters>
         {% if tab_tipo_activa %}
             <input type="hidden" name="tab_tipo" value="{{ tab_tipo_activa }}">
         {% endif %}
@@ -173,35 +173,45 @@
             </div>
         </div>
 
-        <div>
-            <label for="filtro-proveedor" class="mb-2 block text-sm font-semibold text-slate-700">Proveedor</label>
-            <select id="filtro-proveedor" name="proveedor" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
-                <option value="">Todos los proveedores</option>
-                {% for proveedor in proveedores %}<option value="{{ proveedor.pk }}" {% if proveedor_seleccionado == proveedor.pk|stringformat:"s" %}selected{% endif %}>{{ proveedor }}</option>{% endfor %}
-            </select>
-        </div>
+        <div class="grid gap-4 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] xl:items-end">
+            <div>
+                <label for="filtro-proveedor" class="mb-2 block text-sm font-semibold text-slate-700">Proveedor</label>
+                <select id="filtro-proveedor" name="proveedor" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
+                    <option value="">Todos los proveedores</option>
+                    {% for proveedor in proveedores %}<option value="{{ proveedor.pk }}" {% if proveedor_seleccionado == proveedor.pk|stringformat:"s" %}selected{% endif %}>{{ proveedor }}</option>{% endfor %}
+                </select>
+            </div>
 
-        <div>
-            <label for="filtro-factura" class="mb-2 block text-sm font-semibold text-slate-700">Factura</label>
-            <select id="filtro-factura" name="factura" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
-                <option value="">Todas las facturas</option>
-                <option value="sin_factura" {% if factura_seleccionada == 'sin_factura' %}selected{% endif %}>Sin factura registrada</option>
-                {% for factura in facturas_compra %}<option value="{{ factura.pk }}" {% if factura_seleccionada == factura.pk|stringformat:"s" %}selected{% endif %}>{{ factura.numero_factura }} · {{ factura.proveedor }}</option>{% endfor %}
-            </select>
-        </div>
+            <div>
+                <label for="filtro-factura" class="mb-2 block text-sm font-semibold text-slate-700">Factura</label>
+                <select id="filtro-factura" name="factura" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
+                    <option value="">Todas las facturas</option>
+                    <option value="sin_factura" {% if factura_seleccionada == 'sin_factura' %}selected{% endif %}>Sin factura registrada</option>
+                    {% for factura in facturas_compra %}<option value="{{ factura.pk }}" {% if factura_seleccionada == factura.pk|stringformat:"s" %}selected{% endif %}>{{ factura.numero_factura }} · {{ factura.proveedor }}</option>{% endfor %}
+                </select>
+            </div>
 
-        <div class="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-            <label class="inline-flex cursor-pointer items-center gap-3 text-sm font-semibold text-slate-700">
-                <input
-                    type="checkbox"
-                    name="ocultar_deshabilitados"
-                    value="1"
-                    class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
-                    {% if ocultar_deshabilitados %}checked{% endif %}
-                >
-                <span>Ocultar deshabilitados</span>
-            </label>
-            <span class="text-xs text-slate-500">Solo muestra activos vigentes en el listado.</span>
+            <div class="flex min-h-[46px] items-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <label class="inline-flex cursor-pointer items-center gap-3 whitespace-nowrap text-sm font-semibold text-slate-700">
+                    <input
+                        type="checkbox"
+                        name="ocultar_deshabilitados"
+                        value="1"
+                        class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                        {% if ocultar_deshabilitados %}checked{% endif %}
+                    >
+                    <span>Ocultar deshabilitados</span>
+                </label>
+            </div>
+
+            <div class="flex flex-wrap justify-end gap-3 xl:flex-nowrap" data-filter-actions>
+                <button type="submit" class="rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700">
+                    Aplicar
+                </button>
+                <a href="{% url 'activos:lista' %}?reset=1" class="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+                    Restablecer
+                </a>
+            </div>
         </div>
 
         {% if busqueda or estado_seleccionado or disponibilidad_seleccionada or tipos_seleccionados or empresa_seleccionada or proveedor_seleccionado or factura_seleccionada or ocultar_deshabilitados %}
@@ -263,14 +273,6 @@
             </div>
         </details>
 
-        <div class="flex flex-wrap gap-3">
-            <button type="submit" class="rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700">
-                Aplicar
-            </button>
-            <a href="{% url 'activos:lista' %}?reset=1" class="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-                Restablecer
-            </a>
-        </div>
     </form>
 </div>
 

@@ -242,6 +242,8 @@ class ColaboradorListViewTests(TestCase):
         self.assertContains(response, reverse("colaboradores:nuevo"))
         self.assertContains(response, "Agregar colaborador")
         self.assertContains(response, "2 colaboradores encontrados")
+        self.assertContains(response, "data-compact-filters")
+        self.assertContains(response, "data-filter-actions")
 
 
 class ColaboradorCreateViewTests(TestCase):

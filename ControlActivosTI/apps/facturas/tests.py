@@ -266,6 +266,8 @@ class FacturaViewsTests(FacturaBaseTests):
         self.assertContains(response, "1 factura encontrada")
         self.assertContains(response, "Agregar factura")
         self.assertContains(response, "bg-cyan-600")
+        self.assertContains(response, "data-compact-filters")
+        self.assertContains(response, "data-filter-actions")
         response = self.client.get(reverse("facturas:detalle", args=[factura.pk]))
         self.assertContains(response, "SER-001")
         self.assertContains(response, "Ocultar SHA-256")
