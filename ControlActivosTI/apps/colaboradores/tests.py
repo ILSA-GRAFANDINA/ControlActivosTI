@@ -259,6 +259,13 @@ class ColaboradorCreateViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Agregar colaborador")
         self.assertContains(response, "Guardar colaborador")
+        self.assertContains(response, "data-catalogo-rapido", count=5)
+        self.assertContains(response, "data-catalogo-dialog")
+        self.assertContains(
+            response,
+            reverse("colaboradores:catalogo-rapido-crear"),
+        )
+        self.assertContains(response, "js/colaborador-catalogos.js")
 
     def test_create_view_saves_colaborador(self):
         self.client.force_login(self.user)
@@ -289,6 +296,79 @@ class ColaboradorCreateViewTests(TestCase):
             "El colaborador Mariana Gomez fue registrado correctamente.",
         )
         self.assertContains(follow_response, "app-toast--success")
+
+
+class ColaboradorCatalogoRapidoCreateViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="rrhh-catalogos",
+            password="testpass123",
+        )
+        self.url = reverse("colaboradores:catalogo-rapido-crear")
+
+    def test_quick_catalog_creation_requires_login(self):
+        response = self.client.post(
+            self.url,
+            {"catalogo": "area", "nombre": "Finanzas"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("accounts:login"), response.url)
+
+    def test_quick_catalog_creation_returns_new_option(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            self.url,
+            {
+                "catalogo": "area",
+                "nombre": "Finanzas",
+                "descripcion": "Área financiera",
+            },
+        )
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["catalogo"], "area")
+        self.assertEqual(payload["label"], "Finanzas")
+        self.assertTrue(Area.objects.filter(pk=payload["id"], activo=True).exists())
+
+    def test_quick_catalog_creation_reports_validation_errors(self):
+        Area.objects.create(nombre="Finanzas")
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            self.url,
+            {"catalogo": "area", "nombre": "Finanzas"},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(response.json()["ok"])
+        self.assertIn("nombre", response.json()["errors"])
+        self.assertEqual(Area.objects.filter(nombre="Finanzas").count(), 1)
+
+    def test_quick_cost_center_creation_supports_company(self):
+        empresa = Empresa.objects.create(nombre="Andes Corp")
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            self.url,
+            {
+                "catalogo": "centro_costo",
+                "codigo": "ti-009",
+                "nombre": "Tecnología",
+                "empresa": empresa.pk,
+                "descripcion": "Operación tecnológica",
+            },
+        )
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        centro_costo = CentroCosto.objects.get(pk=payload["id"])
+        self.assertEqual(centro_costo.codigo, "TI-009")
+        self.assertEqual(centro_costo.empresa, empresa)
+        self.assertEqual(payload["label"], "TI-009 - Tecnología")
 
 
 class ColaboradorDetailViewTests(TestCase):

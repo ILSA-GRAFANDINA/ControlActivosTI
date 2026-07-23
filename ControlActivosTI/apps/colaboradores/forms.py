@@ -92,3 +92,60 @@ class ColaboradorForm(forms.ModelForm):
                 field.widget.attrs["class"] = TEXTAREA_CLASS
             else:
                 field.widget.attrs["class"] = BASE_CLASS
+
+
+class CentroCostoRapidoForm(forms.ModelForm):
+    codigo = forms.CharField(max_length=30)
+
+    class Meta:
+        model = CentroCosto
+        fields = ["codigo", "nombre", "empresa", "descripcion"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["empresa"].queryset = Empresa.objects.filter(activo=True).order_by(
+            "nombre"
+        )
+
+    def clean_codigo(self):
+        return self.cleaned_data["codigo"].strip().upper()
+
+
+CATALOGOS_RAPIDOS = {
+    "empresa": {
+        "model": Empresa,
+        "fields": ["nombre", "descripcion"],
+        "label": "Empresa",
+    },
+    "cargo": {
+        "model": Cargo,
+        "fields": ["nombre", "descripcion"],
+        "label": "Cargo",
+    },
+    "area": {
+        "model": Area,
+        "fields": ["nombre", "descripcion"],
+        "label": "Área",
+    },
+    "ubicacion": {
+        "model": Ubicacion,
+        "fields": ["nombre", "descripcion"],
+        "label": "Ubicación",
+    },
+}
+
+
+def get_catalogo_rapido_form(catalogo):
+    if catalogo == "centro_costo":
+        return CentroCostoRapidoForm
+    config = CATALOGOS_RAPIDOS.get(catalogo)
+    if not config:
+        return None
+    return forms.modelform_factory(config["model"], fields=config["fields"])
+
+
+def get_catalogo_rapido_label(catalogo):
+    if catalogo == "centro_costo":
+        return "Centro de costo"
+    config = CATALOGOS_RAPIDOS.get(catalogo)
+    return config["label"] if config else ""

@@ -4,15 +4,20 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Count, Prefetch, Q
 from django.urls import reverse
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, JsonResponse
 from django.urls import reverse_lazy
+from django.views import View
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
 from apps.activos.models import FotoActivo
 from apps.asignaciones.models import Asignacion, AsignacionDetalle
 from apps.catalogos.models import Area, Ubicacion
 
-from .forms import ColaboradorForm
+from .forms import (
+    ColaboradorForm,
+    get_catalogo_rapido_form,
+    get_catalogo_rapido_label,
+)
 from .models import Colaborador
 
 ASIGNACIONES_ABIERTAS = [
@@ -239,6 +244,42 @@ class ColaboradorCreateView(LoginRequiredMixin, CreateView):
             f"El colaborador {self.object.nombres} {self.object.apellidos} fue registrado correctamente.",
         )
         return HttpResponseRedirect(self.get_success_url())
+
+
+class ColaboradorCatalogoRapidoCreateView(LoginRequiredMixin, View):
+    def post(self, request, *args, **kwargs):
+        catalogo = request.POST.get("catalogo", "").strip()
+        form_class = get_catalogo_rapido_form(catalogo)
+        if form_class is None:
+            return JsonResponse(
+                {"ok": False, "errors": {"catalogo": ["Catálogo no permitido."]}},
+                status=400,
+            )
+
+        form = form_class(request.POST)
+        if not form.is_valid():
+            return JsonResponse(
+                {
+                    "ok": False,
+                    "errors": {
+                        field: [str(error) for error in errors]
+                        for field, errors in form.errors.items()
+                    },
+                },
+                status=400,
+            )
+
+        instance = form.save()
+        return JsonResponse(
+            {
+                "ok": True,
+                "catalogo": catalogo,
+                "catalogo_label": get_catalogo_rapido_label(catalogo),
+                "id": instance.pk,
+                "label": str(instance),
+            },
+            status=201,
+        )
 
 
 class ColaboradorUpdateView(LoginRequiredMixin, UpdateView):
