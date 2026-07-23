@@ -1,3 +1,4 @@
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 from django.db.models import Count, Prefetch, Q
@@ -479,12 +480,21 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
         return self.forms_invalid(form, formset)
 
     def forms_valid(self, form, formset):
+        es_edicion = bool(self.activo_en_edicion)
         with transaction.atomic():
             self.object = form.save()
             fotos = formset.save(commit=False)
             for foto in fotos:
                 foto.activo = self.object
                 foto.save()
+        messages.success(
+            self.request,
+            (
+                f"El activo {self.object.codigo} fue actualizado correctamente."
+                if es_edicion
+                else f"El activo {self.object.codigo} fue registrado correctamente."
+            ),
+        )
         return HttpResponseRedirect(self.get_success_url())
 
     def forms_invalid(self, form, formset):

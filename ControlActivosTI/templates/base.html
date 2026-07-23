@@ -18,6 +18,7 @@
     </script>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="{% static 'css/app-theme.css' %}?v=20260715-5">
+    <link rel="stylesheet" href="{% static 'css/toasts.css' %}?v=20260723-1">
     <style>
         html {
             scroll-behavior: smooth;
@@ -221,18 +222,11 @@
                 {% block content %}{% endblock %}
             </div>
 
-            {% if messages %}
-                <div class="mb-6 space-y-3">
-                    {% for message in messages %}
-                        <div class="rounded-lg border border-green-200 bg-green-100 px-4 py-3 text-green-800">
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
         </main>
     </div>
+    {% include "includes/toasts.html" %}
     <script src="{% static 'js/app-theme.js' %}?v=20260714-3"></script>
+    <script src="{% static 'js/toasts.js' %}?v=20260723-1"></script>
     <script>
         document.addEventListener("submit", function (event) {
             if (event.target.matches("[data-scroll-to-results]")) {

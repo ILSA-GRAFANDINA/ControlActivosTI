@@ -8,6 +8,7 @@
     <link rel="icon" type="image/svg+xml" href="{% static 'icons/favicon-admin.svg' %}">
     <link rel="alternate icon" href="{% static 'icons/favicon-admin.svg' %}">
     <link rel="stylesheet" href="{% static 'admin2/css/admin2.css' %}?v=20260507-1">
+    <link rel="stylesheet" href="{% static 'css/toasts.css' %}?v=20260723-1">
     <style>
         html {
             scroll-behavior: smooth;
@@ -89,17 +90,11 @@
                 </section>
             {% endif %}
 
-            {% if messages %}
-                <section class="admin2-messages">
-                    {% for message in messages %}
-                        <div class="admin2-message">{{ message }}</div>
-                    {% endfor %}
-                </section>
-            {% endif %}
-
             {% block admin2_content %}{% endblock %}
         </main>
     </div>
+    {% include "includes/toasts.html" %}
+    <script src="{% static 'js/toasts.js' %}?v=20260723-1"></script>
     <script>
         document.addEventListener("submit", function (event) {
             if (event.target.matches("[data-scroll-to-results]")) {

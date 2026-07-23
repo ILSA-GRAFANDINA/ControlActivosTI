@@ -1,0 +1,54 @@
+{% if messages or form.errors or formset.errors or formset.non_form_errors %}
+<section
+    class="toast-region"
+    aria-label="Notificaciones"
+    aria-live="polite"
+    aria-relevant="additions removals"
+    data-toast-region
+>
+    {% for message in messages %}
+        <article
+            class="app-toast {% if 'error' in message.tags %}app-toast--error{% elif 'warning' in message.tags %}app-toast--warning{% elif 'success' in message.tags %}app-toast--success{% else %}app-toast--info{% endif %}"
+            role="{% if 'error' in message.tags or 'warning' in message.tags %}alert{% else %}status{% endif %}"
+            data-toast
+            data-toast-timeout="2500"
+        >
+            <span class="app-toast__icon" aria-hidden="true">
+                {% if 'success' in message.tags %}
+                    <svg viewBox="0 0 20 20"><path d="m5.5 10.2 2.8 2.8 6.2-6.4" /></svg>
+                {% elif 'warning' in message.tags %}
+                    <svg viewBox="0 0 20 20"><path d="M10 5.5v5.25M10 14.2v.1" /></svg>
+                {% elif 'error' in message.tags %}
+                    <svg viewBox="0 0 20 20"><path d="m6.5 6.5 7 7m0-7-7 7" /></svg>
+                {% else %}
+                    <svg viewBox="0 0 20 20"><path d="M10 8.6v5M10 5.6v.1" /></svg>
+                {% endif %}
+            </span>
+            <span class="app-toast__content">
+                <strong class="app-toast__title">
+                    {% if 'success' in message.tags %}Operación exitosa{% elif 'warning' in message.tags %}Atención{% elif 'error' in message.tags %}No se pudo completar{% else %}Información{% endif %}
+                </strong>
+                <span class="app-toast__message">{{ message }}</span>
+            </span>
+            <button type="button" class="app-toast__close" aria-label="Cerrar notificación" data-toast-close>
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m6 6 8 8m0-8-8 8" /></svg>
+            </button>
+        </article>
+    {% endfor %}
+
+    {% if form.errors or formset.errors or formset.non_form_errors %}
+        <article class="app-toast app-toast--error" role="alert" data-toast data-toast-timeout="2500">
+            <span class="app-toast__icon" aria-hidden="true">
+                <svg viewBox="0 0 20 20"><path d="m6.5 6.5 7 7m0-7-7 7" /></svg>
+            </span>
+            <span class="app-toast__content">
+                <strong class="app-toast__title">Revisa la información</strong>
+                <span class="app-toast__message">No se pudo guardar. Corrige los campos marcados e inténtalo nuevamente.</span>
+            </span>
+            <button type="button" class="app-toast__close" aria-label="Cerrar notificación" data-toast-close>
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m6 6 8 8m0-8-8 8" /></svg>
+            </button>
+        </article>
+    {% endif %}
+</section>
+{% endif %}

@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Count, Prefetch, Q
 from django.urls import reverse
@@ -233,6 +234,10 @@ class ColaboradorCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         self.object = form.save()
+        messages.success(
+            self.request,
+            f"El colaborador {self.object.nombres} {self.object.apellidos} fue registrado correctamente.",
+        )
         return HttpResponseRedirect(self.get_success_url())
 
 
@@ -240,6 +245,14 @@ class ColaboradorUpdateView(LoginRequiredMixin, UpdateView):
     model = Colaborador
     form_class = ColaboradorForm
     template_name = "colaboradores/formulario.html"
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(
+            self.request,
+            f"Los datos de {self.object.nombres} {self.object.apellidos} fueron actualizados correctamente.",
+        )
+        return response
 
     def get_success_url(self):
         return reverse("colaboradores:detalle", args=[self.object.pk])

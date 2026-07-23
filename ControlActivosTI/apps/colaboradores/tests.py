@@ -283,6 +283,12 @@ class ColaboradorCreateViewTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertTrue(Colaborador.objects.filter(cedula="1234567890").exists())
+        follow_response = self.client.get(response.url)
+        self.assertContains(
+            follow_response,
+            "El colaborador Mariana Gomez fue registrado correctamente.",
+        )
+        self.assertContains(follow_response, "app-toast--success")
 
 
 class ColaboradorDetailViewTests(TestCase):

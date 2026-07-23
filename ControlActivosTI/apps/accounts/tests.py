@@ -291,6 +291,55 @@ class PerfilUsuarioViewTests(TestCase):
         self.assertEqual(profile.cargo_visible, "Analista TI")
         self.assertEqual(profile.bio, "Encargada de soporte interno.")
 
+    def test_profile_success_message_is_rendered_as_floating_toast(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse("accounts:perfil"),
+            {
+                "first_name": "Maria",
+                "last_name": "Lopez",
+                "email": "maria@example.com",
+                "telefono": "",
+                "cargo_visible": "",
+                "bio": "",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="toast-region"')
+        self.assertContains(response, "app-toast--success")
+        self.assertContains(response, "Operación exitosa")
+        self.assertContains(response, "Tu perfil fue actualizado correctamente.")
+        self.assertContains(response, 'data-toast-close')
+        self.assertContains(response, "css/toasts.css")
+        self.assertContains(response, "js/toasts.js")
+
+    def test_invalid_profile_form_shows_auto_dismiss_error_toast(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse("accounts:perfil"),
+            {
+                "first_name": "Maria",
+                "last_name": "Lopez",
+                "email": "correo-invalido",
+                "telefono": "",
+                "cargo_visible": "",
+                "bio": "",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "app-toast--error")
+        self.assertContains(response, "Revisa la información")
+        self.assertContains(response, 'data-toast-timeout="2500"')
+        self.assertContains(
+            response,
+            "No se pudo guardar. Corrige los campos marcados e inténtalo nuevamente.",
+        )
+
 
 class LoginViewTests(TestCase):
     def setUp(self):
