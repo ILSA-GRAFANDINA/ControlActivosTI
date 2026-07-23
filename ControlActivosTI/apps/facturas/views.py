@@ -195,16 +195,42 @@ class FacturaAsociarActivosView(LoginRequiredMixin, PermissionRequiredMixin, Vie
             FacturaCompra.objects.select_related("proveedor", "empresa").prefetch_related("activos"), pk=pk
         )
 
+    def get_context(self, factura, form):
+        activos_disponibles = list(form.fields["activos"].queryset)
+        if form.is_bound:
+            activos_seleccionados = self.request.POST.getlist("activos")
+        else:
+            activos_seleccionados = [
+                str(pk) for pk in factura.activos.values_list("pk", flat=True)
+            ]
+        return {
+            "factura": factura,
+            "form": form,
+            "activos_disponibles": activos_disponibles,
+            "activos_seleccionados": activos_seleccionados,
+            "activos_asociados_ids": set(
+                factura.activos.values_list("pk", flat=True)
+            ),
+            "tipos_disponibles": sorted(
+                {activo.tipo_activo for activo in activos_disponibles},
+                key=lambda tipo: tipo.nombre.lower(),
+            ),
+            "estados_disponibles": sorted(
+                {activo.estado_activo for activo in activos_disponibles},
+                key=lambda estado: estado.nombre.lower(),
+            ),
+        }
+
     def get(self, request, pk):
         factura = self.get_factura(pk)
         form = AsociarActivosForm(factura=factura)
-        return render(request, self.template_name, {"factura": factura, "form": form})
+        return render(request, self.template_name, self.get_context(factura, form))
 
     def post(self, request, pk):
         factura = self.get_factura(pk)
         form = AsociarActivosForm(request.POST, factura=factura)
         if not form.is_valid():
-            return render(request, self.template_name, {"factura": factura, "form": form})
+            return render(request, self.template_name, self.get_context(factura, form))
         if not factura.activa:
             messages.error(request, "No se pueden crear asociaciones nuevas con una factura archivada.")
             return redirect("facturas:detalle", pk=pk)

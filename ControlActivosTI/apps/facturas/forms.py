@@ -123,7 +123,9 @@ class AsociarActivosForm(forms.Form):
             Q(factura_compra__isnull=True) | Q(factura_compra=factura),
             Q(proveedor__isnull=True) | Q(proveedor=factura.proveedor),
             Q(empresa__isnull=True) | Q(empresa=factura.empresa),
-        ).select_related("tipo_activo", "proveedor", "empresa").order_by("codigo")
+        ).select_related(
+            "tipo_activo", "estado_activo", "proveedor", "empresa", "factura_compra"
+        ).order_by("codigo")
         self.fields["activos"].initial = factura.activos.values_list("pk", flat=True)
 
 

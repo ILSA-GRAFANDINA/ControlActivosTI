@@ -305,6 +305,15 @@ class FacturaViewsTests(FacturaBaseTests):
         self.user.user_permissions.add(Permission.objects.get(codename="change_activo"))
         factura = self.crear_factura()
         activo = self.crear_activo(proveedor=None, empresa=None)
+        response = self.client.get(reverse("facturas:asociar_activos", args=[factura.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "data-asset-picker")
+        self.assertContains(response, "data-assets-search")
+        self.assertContains(response, "Seleccionar visibles")
+        self.assertContains(response, activo.codigo)
+        self.assertContains(response, activo.serie)
+        self.assertContains(response, "app-topbar--sticky")
+        self.assertContains(response, "asset-picker-toolbar")
         response = self.client.post(
             reverse("facturas:asociar_activos", args=[factura.pk]), {"activos": [activo.pk]}
         )

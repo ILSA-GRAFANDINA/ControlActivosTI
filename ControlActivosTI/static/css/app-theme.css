@@ -339,6 +339,11 @@ html.dark .app-topbar {
     box-shadow: 0 18px 48px rgba(7, 8, 28, .28) !important;
 }
 
+.app-topbar--sticky {
+    position: sticky;
+    top: 1rem;
+}
+
 .app-topbar h2 {
     margin-top: .25rem !important;
     color: var(--app-text) !important;
@@ -647,6 +652,17 @@ html.dark .app-content section.bg-white {
 
 html.dark .app-content article.bg-white:hover {
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, .035), var(--app-shadow-hover) !important;
+}
+
+.app-content .asset-picker-toolbar,
+.app-content .asset-picker-footer {
+    background-color: var(--app-surface-soft) !important;
+    transition: background-color .3s ease, border-color .3s ease;
+}
+
+.app-content .asset-picker-table-head {
+    background-color: var(--app-surface-soft) !important;
+    box-shadow: 0 1px 0 var(--app-border) !important;
 }
 
 .app-content .bg-slate-50,

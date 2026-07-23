@@ -17,7 +17,7 @@
         })();
     </script>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <link rel="stylesheet" href="{% static 'css/app-theme.css' %}?v=20260715-5">
+    <link rel="stylesheet" href="{% static 'css/app-theme.css' %}?v=20260723-6">
     <link rel="stylesheet" href="{% static 'css/toasts.css' %}?v=20260723-1">
     <style>
         html {
@@ -162,7 +162,7 @@
         </aside>
 
         <main class="app-main min-w-0 flex-1 p-8">
-            <div class="app-topbar mb-8 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-5 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+            <div class="app-topbar {% block topbar_classes %}{% endblock %} mb-8 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-5 shadow-sm lg:flex-row lg:items-center lg:justify-between">
                 <div>
                     <div class="flex items-center gap-3">
                         <button type="button" class="app-mobile-menu" data-sidebar-open aria-label="Abrir menú" aria-controls="app-sidebar" aria-expanded="false">

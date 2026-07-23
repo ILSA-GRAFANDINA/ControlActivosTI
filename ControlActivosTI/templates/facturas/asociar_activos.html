@@ -1,5 +1,282 @@
 {% extends "base.html" %}
-{% block title %}Activos de factura {{ factura.numero_factura }}{% endblock %}
-{% block page_title %}Gestionar activos de la factura{% endblock %}
-{% block content %}<section class="mx-auto max-w-5xl rounded-3xl border border-slate-200 bg-white p-7 shadow-sm"><div class="mb-6"><h3 class="text-xl font-semibold">{{ factura.numero_factura }}</h3><p class="mt-2 text-sm text-slate-500">{{ factura.proveedor }} · {{ factura.empresa }}. Al asociar un activo sin proveedor o empresa, se completarán desde la factura.</p></div><form method="post">{% csrf_token %}{% if form.activos.errors %}<div class="mb-4 rounded-xl bg-red-50 p-4 text-red-700">{{ form.activos.errors }}</div>{% endif %}<div class="max-h-[32rem] space-y-2 overflow-y-auto rounded-2xl border border-slate-200 p-4">{% for choice in form.activos %}<label class="flex cursor-pointer items-center gap-3 rounded-xl p-3 hover:bg-slate-50">{{ choice.tag }}<span class="text-sm text-slate-700">{{ choice.choice_label }}</span></label>{% empty %}<p class="p-6 text-center text-slate-500">No hay activos compatibles disponibles.</p>{% endfor %}</div><div class="mt-6 flex gap-3"><button class="rounded-xl bg-violet-600 px-6 py-3 font-semibold text-white">Guardar asociaciones</button><a href="{% url 'facturas:detalle' factura.pk %}" class="rounded-xl border border-slate-300 px-6 py-3 font-semibold text-slate-600">Cancelar</a></div></form></section>{% endblock %}
 
+{% block title %}Gestionar activos - Factura {{ factura.numero_factura }}{% endblock %}
+{% block page_title %}Gestionar activos de la factura{% endblock %}
+{% block topbar_classes %}app-topbar--sticky{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-7xl space-y-6">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+            <div class="flex flex-wrap items-center gap-3">
+                <h2 class="text-xl font-semibold text-slate-900">{{ factura.numero_factura }}</h2>
+                <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
+                    {{ factura.proveedor }}
+                </span>
+            </div>
+            <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+                Busca y selecciona los activos que pertenecen a esta factura. Si un activo todavía no tiene proveedor o empresa, estos datos se completarán desde la factura.
+            </p>
+        </div>
+        <a href="{% url 'facturas:detalle' factura.pk %}" class="inline-flex shrink-0 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+            Volver a la factura
+        </a>
+    </div>
+
+    <form method="post" data-asset-picker>
+        {% csrf_token %}
+
+        {% if form.activos.errors %}
+            <div class="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-medium text-rose-700">
+                {{ form.activos.errors }}
+            </div>
+        {% endif %}
+
+        <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div class="asset-picker-toolbar border-b border-slate-200 p-5">
+                <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(180px,0.28fr)_minmax(180px,0.28fr)]">
+                    <div>
+                        <label for="buscar-activo" class="mb-2 block text-sm font-semibold text-slate-700">Buscar activo</label>
+                        <div class="relative">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 3.473 9.768l3.63 3.629a.75.75 0 0 0 1.06-1.06l-3.629-3.63A5.5 5.5 0 0 0 9 3.5ZM5 9a4 4 0 1 1 8 0 4 4 0 0 1-8 0Z" clip-rule="evenodd" />
+                            </svg>
+                            <input
+                                id="buscar-activo"
+                                type="search"
+                                autocomplete="off"
+                                placeholder="Código, SAP, marca, modelo o serie"
+                                class="w-full rounded-xl border border-slate-300 bg-white py-3 pl-11 pr-4 text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+                                data-assets-search
+                            >
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="filtrar-tipo-activo" class="mb-2 block text-sm font-semibold text-slate-700">Tipo</label>
+                        <select id="filtrar-tipo-activo" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" data-assets-type>
+                            <option value="">Todos los tipos</option>
+                            {% for tipo in tipos_disponibles %}
+                                <option value="{{ tipo.pk }}">{{ tipo.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="filtrar-estado-activo" class="mb-2 block text-sm font-semibold text-slate-700">Estado</label>
+                        <select id="filtrar-estado-activo" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" data-assets-status>
+                            <option value="">Todos los estados</option>
+                            {% for estado in estados_disponibles %}
+                                <option value="{{ estado.pk }}">{{ estado.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+                    <label class="inline-flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700">
+                        <input type="checkbox" class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" data-assets-only-selected>
+                        Mostrar solo seleccionados
+                    </label>
+                    <div class="flex flex-wrap items-center justify-end gap-2">
+                        <button type="button" class="rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-2.5 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-100" data-select-visible>
+                            Seleccionar visibles
+                        </button>
+                        <button type="button" class="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100" data-clear-visible>
+                            Desmarcar visibles
+                        </button>
+                        <button type="button" class="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 transition hover:bg-white hover:text-slate-700" data-clear-asset-filters>
+                            Limpiar búsqueda
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+                <p class="text-sm text-slate-600">
+                    <span class="font-semibold text-slate-900" data-visible-count>{{ activos_disponibles|length }}</span>
+                    activos visibles
+                </p>
+                <span class="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">
+                    <span data-selected-count>{{ activos_seleccionados|length }}</span> seleccionados
+                </span>
+            </div>
+
+            <div class="max-h-[32rem] overflow-auto">
+                <table class="min-w-full divide-y divide-slate-200 text-sm">
+                    <thead class="asset-picker-table-head sticky top-0 z-10 text-left text-slate-600">
+                        <tr>
+                            <th class="w-14 px-5 py-3"><span class="sr-only">Seleccionar</span></th>
+                            <th class="px-5 py-3 font-semibold">Código</th>
+                            <th class="px-5 py-3 font-semibold">Activo</th>
+                            <th class="px-5 py-3 font-semibold">Serie</th>
+                            <th class="px-5 py-3 font-semibold">Estado</th>
+                            <th class="px-5 py-3 font-semibold">Relación</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100" data-assets-body>
+                        {% for activo in activos_disponibles %}
+                            <tr
+                                class="cursor-pointer text-slate-700 transition hover:bg-cyan-50/50"
+                                data-asset-row
+                                data-search="{{ activo.codigo }} {{ activo.codigo_sap|default:'' }} {{ activo.tipo_activo.nombre }} {{ activo.marca }} {{ activo.modelo }} {{ activo.serie }}"
+                                data-type="{{ activo.tipo_activo_id }}"
+                                data-status="{{ activo.estado_activo_id }}"
+                            >
+                                <td class="px-5 py-4">
+                                    <input
+                                        type="checkbox"
+                                        name="activos"
+                                        value="{{ activo.pk }}"
+                                        aria-label="Seleccionar {{ activo.codigo }}"
+                                        class="h-5 w-5 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                                        data-asset-checkbox
+                                        {% if activo.pk|stringformat:"s" in activos_seleccionados %}checked{% endif %}
+                                    >
+                                </td>
+                                <td class="px-5 py-4">
+                                    <span class="inline-flex rounded-lg border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">{{ activo.codigo }}</span>
+                                    {% if activo.codigo_sap %}
+                                        <span class="mt-1 block text-xs text-slate-500">SAP: {{ activo.codigo_sap }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-5 py-4">
+                                    <span class="font-semibold text-slate-900">{{ activo.tipo_activo }}</span>
+                                    <span class="mt-1 block text-xs text-slate-500">{{ activo.marca }} {{ activo.modelo }}</span>
+                                </td>
+                                <td class="px-5 py-4 text-slate-600">{{ activo.serie|default:"-" }}</td>
+                                <td class="px-5 py-4">
+                                    <span class="inline-flex whitespace-nowrap rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">{{ activo.estado_activo }}</span>
+                                </td>
+                                <td class="px-5 py-4">
+                                    {% if activo.pk in activos_asociados_ids %}
+                                        <span class="inline-flex whitespace-nowrap rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">En esta factura</span>
+                                    {% else %}
+                                        <span class="text-xs font-medium text-slate-500">Disponible</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="6" class="px-6 py-12 text-center text-slate-500">No hay activos compatibles disponibles.</td>
+                            </tr>
+                        {% endfor %}
+                        {% if activos_disponibles %}
+                            <tr hidden data-no-filter-results>
+                                <td colspan="6" class="px-6 py-12 text-center">
+                                    <p class="font-semibold text-slate-700">No se encontraron activos</p>
+                                    <p class="mt-1 text-sm text-slate-500">Prueba con otra búsqueda o limpia los filtros.</p>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="asset-picker-footer flex flex-col gap-4 border-t border-slate-200 p-5 sm:flex-row sm:items-center sm:justify-between">
+                <p class="max-w-2xl text-xs leading-5 text-slate-500">
+                    Al guardar, los activos desmarcados que estaban relacionados con esta factura se desvincularán. Sus demás datos se conservarán.
+                </p>
+                <div class="flex flex-wrap justify-end gap-3">
+                    <a href="{% url 'facturas:detalle' factura.pk %}" class="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
+                        Cancelar
+                    </a>
+                    <button type="submit" class="rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700">
+                        Guardar asociaciones
+                    </button>
+                </div>
+            </div>
+        </section>
+    </form>
+</div>
+
+<script>
+    (() => {
+        const picker = document.querySelector("[data-asset-picker]");
+        if (!picker) return;
+
+        const search = picker.querySelector("[data-assets-search]");
+        const typeFilter = picker.querySelector("[data-assets-type]");
+        const statusFilter = picker.querySelector("[data-assets-status]");
+        const onlySelected = picker.querySelector("[data-assets-only-selected]");
+        const rows = [...picker.querySelectorAll("[data-asset-row]")];
+        const visibleCount = picker.querySelector("[data-visible-count]");
+        const selectedCount = picker.querySelector("[data-selected-count]");
+        const noResults = picker.querySelector("[data-no-filter-results]");
+
+        const normalize = (value) =>
+            (value || "")
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .toLowerCase()
+                .trim();
+
+        const update = () => {
+            const query = normalize(search.value);
+            let visible = 0;
+            let selected = 0;
+
+            rows.forEach((row) => {
+                const checkbox = row.querySelector("[data-asset-checkbox]");
+                const matches =
+                    normalize(row.dataset.search).includes(query) &&
+                    (!typeFilter.value || row.dataset.type === typeFilter.value) &&
+                    (!statusFilter.value || row.dataset.status === statusFilter.value) &&
+                    (!onlySelected.checked || checkbox.checked);
+
+                row.hidden = !matches;
+                row.classList.toggle("bg-cyan-50/70", checkbox.checked);
+                row.classList.toggle("ring-1", checkbox.checked);
+                row.classList.toggle("ring-inset", checkbox.checked);
+                row.classList.toggle("ring-cyan-100", checkbox.checked);
+                if (matches) visible += 1;
+                if (checkbox.checked) selected += 1;
+            });
+
+            visibleCount.textContent = visible;
+            selectedCount.textContent = selected;
+            if (noResults) noResults.hidden = visible !== 0;
+        };
+
+        search.addEventListener("input", update);
+        typeFilter.addEventListener("change", update);
+        statusFilter.addEventListener("change", update);
+        onlySelected.addEventListener("change", update);
+
+        rows.forEach((row) => {
+            const checkbox = row.querySelector("[data-asset-checkbox]");
+            checkbox.addEventListener("change", update);
+            row.addEventListener("click", (event) => {
+                if (event.target.closest("input, a, button, label")) return;
+                checkbox.checked = !checkbox.checked;
+                update();
+            });
+        });
+
+        picker.querySelector("[data-select-visible]").addEventListener("click", () => {
+            rows.filter((row) => !row.hidden).forEach((row) => {
+                row.querySelector("[data-asset-checkbox]").checked = true;
+            });
+            update();
+        });
+
+        picker.querySelector("[data-clear-visible]").addEventListener("click", () => {
+            rows.filter((row) => !row.hidden).forEach((row) => {
+                row.querySelector("[data-asset-checkbox]").checked = false;
+            });
+            update();
+        });
+
+        picker.querySelector("[data-clear-asset-filters]").addEventListener("click", () => {
+            search.value = "";
+            typeFilter.value = "";
+            statusFilter.value = "";
+            onlySelected.checked = false;
+            search.focus();
+            update();
+        });
+
+        update();
+    })();
+</script>
+{% endblock %}
