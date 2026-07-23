@@ -84,8 +84,10 @@ class ProveedorViewsTests(TestCase):
         response = self.client.get(reverse("proveedores:lista"), {"q": "Ana Torres", "estado": "activo"})
         self.assertEqual(response.status_code, 200)
         self.assertTrue(all(item.activo for item in response.context["proveedores"]))
+        self.assertContains(response, "7 proveedores encontrados")
         response = self.client.get(reverse("proveedores:lista"))
         self.assertTrue(response.context["is_paginated"])
+        self.assertContains(response, "12 proveedores encontrados")
 
     def test_activar_y_desactivar(self):
         proveedor = Proveedor.objects.create(**datos_proveedor())

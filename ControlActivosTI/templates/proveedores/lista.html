@@ -5,18 +5,13 @@
 
 {% block content %}
 <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
-  <div>
-    <h2 class="text-xl font-semibold text-slate-900">Listado de proveedores</h2>
-    <p class="text-sm text-slate-500">
-      Empresas y personas que suministran activos tecnologicos.
-    </p>
-  </div>
+  {% include "includes/listado_resumen.html" with titulo="Listado de proveedores" descripcion="Consulta empresas y personas que suministran activos tecnológicos." total=paginator.count contador_singular="proveedor encontrado" contador_plural="proveedores encontrados" %}
   {% if perms.proveedores.add_proveedor %}
   <a
     href="{% url 'proveedores:nuevo' %}"
     class="rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700"
   >
-    Registrar proveedor
+    Agregar proveedor
   </a>
   {% endif %}
 </div>

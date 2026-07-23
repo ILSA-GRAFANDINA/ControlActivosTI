@@ -4,30 +4,35 @@
 {% block page_title %}Facturas de compra{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
-    <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-                <p class="text-sm text-slate-500">Documentos de adquisición vinculados con proveedores y activos.</p>
-            </div>
-            {% if perms.facturas.add_facturacompra %}
-            <a href="{% url 'facturas:nueva' %}" class="rounded-xl bg-violet-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700">Registrar factura</a>
-            {% endif %}
+<div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+    {% include "includes/listado_resumen.html" with titulo="Listado de facturas" descripcion="Consulta documentos de adquisición vinculados con proveedores, empresas y activos." total=paginator.count contador_singular="factura encontrada" contador_plural="facturas encontradas" %}
+    {% if perms.facturas.add_facturacompra %}
+        <a href="{% url 'facturas:nueva' %}" class="rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700">
+            Agregar factura
+        </a>
+    {% endif %}
+</div>
+
+<section class="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <form method="get" class="space-y-6" data-scroll-to-results>
+        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <label class="xl:col-span-2"><span class="mb-2 block text-sm font-semibold text-slate-700">Búsqueda</span><input name="q" value="{{ busqueda }}" placeholder="Factura, proveedor, identificación, activo o serial" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"></label>
+            <label><span class="mb-2 block text-sm font-semibold text-slate-700">Proveedor</span><select name="proveedor" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"><option value="">Todos</option>{% for proveedor in proveedores %}<option value="{{ proveedor.pk }}" {% if proveedor_seleccionado == proveedor.pk|stringformat:'s' %}selected{% endif %}>{{ proveedor }}</option>{% endfor %}</select></label>
+            <label><span class="mb-2 block text-sm font-semibold text-slate-700">Empresa</span><select name="empresa" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"><option value="">Todas</option>{% for empresa in empresas %}<option value="{{ empresa.pk }}" {% if empresa_seleccionada == empresa.pk|stringformat:'s' %}selected{% endif %}>{{ empresa }}</option>{% endfor %}</select></label>
+            <label><span class="mb-2 block text-sm font-semibold text-slate-700">Estado</span><select name="estado" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"><option value="">Todos</option><option value="activa" {% if estado_seleccionado == 'activa' %}selected{% endif %}>Activas</option><option value="archivada" {% if estado_seleccionado == 'archivada' %}selected{% endif %}>Archivadas</option></select></label>
+            <label><span class="mb-2 block text-sm font-semibold text-slate-700">Activos asociados</span><select name="relaciones" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"><option value="">Todas</option><option value="con_activos" {% if relaciones_seleccionadas == 'con_activos' %}selected{% endif %}>Con activos</option><option value="sin_activos" {% if relaciones_seleccionadas == 'sin_activos' %}selected{% endif %}>Sin activos</option></select></label>
+            <label><span class="mb-2 block text-sm font-semibold text-slate-700">Desde</span><input type="date" name="fecha_desde" value="{{ fecha_desde }}" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"></label>
+            <label><span class="mb-2 block text-sm font-semibold text-slate-700">Hasta</span><input type="date" name="fecha_hasta" value="{{ fecha_hasta }}" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"></label>
         </div>
 
-        <form method="get" class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4" data-scroll-to-results>
-            <label class="xl:col-span-2"><span class="mb-2 block text-sm font-semibold text-slate-600">Búsqueda</span><input name="q" value="{{ busqueda }}" placeholder="Factura, proveedor, identificación, activo o serial" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"></label>
-            <label><span class="mb-2 block text-sm font-semibold text-slate-600">Proveedor</span><select name="proveedor" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"><option value="">Todos</option>{% for proveedor in proveedores %}<option value="{{ proveedor.pk }}" {% if proveedor_seleccionado == proveedor.pk|stringformat:'s' %}selected{% endif %}>{{ proveedor }}</option>{% endfor %}</select></label>
-            <label><span class="mb-2 block text-sm font-semibold text-slate-600">Empresa</span><select name="empresa" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"><option value="">Todas</option>{% for empresa in empresas %}<option value="{{ empresa.pk }}" {% if empresa_seleccionada == empresa.pk|stringformat:'s' %}selected{% endif %}>{{ empresa }}</option>{% endfor %}</select></label>
-            <label><span class="mb-2 block text-sm font-semibold text-slate-600">Estado</span><select name="estado" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"><option value="">Todos</option><option value="activa" {% if estado_seleccionado == 'activa' %}selected{% endif %}>Activas</option><option value="archivada" {% if estado_seleccionado == 'archivada' %}selected{% endif %}>Archivadas</option></select></label>
-            <label><span class="mb-2 block text-sm font-semibold text-slate-600">Activos asociados</span><select name="relaciones" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"><option value="">Todas</option><option value="con_activos" {% if relaciones_seleccionadas == 'con_activos' %}selected{% endif %}>Con activos</option><option value="sin_activos" {% if relaciones_seleccionadas == 'sin_activos' %}selected{% endif %}>Sin activos</option></select></label>
-            <label><span class="mb-2 block text-sm font-semibold text-slate-600">Desde</span><input type="date" name="fecha_desde" value="{{ fecha_desde }}" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"></label>
-            <label><span class="mb-2 block text-sm font-semibold text-slate-600">Hasta</span><input type="date" name="fecha_hasta" value="{{ fecha_hasta }}" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"></label>
-            <div class="flex gap-3 xl:col-span-4"><button class="rounded-xl bg-violet-600 px-5 py-3 font-semibold text-white hover:bg-violet-700">Aplicar</button><a href="{% url 'facturas:lista' %}" class="rounded-xl border border-slate-300 px-5 py-3 font-semibold text-slate-600">Restablecer</a></div>
-        </form>
-    </section>
+        <div class="flex flex-wrap gap-3">
+            <button type="submit" class="rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700">Aplicar</button>
+            <a href="{% url 'facturas:lista' %}" class="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Restablecer</a>
+        </div>
+    </form>
+</section>
 
-    <section id="resultados" class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+<section id="resultados" class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-slate-200 text-sm">
                 <thead class="bg-slate-50 text-left text-slate-600"><tr><th class="px-6 py-4">Factura</th><th class="px-6 py-4">Proveedor</th><th class="px-6 py-4">Empresa</th><th class="px-6 py-4">Emisión</th><th class="px-6 py-4">Documento</th><th class="px-6 py-4">Estado</th><th class="px-6 py-4 text-center">Activos</th></tr></thead>
@@ -46,7 +51,6 @@
                 </tbody>
             </table>
         </div>
-        {% if is_paginated %}<nav class="flex flex-wrap justify-center gap-2 border-t border-slate-200 px-6 py-4">{% for numero in page_numbers %}{% if numero == page_obj.paginator.ELLIPSIS %}<span class="px-3 py-2">{{ numero }}</span>{% elif numero == page_obj.number %}<span class="rounded-lg bg-violet-600 px-3 py-2 text-white">{{ numero }}</span>{% else %}<a href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ numero }}" class="rounded-lg border border-slate-200 px-3 py-2">{{ numero }}</a>{% endif %}{% endfor %}</nav>{% endif %}
+        {% if is_paginated %}<nav class="flex flex-wrap justify-center gap-2 border-t border-slate-200 px-6 py-4">{% for numero in page_numbers %}{% if numero == page_obj.paginator.ELLIPSIS %}<span class="px-3 py-2">{{ numero }}</span>{% elif numero == page_obj.number %}<span class="rounded-xl bg-cyan-600 px-3 py-2 text-white">{{ numero }}</span>{% else %}<a href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ numero }}" class="rounded-xl border border-slate-200 px-3 py-2 hover:bg-slate-50">{{ numero }}</a>{% endif %}{% endfor %}</nav>{% endif %}
     </section>
-</div>
 {% endblock %}

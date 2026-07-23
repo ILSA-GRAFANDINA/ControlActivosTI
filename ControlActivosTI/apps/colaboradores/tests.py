@@ -241,6 +241,7 @@ class ColaboradorListViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, reverse("colaboradores:nuevo"))
         self.assertContains(response, "Agregar colaborador")
+        self.assertContains(response, "2 colaboradores encontrados")
 
 
 class ColaboradorCreateViewTests(TestCase):

@@ -3,12 +3,9 @@
 {% block page_title %}Asignaciones{% endblock %}
 {% block content %}
 <div class="mb-6 flex items-center justify-between gap-4">
-    <div>
-        <h2 class="text-xl font-semibold text-slate-900">Listado de asignaciones</h2>
-        <p class="text-sm text-slate-500">Cada asignación puede contener varios activos y sus actas de entrega y recepción.</p>
-    </div>
+    {% include "includes/listado_resumen.html" with titulo="Listado de asignaciones" descripcion="Cada asignación puede contener varios activos y sus actas de entrega y recepción." total=paginator.count contador_singular="asignación encontrada" contador_plural="asignaciones encontradas" %}
     <a href="{% url 'asignaciones:nueva' %}" class="rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700">
-        Nueva asignación
+        Agregar asignación
     </a>
 </div>
 
