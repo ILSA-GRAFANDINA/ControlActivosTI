@@ -1,5 +1,39 @@
 {% extends "admin2/base.html" %}
 
+{% block admin2_page_actions %}
+<div class="admin2-search admin2-search--quick" data-admin2-search>
+    <div class="admin2-search__control">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="10.8" cy="10.8" r="6.3"></circle>
+            <path d="m16 16 4.2 4.2"></path>
+        </svg>
+        <label class="admin2-visually-hidden" for="admin2-global-search">Buscar un módulo o función</label>
+        <input
+            id="admin2-global-search"
+            type="search"
+            placeholder="Buscar módulo o función..."
+            autocomplete="off"
+            spellcheck="false"
+            aria-controls="admin2-search-results"
+            aria-describedby="admin2-search-status"
+            data-admin2-search-input
+        >
+        <button type="button" class="admin2-search__clear" aria-label="Limpiar búsqueda" data-admin2-search-clear hidden>
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m6 6 8 8m0-8-8 8"></path></svg>
+        </button>
+    </div>
+
+    <p id="admin2-search-status" class="admin2-visually-hidden" aria-live="polite" data-admin2-search-status>
+        Escribe para encontrar rápidamente el acceso que necesitas.
+    </p>
+    <div id="admin2-search-results" class="admin2-search__results" role="list" data-admin2-search-results hidden></div>
+    <div class="admin2-search__empty" data-admin2-search-empty hidden>
+        <strong>No encontramos coincidencias</strong>
+        <span>Prueba con otro nombre o describe la tarea de otra forma.</span>
+    </div>
+</div>
+{% endblock %}
+
 {% block admin2_content %}
 <section id="admin2-resumen" class="admin2-panel admin2-panel--hero" data-admin2-section>
     <div class="admin2-hero">
@@ -37,7 +71,13 @@
 
         <div class="admin2-launch-grid admin2-launch-grid--{{ group.tone }}">
             {% for item in group.items %}
-                <a href="{{ item.url }}" class="admin2-launch-card">
+                <a
+                    href="{{ item.url }}"
+                    class="admin2-launch-card"
+                    data-admin2-search-source
+                    data-search-group="{{ group.title }} {{ group.subtitle }}"
+                    data-search-kind="{{ item.eyebrow }}"
+                >
                     <div class="admin2-launch-card__topline">
                         <span class="admin2-launch-card__icon">{{ item.eyebrow|slice:":2"|upper }}</span>
                         <span class="admin2-launch-card__eyebrow">{{ item.eyebrow }}</span>
@@ -67,7 +107,13 @@
 
     <div class="admin2-support-grid">
         {% for item in admin_support_links %}
-            <a href="{{ item.url }}" class="admin2-support-card">
+            <a
+                href="{{ item.url }}"
+                class="admin2-support-card"
+                data-admin2-search-source
+                data-search-group="Administrador Django Admin"
+                data-search-kind="Acceso general"
+            >
                 <div class="admin2-support-card__topline">
                     <span class="admin2-support-card__icon">AD</span>
                     <span class="admin2-support-card__eyebrow">Django Admin</span>
@@ -82,4 +128,9 @@
         {% endfor %}
     </div>
 </section>
+{% endblock %}
+
+{% block admin2_scripts %}
+    {% load static %}
+    <script src="{% static 'admin2/js/admin2-search.js' %}?v=20260723-1"></script>
 {% endblock %}

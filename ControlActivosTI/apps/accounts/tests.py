@@ -227,6 +227,21 @@ class Admin2ViewsTests(TestCase):
         self.assertContains(response, 'data-admin2-anchor-link')
         self.assertContains(response, 'data-admin2-section')
 
+    def test_admin2_home_exposes_dynamic_module_search(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("admin2-inicio"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-admin2-search')
+        self.assertContains(response, 'data-admin2-search-input')
+        self.assertContains(response, 'data-admin2-search-results')
+        self.assertContains(response, 'data-admin2-search-source')
+        self.assertContains(response, "Buscar módulo o función...")
+        self.assertContains(response, "admin2-search--quick")
+        self.assertNotContains(response, "¿Qué necesitas administrar?")
+        self.assertContains(response, "admin2/js/admin2-search.js")
+
 
 class PerfilUsuarioViewTests(TestCase):
     def setUp(self):
