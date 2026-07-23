@@ -1,13 +1,19 @@
 {% extends "base.html" %}
 
-{% block title %}Nuevo colaborador - ControlActivosTI{% endblock %}
-{% block page_title %}Nuevo colaborador{% endblock %}
+{% block title %}{% if object %}Editar{% else %}Nuevo{% endif %} colaborador - ControlActivosTI{% endblock %}
+{% block page_title %}{% if object %}Editar colaborador{% else %}Nuevo colaborador{% endif %}{% endblock %}
 
 {% block content %}
 <div class="mb-6 flex items-center justify-between gap-4">
     <div>
-        <h2 class="text-xl font-semibold text-slate-900">Agregar colaborador</h2>
-        <p class="text-sm text-slate-500">Registra un nuevo colaborador para poder asignarle activos luego.</p>
+        <h2 class="text-xl font-semibold text-slate-900">{% if object %}Editar colaborador{% else %}Agregar colaborador{% endif %}</h2>
+        <p class="text-sm text-slate-500">
+            {% if object %}
+                Actualiza la información de {{ object.nombres }} {{ object.apellidos }}.
+            {% else %}
+                Registra un nuevo colaborador para poder asignarle activos luego.
+            {% endif %}
+        </p>
     </div>
     <a href="{% url 'colaboradores:lista' %}" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
         Volver a colaboradores
@@ -89,9 +95,9 @@
 
     <div class="flex items-center gap-3">
         <button type="submit" class="rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700">
-            Guardar colaborador
+            {% if object %}Guardar cambios{% else %}Guardar colaborador{% endif %}
         </button>
-        <a href="{% url 'colaboradores:lista' %}" class="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+        <a href="{% if object %}{% url 'colaboradores:detalle' object.pk %}{% else %}{% url 'colaboradores:lista' %}{% endif %}" class="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
             Cancelar
         </a>
     </div>

@@ -1,4 +1,5 @@
 from django import forms
+from django.db.models import Q
 
 from apps.catalogos.models import Area, Cargo, CentroCosto, Empresa, Ubicacion
 
@@ -41,12 +42,29 @@ class ColaboradorForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["empresa"].queryset = Empresa.objects.filter(activo=True).order_by("nombre")
-        self.fields["cargo"].queryset = Cargo.objects.filter(activo=True).order_by("nombre")
-        self.fields["area"].queryset = Area.objects.filter(activo=True).order_by("nombre")
-        self.fields["ubicacion"].queryset = Ubicacion.objects.filter(activo=True).order_by("nombre")
+        instance = self.instance if self.instance and self.instance.pk else None
+
+        def activos_o_actuales(model, field_name):
+            actual_id = getattr(instance, f"{field_name}_id", None) if instance else None
+            filtro = Q(activo=True)
+            if actual_id:
+                filtro |= Q(pk=actual_id)
+            return model.objects.filter(filtro)
+
+        self.fields["empresa"].queryset = activos_o_actuales(
+            Empresa, "empresa"
+        ).order_by("nombre")
+        self.fields["cargo"].queryset = activos_o_actuales(
+            Cargo, "cargo"
+        ).order_by("nombre")
+        self.fields["area"].queryset = activos_o_actuales(
+            Area, "area"
+        ).order_by("nombre")
+        self.fields["ubicacion"].queryset = activos_o_actuales(
+            Ubicacion, "ubicacion"
+        ).order_by("nombre")
         self.fields["centro_costo"].queryset = (
-            CentroCosto.objects.filter(activo=True).order_by("codigo")
+            activos_o_actuales(CentroCosto, "centro_costo").order_by("codigo")
         )
         self.fields["estado"].initial = Colaborador.EstadoColaborador.ACTIVO
 
@@ -74,4 +92,3 @@ class ColaboradorForm(forms.ModelForm):
                 field.widget.attrs["class"] = TEXTAREA_CLASS
             else:
                 field.widget.attrs["class"] = BASE_CLASS
-

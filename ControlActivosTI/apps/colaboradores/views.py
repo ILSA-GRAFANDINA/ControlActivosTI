@@ -5,7 +5,7 @@ from django.db.models import Count, Prefetch, Q
 from django.urls import reverse
 from django.http import HttpResponseRedirect
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, DetailView, ListView
+from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
 from apps.activos.models import FotoActivo
 from apps.asignaciones.models import Asignacion, AsignacionDetalle
@@ -236,6 +236,15 @@ class ColaboradorCreateView(LoginRequiredMixin, CreateView):
         return HttpResponseRedirect(self.get_success_url())
 
 
+class ColaboradorUpdateView(LoginRequiredMixin, UpdateView):
+    model = Colaborador
+    form_class = ColaboradorForm
+    template_name = "colaboradores/formulario.html"
+
+    def get_success_url(self):
+        return reverse("colaboradores:detalle", args=[self.object.pk])
+
+
 class ColaboradorDetailView(LoginRequiredMixin, DetailView):
     model = Colaborador
     template_name = "colaboradores/detalle.html"
@@ -275,8 +284,8 @@ class ColaboradorDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         colaborador = self.object
-        context["admin_change_url"] = reverse(
-            "admin:colaboradores_colaborador_change",
+        context["editar_url"] = reverse(
+            "colaboradores:editar",
             args=[colaborador.pk],
         )
         asignaciones = list(colaborador.asignaciones.all())

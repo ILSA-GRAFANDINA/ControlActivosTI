@@ -310,7 +310,7 @@ class ColaboradorDetailViewTests(TestCase):
             fecha_ingreso=date(2024, 1, 10),
         )
 
-    def test_detail_view_exposes_admin_edit_button(self):
+    def test_detail_view_exposes_custom_edit_button(self):
         self.client.force_login(self.user)
 
         response = self.client.get(reverse("colaboradores:detalle", args=[self.colaborador.pk]))
@@ -318,8 +318,79 @@ class ColaboradorDetailViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(
             response,
+            reverse("colaboradores:editar", args=[self.colaborador.pk]),
+        )
+        self.assertNotContains(
+            response,
             reverse("admin:colaboradores_colaborador_change", args=[self.colaborador.pk]),
         )
         self.assertContains(response, "Editar colaborador")
         self.assertContains(response, "Centro de costo")
         self.assertContains(response, "TI-001 - Tecnologia")
+
+
+class ColaboradorUpdateViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="rrhh-update", password="testpass123")
+        self.area = Area.objects.create(nombre="TI")
+        self.cargo = Cargo.objects.create(nombre="Soporte")
+        self.ubicacion = Ubicacion.objects.create(nombre="Matriz")
+        self.empresa = Empresa.objects.create(nombre="Andes Corp")
+        self.colaborador = Colaborador.objects.create(
+            nombres="Ana",
+            apellidos="Zambrano",
+            cedula="0102030405",
+            correo_corporativo="ana@example.com",
+            empresa=self.empresa,
+            cargo=self.cargo,
+            area=self.area,
+            ubicacion=self.ubicacion,
+            fecha_ingreso=date(2024, 1, 10),
+        )
+
+    def test_update_view_uses_prefilled_custom_form(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse("colaboradores:editar", args=[self.colaborador.pk])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "colaboradores/formulario.html")
+        self.assertContains(response, "Editar colaborador")
+        self.assertContains(response, "Guardar cambios")
+        self.assertEqual(response.context["form"].instance, self.colaborador)
+
+    def test_update_view_persists_changes_and_redirects_to_detail(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse("colaboradores:editar", args=[self.colaborador.pk]),
+            {
+                "nombres": "Ana Maria",
+                "apellidos": "Zambrano",
+                "cedula": "0102030405",
+                "correo_corporativo": "ana.maria@example.com",
+                "empresa": self.empresa.pk,
+                "cargo": self.cargo.pk,
+                "area": self.area.pk,
+                "ubicacion": self.ubicacion.pk,
+                "centro_costo": "",
+                "estado": Colaborador.EstadoColaborador.INACTIVO,
+                "fecha_ingreso": "2024-01-10",
+                "observaciones": "Datos actualizados",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("colaboradores:detalle", args=[self.colaborador.pk]),
+        )
+        self.colaborador.refresh_from_db()
+        self.assertEqual(self.colaborador.nombres, "Ana Maria")
+        self.assertEqual(self.colaborador.correo_corporativo, "ana.maria@example.com")
+        self.assertEqual(
+            self.colaborador.estado,
+            Colaborador.EstadoColaborador.INACTIVO,
+        )
+        self.assertEqual(self.colaborador.observaciones, "Datos actualizados")
