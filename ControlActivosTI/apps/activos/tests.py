@@ -134,6 +134,22 @@ class ActivoAdminFormTests(TestCase):
         self.assertEqual(form.fields["valor"].label, "Valor de Compra")
         self.assertIn("10,482.00", form.fields["valor"].help_text)
 
+    def test_estado_dado_de_baja_se_ofrece_pero_no_es_asignable(self):
+        estado_baja = EstadoActivo.objects.create(
+            nombre="Dado de baja",
+            permite_asignacion=True,
+            activo=True,
+        )
+
+        form = ActivoAdminForm()
+
+        self.assertTrue(estado_baja.activo)
+        self.assertFalse(estado_baja.permite_asignacion)
+        self.assertIn(
+            estado_baja.pk,
+            form.fields["estado_activo"].queryset.values_list("pk", flat=True),
+        )
+
 
 class ActivoCodigoTests(TestCase):
     def setUp(self):
@@ -288,6 +304,16 @@ class EventoActivoAdminFormTests(TestCase):
         self.assertEqual(
             form.fields["costo_adicional"].label,
             "Costo del repuesto o mejora",
+        )
+
+    def test_permite_seleccionar_baja_como_estado_operativo_final(self):
+        estado_baja = EstadoActivo.objects.create(nombre="Dado de baja")
+
+        form = EventoActivoAdminForm()
+
+        self.assertIn(
+            estado_baja.pk,
+            form.fields["nuevo_estado_activo"].queryset.values_list("pk", flat=True),
         )
 
 
@@ -529,15 +555,49 @@ class ActivoListViewTests(TestCase):
         self.assertContains(response, "SAP-LST-001")
         self.assertNotContains(response, "MOU-001")
 
-    def test_list_view_can_hide_disabled_assets(self):
+    def test_list_view_hides_deleted_assets_by_default(self):
         self.client.force_login(self.user)
 
-        response = self.client.get(reverse("activos:lista"), {"ocultar_deshabilitados": "1"})
+        response = self.client.get(reverse("activos:lista"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Dados de baja ocultos")
         self.assertContains(response, "LAP-001")
         self.assertNotContains(response, "MOU-002")
+
+    def test_list_view_can_show_deleted_assets(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse("activos:lista"),
+            {"mostrar_eliminados": "1"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Incluye eliminados")
+        self.assertContains(response, "MOU-002")
+
+    def test_dado_de_baja_state_is_offered_as_filter(self):
+        estado_baja = EstadoActivo.objects.create(nombre="Dado de baja")
+        activo_baja = Activo.objects.create(
+            tipo_activo=self.tipo_laptop,
+            empresa=self.empresa_acme,
+            marca="Dell",
+            modelo="Retirado",
+            serie="BAJA-001",
+            estado_activo=estado_baja,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse("activos:lista"),
+            {"estado": estado_baja.pk, "q": activo_baja.codigo},
+        )
+
+        estados = response.context["estados_activo"]
+        self.assertTrue(estados.filter(nombre__iexact="Dado de baja").exists())
+        self.assertContains(response, activo_baja.codigo)
+        self.assertTrue(activo_baja.activo)
+        self.assertFalse(estado_baja.permite_asignacion)
 
     def test_list_view_can_order_assets_by_most_recent(self):
         activos = list(Activo.objects.order_by("pk"))
@@ -794,7 +854,7 @@ class ActivoExportViewTests(TestCase):
     def test_export_view_renders_filtered_selection_page(self):
         self.client.force_login(self.user)
 
-        response = self.client.get(reverse("activos:exportar"), {"ocultar_deshabilitados": "1"})
+        response = self.client.get(reverse("activos:exportar"))
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Exportar seleccionados")
@@ -804,7 +864,7 @@ class ActivoExportViewTests(TestCase):
     def test_export_view_shows_tabs_and_selection_actions(self):
         self.client.force_login(self.user)
 
-        response = self.client.get(reverse("activos:exportar"), {"ocultar_deshabilitados": "1"})
+        response = self.client.get(reverse("activos:exportar"))
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, ">Todos<", html=False)
@@ -1233,23 +1293,23 @@ class ActivoVigenciaViewTests(TestCase):
         self.assertNotIn("activo", form.fields)
         self.assertIn("activo", ActivoAdminForm(instance=self.activo).fields)
 
-    def test_baja_requires_change_permission(self):
+    def test_eliminar_requires_change_permission(self):
         unauthorized = User.objects.create_user(
             username="sin-permiso", password="testpass123"
         )
         self.client.force_login(unauthorized)
         response = self.client.post(
-            reverse("activos:vigencia", args=[self.activo.pk, "baja"])
+            reverse("activos:vigencia", args=[self.activo.pk, "eliminar"])
         )
         self.assertEqual(response.status_code, 403)
         self.activo.refresh_from_db()
         self.assertTrue(self.activo.activo)
 
-    def test_baja_changes_vigencia_and_creates_notification(self):
+    def test_eliminar_changes_vigencia_and_creates_notification(self):
         self.client.force_login(self.user)
         with self.captureOnCommitCallbacks(execute=True):
             response = self.client.post(
-                reverse("activos:vigencia", args=[self.activo.pk, "baja"])
+                reverse("activos:vigencia", args=[self.activo.pk, "eliminar"])
             )
         self.assertRedirects(
             response,
@@ -1260,11 +1320,11 @@ class ActivoVigenciaViewTests(TestCase):
         self.assertFalse(self.activo.activo)
         notification = Notificacion.objects.get(
             destinatario=self.user,
-            tipo=Notificacion.Tipo.ACTIVO_BAJA,
+            tipo=Notificacion.Tipo.ACTIVO_ELIMINADO,
         )
-        self.assertIn("Dado de baja", notification.mensaje)
+        self.assertIn("Eliminado", notification.mensaje)
 
-    def test_baja_is_blocked_while_assignment_is_active(self):
+    def test_eliminar_is_blocked_while_assignment_is_active(self):
         empresa = Empresa.objects.create(nombre="Empresa Vigencia")
         area = Area.objects.create(nombre="TI Vigencia")
         cargo = Cargo.objects.create(nombre="Analista Vigencia")
@@ -1298,7 +1358,7 @@ class ActivoVigenciaViewTests(TestCase):
 
         self.client.force_login(self.user)
         response = self.client.post(
-            reverse("activos:vigencia", args=[self.activo.pk, "baja"])
+            reverse("activos:vigencia", args=[self.activo.pk, "eliminar"])
         )
         self.assertRedirects(
             response,
@@ -1310,17 +1370,17 @@ class ActivoVigenciaViewTests(TestCase):
         self.assertFalse(
             Notificacion.objects.filter(
                 destinatario=self.user,
-                tipo=Notificacion.Tipo.ACTIVO_BAJA,
+                tipo=Notificacion.Tipo.ACTIVO_ELIMINADO,
             ).exists()
         )
 
-    def test_inactive_asset_can_be_reactivated(self):
+    def test_deleted_asset_can_be_restored(self):
         Activo.objects.filter(pk=self.activo.pk).update(activo=False)
         self.activo.refresh_from_db()
         self.client.force_login(self.user)
         with self.captureOnCommitCallbacks(execute=True):
             response = self.client.post(
-                reverse("activos:vigencia", args=[self.activo.pk, "reactivar"])
+                reverse("activos:vigencia", args=[self.activo.pk, "restaurar"])
             )
         self.assertEqual(response.status_code, 302)
         self.activo.refresh_from_db()

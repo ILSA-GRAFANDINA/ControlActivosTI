@@ -130,7 +130,7 @@ class Admin2ViewsTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         expected_urls = [
-            f"{reverse('activos:lista')}?ocultar_deshabilitados=1",
+            reverse("activos:lista"),
             f"{reverse('activos:lista')}?disponibilidad=disponibles",
             f"{reverse('activos:lista')}?disponibilidad=asignados",
             f"{reverse('asignaciones:lista')}?estado=ABIERTAS",

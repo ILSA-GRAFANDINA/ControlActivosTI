@@ -1,17 +1,17 @@
 {% extends "base.html" %}
 
-{% block title %}{% if accion == "baja" %}Dar de baja{% else %}Reactivar{% endif %} activo | ControlActivosTI{% endblock %}
-{% block page_title %}{% if accion == "baja" %}Dar de baja activo{% else %}Reactivar activo{% endif %}{% endblock %}
+{% block title %}{% if accion == "eliminar" %}Eliminar{% else %}Restaurar{% endif %} activo | ControlActivosTI{% endblock %}
+{% block page_title %}{% if accion == "eliminar" %}Eliminar activo{% else %}Restaurar activo{% endif %}{% endblock %}
 
 {% block content %}
 <div class="mx-auto max-w-2xl">
-    <section class="overflow-hidden rounded-2xl border {% if accion == 'baja' %}border-rose-200{% else %}border-violet-200{% endif %} bg-white shadow-sm">
+    <section class="overflow-hidden rounded-2xl border {% if accion == 'eliminar' %}border-rose-200{% else %}border-violet-200{% endif %} bg-white shadow-sm">
         <div class="border-b border-slate-200 p-6">
-            <p class="text-xs font-semibold uppercase tracking-[0.2em] {% if accion == 'baja' %}text-rose-600{% else %}text-violet-600{% endif %}">
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] {% if accion == 'eliminar' %}text-rose-600{% else %}text-violet-600{% endif %}">
                 Confirmación requerida
             </p>
             <h2 class="mt-2 text-2xl font-semibold text-slate-900">
-                {% if accion == "baja" %}Dar de baja {{ activo.codigo }}{% else %}Reactivar {{ activo.codigo }}{% endif %}
+                {% if accion == "eliminar" %}Eliminar {{ activo.codigo }}{% else %}Restaurar {{ activo.codigo }}{% endif %}
             </h2>
             <p class="mt-2 text-sm leading-6 text-slate-600">
                 {{ activo.marca }} {{ activo.modelo }} · Serie {{ activo.serie|default:"S/N" }}
@@ -19,37 +19,40 @@
         </div>
 
         <div class="p-6">
-            {% if accion == "baja" %}
+            {% if accion == "eliminar" %}
                 <p class="text-sm leading-6 text-slate-600">
-                    El activo dejará de estar disponible para nuevas asignaciones, pero conservará sus fotos, eventos, factura e historial.
+                    El activo se ocultará del directorio y de las operaciones habituales. No se borrará físicamente: conservará sus fotos, eventos, factura e historial y podrá restaurarse.
                 </p>
+                <div class="mt-4 rounded-xl border border-violet-200 bg-violet-50 p-4 text-sm text-violet-800">
+                    Si el equipo aún pertenece a la empresa y solo debe quedar fuera de asignación, cancela esta acción y cambia su estado a <strong>Dado de baja</strong> desde “Editar activo”.
+                </div>
                 {% if asignacion_activa %}
                     <div class="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                        <strong>No se puede completar la baja.</strong>
+                        <strong>No se puede eliminar.</strong>
                         <p class="mt-1">
                             Mantiene la asignación
-                            <a class="font-semibold underline" href="{% url 'asignaciones:detalle' asignacion_activa.pk %}">{{ asignacion_activa.codigo_asignacion }}</a>
+                            <a class="cursor-pointer font-semibold underline" href="{% url 'asignaciones:detalle' asignacion_activa.pk %}">{{ asignacion_activa.codigo_asignacion }}</a>
                             con {{ asignacion_activa.nombre_colaborador_completo }}. Registra primero la devolución.
                         </p>
                     </div>
                 {% endif %}
             {% else %}
                 <p class="text-sm leading-6 text-slate-600">
-                    El activo volverá a formar parte del inventario vigente. Su disponibilidad seguirá dependiendo del estado “{{ activo.estado_activo }}”.
+                    El activo volverá a mostrarse en el directorio. Su posibilidad de asignación seguirá dependiendo del estado “{{ activo.estado_activo }}”.
                 </p>
             {% endif %}
 
             <form method="post" class="mt-7 flex flex-wrap justify-end gap-3">
                 {% csrf_token %}
-                <a href="{% url 'activos:detalle' activo.pk %}" class="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+                <a href="{% url 'activos:detalle' activo.pk %}" class="cursor-pointer rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
                     Cancelar
                 </a>
                 <button
                     type="submit"
-                    {% if accion == "baja" and asignacion_activa %}disabled{% endif %}
-                    class="rounded-xl px-5 py-3 text-sm font-semibold text-white shadow-sm transition disabled:cursor-not-allowed disabled:opacity-50 {% if accion == 'baja' %}bg-rose-600 hover:bg-rose-700{% else %}bg-violet-600 hover:bg-violet-700{% endif %}"
+                    {% if accion == "eliminar" and asignacion_activa %}disabled{% endif %}
+                    class="cursor-pointer rounded-xl px-5 py-3 text-sm font-semibold text-white shadow-sm transition disabled:cursor-not-allowed disabled:opacity-50 {% if accion == 'eliminar' %}bg-rose-600 hover:bg-rose-700{% else %}bg-violet-600 hover:bg-violet-700{% endif %}"
                 >
-                    {% if accion == "baja" %}Confirmar baja{% else %}Confirmar reactivación{% endif %}
+                    {% if accion == "eliminar" %}Confirmar eliminación{% else %}Confirmar restauración{% endif %}
                 </button>
             </form>
         </div>

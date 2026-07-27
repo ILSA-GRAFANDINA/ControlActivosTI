@@ -6,6 +6,7 @@ from django.db.models import Q
 
 from apps.proveedores.models import Proveedor
 from apps.facturas.models import FacturaCompra
+from apps.catalogos.models import EstadoActivo
 
 from .models import (
     Activo,
@@ -133,6 +134,22 @@ class ActivoAdminForm(forms.ModelForm):
         if "codigo_sap" in self.fields:
             self.fields["codigo_sap"].help_text = ayuda_codigo_sap
 
+        if "estado_activo" in self.fields:
+            estado_actual_id = (
+                self.instance.estado_activo_id
+                if self.instance and self.instance.pk
+                else None
+            )
+            estados = EstadoActivo.objects.filter(activo=True)
+            if estado_actual_id:
+                estados = EstadoActivo.objects.filter(
+                    Q(activo=True) | Q(pk=estado_actual_id)
+                )
+            self.fields["estado_activo"].queryset = estados.order_by("nombre")
+            self.fields["estado_activo"].help_text = (
+                "“Dado de baja” mantiene el activo visible, pero impide nuevas asignaciones."
+            )
+
         if "proveedor" in self.fields:
             proveedor_actual_id = self.instance.proveedor_id if self.instance and self.instance.pk else None
             filtro = Q(activo=True)
@@ -248,6 +265,12 @@ class EventoActivoAdminForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        if "nuevo_estado_activo" in self.fields:
+            self.fields["nuevo_estado_activo"].queryset = (
+                EstadoActivo.objects.filter(activo=True)
+                .order_by("nombre")
+            )
+
         etiquetas = {
             "activo": "Activo afectado",
             "tipo_evento": "Tipo de evento",
@@ -277,7 +300,8 @@ class EventoActivoAdminForm(forms.ModelForm):
                 "Activalo solo cuando el costo adicional deba aumentar el valor registrado del activo."
             ),
             "nuevo_estado_activo": (
-                "Opcional. Usalo si el evento deja el activo en otro estado, por ejemplo Mantenimiento o Baja."
+                "Opcional. Úsalo si el evento deja el activo en otro estado operativo, "
+                "por ejemplo Mantenimiento o Dado de baja."
             ),
         }
         placeholders = {

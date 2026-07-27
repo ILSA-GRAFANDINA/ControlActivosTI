@@ -224,6 +224,8 @@ class TipoActivo(models.Model):
 
 
 class EstadoActivo(models.Model):
+    NOMBRE_DADO_DE_BAJA = "dado de baja"
+
     nombre = models.CharField(max_length=50, unique=True)
     descripcion = models.TextField(blank=True)
     permite_asignacion = models.BooleanField(default=False)
@@ -239,11 +241,26 @@ class EstadoActivo(models.Model):
     def __str__(self):
         return self.nombre
 
+    def save(self, *args, **kwargs):
+        # "Dado de baja" es un estado operativo visible, pero nunca asignable.
+        # Activo.activo se reserva para la eliminación lógica del registro.
+        if self.nombre_normalizado == self.NOMBRE_DADO_DE_BAJA:
+            self.permite_asignacion = False
+            if kwargs.get("update_fields") is not None:
+                kwargs["update_fields"] = set(kwargs["update_fields"]) | {
+                    "permite_asignacion"
+                }
+        super().save(*args, **kwargs)
+
     @property
     def nombre_normalizado(self):
         nombre = unicodedata.normalize("NFKD", self.nombre or "")
         nombre = "".join(caracter for caracter in nombre if not unicodedata.combining(caracter))
         return nombre.lower().strip()
+
+    @property
+    def es_dado_de_baja(self):
+        return self.nombre_normalizado == self.NOMBRE_DADO_DE_BAJA
 
     @property
     def es_asignable_para_nueva_asignacion(self):

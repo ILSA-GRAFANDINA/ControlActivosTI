@@ -203,12 +203,12 @@
                 <label class="inline-flex cursor-pointer items-center gap-3 whitespace-nowrap text-sm font-semibold text-slate-700">
                     <input
                         type="checkbox"
-                        name="ocultar_deshabilitados"
+                        name="mostrar_eliminados"
                         value="1"
                         class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
-                        {% if ocultar_deshabilitados %}checked{% endif %}
+                        {% if mostrar_eliminados %}checked{% endif %}
                     >
-                    <span>Ocultar dados de baja</span>
+                    <span>Mostrar eliminados</span>
                 </label>
             </div>
 
@@ -222,7 +222,7 @@
             </div>
         </div>
 
-        {% if busqueda or estado_seleccionado or disponibilidad_seleccionada or tipos_seleccionados or empresa_seleccionada or proveedor_seleccionado or factura_seleccionada or orden_seleccionado or ocultar_deshabilitados %}
+        {% if busqueda or estado_seleccionado or disponibilidad_seleccionada or tipos_seleccionados or empresa_seleccionada or proveedor_seleccionado or factura_seleccionada or orden_seleccionado or mostrar_eliminados %}
             <div class="flex flex-wrap items-center gap-2">
                 <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Filtros activos</span>
                 {% if busqueda %}
@@ -259,8 +259,8 @@
                 {% if orden_seleccionado == "recientes" %}
                     <span class="rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700">Orden: Más recientes</span>
                 {% endif %}
-                {% if ocultar_deshabilitados %}
-                    <span class="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">Dados de baja ocultos</span>
+                {% if mostrar_eliminados %}
+                    <span class="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">Incluye eliminados</span>
                 {% endif %}
             </div>
         {% endif %}
@@ -377,7 +377,7 @@
                             <td class="px-4 py-3">
                                 {% if not activo.activo %}
                                     <span class="inline-flex whitespace-nowrap rounded-lg border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                                        Dado de baja
+                                        Eliminado
                                     </span>
                                     <span class="ml-2 whitespace-nowrap text-xs text-slate-500">{{ activo.estado_activo }}</span>
                                 {% else %}

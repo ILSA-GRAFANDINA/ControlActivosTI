@@ -127,14 +127,14 @@
             <label class="inline-flex cursor-pointer items-center gap-3 text-sm font-semibold text-slate-700">
                 <input
                     type="checkbox"
-                    name="ocultar_deshabilitados"
+                    name="mostrar_eliminados"
                     value="1"
                     class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
-                    {% if ocultar_deshabilitados %}checked{% endif %}
+                    {% if mostrar_eliminados %}checked{% endif %}
                 >
-                <span>Ocultar dados de baja</span>
+                <span>Mostrar eliminados</span>
             </label>
-            <span class="text-xs text-slate-500">Usa este filtro si solo quieres exportar activos vigentes.</span>
+            <span class="text-xs text-slate-500">Los activos eliminados están ocultos de forma predeterminada.</span>
         </div>
 
         <div class="flex flex-wrap gap-3">
@@ -205,8 +205,8 @@
         {% if tab_tipo_activa %}
             <input type="hidden" name="tab_tipo" value="{{ tab_tipo_activa }}">
         {% endif %}
-        {% if ocultar_deshabilitados %}
-            <input type="hidden" name="ocultar_deshabilitados" value="1">
+        {% if mostrar_eliminados %}
+            <input type="hidden" name="mostrar_eliminados" value="1">
         {% endif %}
         <div data-selected-hidden-inputs></div>
 
@@ -257,7 +257,7 @@
                                 <td class="px-4 py-3">
                                     {% if not activo.activo %}
                                         <span class="inline-flex whitespace-nowrap rounded-lg border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                                            Dado de baja
+                                            Eliminado
                                         </span>
                                     {% else %}
                                         <span class="inline-flex whitespace-nowrap rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">
@@ -307,7 +307,7 @@
             empresa: "{{ empresa_seleccionada|escapejs }}",
             proveedor: "{{ proveedor_seleccionado|escapejs }}",
             factura: "{{ factura_seleccionada|escapejs }}",
-            ocultar: "{{ ocultar_deshabilitados|yesno:'1,0' }}",
+            eliminados: "{{ mostrar_eliminados|yesno:'1,0' }}",
         });
         const selectionKey = `activos-export-selection:${window.location.pathname}:${currentFilterSignature}`;
 

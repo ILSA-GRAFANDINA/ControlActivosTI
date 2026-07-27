@@ -158,7 +158,7 @@ class NotificationService:
             "tipo_activo": "categoría",
             "estado_activo": "estado",
             "empresa": "empresa",
-            "activo": "vigencia",
+            "activo": "estado del registro",
             "proveedor": "proveedor",
             "factura_compra": "factura",
         }
@@ -171,8 +171,8 @@ class NotificationService:
             if isinstance(valores, (list, tuple)) and len(valores) == 2:
                 anterior, nuevo = valores
                 if campo == "activo":
-                    anterior = "Activo" if anterior else "Dado de baja"
-                    nuevo = "Activo" if nuevo else "Dado de baja"
+                    anterior = "Visible" if anterior else "Eliminado"
+                    nuevo = "Visible" if nuevo else "Eliminado"
                 else:
                     anterior = str(anterior if anterior not in (None, "") else "sin valor")
                     nuevo = str(nuevo if nuevo not in (None, "") else "sin valor")
@@ -181,7 +181,11 @@ class NotificationService:
                 resumen = etiquetas[campo]
         else:
             resumen = ", ".join(partes)
-        tipo = Notificacion.Tipo.ACTIVO_BAJA if "activo" in cambios and not activo.activo else Notificacion.Tipo.ACTIVO_CAMBIADO
+        tipo = (
+            Notificacion.Tipo.ACTIVO_ELIMINADO
+            if "activo" in cambios and not activo.activo
+            else Notificacion.Tipo.ACTIVO_CAMBIADO
+        )
         cls.notificar_actividad(
             actor=actor,
             tipo=tipo,

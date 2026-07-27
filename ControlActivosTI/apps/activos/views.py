@@ -30,7 +30,7 @@ class ActivoFilterMixin:
         "proveedor",
         "factura",
         "orden",
-        "ocultar_deshabilitados",
+        "mostrar_eliminados",
     )
     FILTER_MULTI_FIELDS = ("tipo",)
     TAB_PARAM = "tab_tipo"
@@ -43,7 +43,7 @@ class ActivoFilterMixin:
         filtros = {}
         for field in self.FILTER_FIELDS:
             value = (source.get(field, "") or "").strip()
-            if field == "ocultar_deshabilitados":
+            if field == "mostrar_eliminados":
                 value = "1" if source.get(field) in ("1", "on", "true", "True") else ""
             elif field == "orden" and value not in {"recientes"}:
                 value = ""
@@ -143,7 +143,7 @@ class ActivoFilterMixin:
         elif factura_id == "sin_factura":
             queryset = queryset.filter(factura_compra__isnull=True)
 
-        if self.get_filter_value("ocultar_deshabilitados") == "1":
+        if self.get_filter_value("mostrar_eliminados") != "1":
             queryset = queryset.filter(activo=True)
 
         if self.get_filter_value("orden") == "recientes":
@@ -162,7 +162,7 @@ class ActivoFilterMixin:
             "proveedor_seleccionado": filtros["proveedor"],
             "factura_seleccionada": filtros["factura"],
             "orden_seleccionado": filtros["orden"],
-            "ocultar_deshabilitados": filtros["ocultar_deshabilitados"] == "1",
+            "mostrar_eliminados": filtros["mostrar_eliminados"] == "1",
             "estados_activo": EstadoActivo.objects.filter(activo=True).order_by("nombre"),
             "tipos_activo": TipoActivo.objects.filter(activo=True).order_by("nombre"),
             "empresas_activo": Empresa.objects.filter(activo=True).order_by("nombre"),
@@ -182,10 +182,10 @@ class ActivoFilterMixin:
         params["proveedor"] = filtros["proveedor"]
         params["factura"] = filtros["factura"]
         params["orden"] = filtros["orden"]
-        if filtros["ocultar_deshabilitados"] == "1":
-            params["ocultar_deshabilitados"] = "1"
+        if filtros["mostrar_eliminados"] == "1":
+            params["mostrar_eliminados"] = "1"
         else:
-            params.pop("ocultar_deshabilitados", None)
+            params.pop("mostrar_eliminados", None)
         params.pop("reset", None)
         querystring = params.urlencode()
         return f"?{querystring}" if querystring else ""
@@ -217,8 +217,8 @@ class ActivoFilterMixin:
         params["proveedor"] = filtros["proveedor"]
         params["factura"] = filtros["factura"]
         params["orden"] = filtros["orden"]
-        if filtros["ocultar_deshabilitados"] == "1":
-            params["ocultar_deshabilitados"] = "1"
+        if filtros["mostrar_eliminados"] == "1":
+            params["mostrar_eliminados"] = "1"
 
         if include_columns and hasattr(self, "get_selected_columns"):
             for columna in self.get_selected_columns():
@@ -330,7 +330,7 @@ class ActivoListView(LoginRequiredMixin, ActivoFilterMixin, ListView):
             or context["proveedor_seleccionado"]
             or context["factura_seleccionada"]
             or context["orden_seleccionado"]
-            or context["ocultar_deshabilitados"]
+            or context["mostrar_eliminados"]
             or self.active_tab_type_id
         )
         context["exportar_sin_filtros_url"] = f"{reverse('activos:exportar')}?reset=1"
@@ -596,7 +596,7 @@ class ActivoVigenciaView(LoginRequiredMixin, PermissionRequiredMixin, View):
     permission_required = "activos.change_activo"
     raise_exception = True
     template_name = "activos/confirmar_vigencia.html"
-    acciones_validas = {"baja", "reactivar"}
+    acciones_validas = {"eliminar", "restaurar"}
 
     def dispatch(self, request, *args, **kwargs):
         self.accion = kwargs["accion"]
@@ -621,10 +621,10 @@ class ActivoVigenciaView(LoginRequiredMixin, PermissionRequiredMixin, View):
 
     def get(self, request, *args, **kwargs):
         activo = self._get_activo()
-        if self.accion == "baja" and not activo.activo:
-            messages.info(request, f"El activo {activo.codigo} ya está dado de baja.")
+        if self.accion == "eliminar" and not activo.activo:
+            messages.info(request, f"El activo {activo.codigo} ya está eliminado.")
             return redirect("activos:detalle", pk=activo.pk)
-        if self.accion == "reactivar" and activo.activo:
+        if self.accion == "restaurar" and activo.activo:
             messages.info(request, f"El activo {activo.codigo} ya está activo.")
             return redirect("activos:detalle", pk=activo.pk)
         return render(
@@ -646,7 +646,7 @@ class ActivoVigenciaView(LoginRequiredMixin, PermissionRequiredMixin, View):
                 pk=self.kwargs["pk"],
             )
             estado_anterior = activo.activo
-            estado_nuevo = self.accion == "reactivar"
+            estado_nuevo = self.accion == "restaurar"
 
             if estado_anterior == estado_nuevo:
                 messages.info(
@@ -656,27 +656,27 @@ class ActivoVigenciaView(LoginRequiredMixin, PermissionRequiredMixin, View):
                 return redirect("activos:detalle", pk=activo.pk)
 
             asignacion_activa = self._get_asignacion_activa(activo)
-            if self.accion == "baja" and asignacion_activa:
+            if self.accion == "eliminar" and asignacion_activa:
                 messages.error(
                     request,
-                    "No se puede dar de baja un activo con una asignación vigente. "
+                    "No se puede eliminar un activo con una asignación vigente. "
                     "Registra primero su devolución.",
                 )
                 return redirect("activos:detalle", pk=activo.pk)
 
-            if self.accion == "reactivar" and not activo.estado_activo.activo:
+            if self.accion == "restaurar" and not activo.estado_activo.activo:
                 messages.error(
                     request,
-                    "No se puede reactivar el activo porque su estado de catálogo está inactivo.",
+                    "No se puede restaurar el activo porque su estado de catálogo está inactivo.",
                 )
                 return redirect("activos:detalle", pk=activo.pk)
             if (
-                self.accion == "reactivar"
+                self.accion == "restaurar"
                 and activo.estado_activo.nombre_normalizado == "asignado"
             ):
                 messages.error(
                     request,
-                    "No se puede reactivar un activo con estado “Asignado” sin una "
+                    "No se puede restaurar un activo con estado “Asignado” sin una "
                     "asignación vigente. Actualiza primero su estado operativo.",
                 )
                 return redirect("activos:detalle", pk=activo.pk)
@@ -694,7 +694,7 @@ class ActivoVigenciaView(LoginRequiredMixin, PermissionRequiredMixin, View):
             (
                 f"El activo {activo.codigo} fue reactivado correctamente."
                 if estado_nuevo
-                else f"El activo {activo.codigo} fue dado de baja correctamente."
+                else f"El activo {activo.codigo} fue eliminado correctamente."
             ),
         )
         return redirect("activos:detalle", pk=activo.pk)

@@ -18,12 +18,12 @@
             </a>
             {% if perms.activos.change_activo %}
                 {% if activo.activo %}
-                    <a href="{% url 'activos:vigencia' activo.pk 'baja' %}" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 shadow-sm transition hover:bg-rose-100">
-                        Dar de baja
+                    <a href="{% url 'activos:vigencia' activo.pk 'eliminar' %}" class="cursor-pointer rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 shadow-sm transition hover:bg-rose-100">
+                        Eliminar activo
                     </a>
                 {% else %}
-                    <a href="{% url 'activos:vigencia' activo.pk 'reactivar' %}" class="rounded-xl border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-semibold text-violet-700 shadow-sm transition hover:bg-violet-100">
-                        Reactivar activo
+                    <a href="{% url 'activos:vigencia' activo.pk 'restaurar' %}" class="cursor-pointer rounded-xl border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-semibold text-violet-700 shadow-sm transition hover:bg-violet-100">
+                        Restaurar activo
                     </a>
                 {% endif %}
             {% endif %}
@@ -32,7 +32,7 @@
         <div class="flex flex-wrap items-center gap-2">
             {% if not activo.activo %}
                 <span class="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                    Dado de baja
+                    Eliminado
                 </span>
             {% endif %}
                 <span class="inline-flex whitespace-nowrap rounded-lg px-3 py-1 text-xs font-semibold {% if 'operativo' in activo.estado_activo.nombre|lower or 'en uso' in activo.estado_activo.nombre|lower %}border border-orange-200 bg-orange-50 text-orange-700{% elif activo.estado_activo.nombre|lower == 'disponible' %}border border-emerald-200 bg-emerald-50 text-emerald-700{% elif activo.estado_activo.nombre|lower == 'asignado' %}border border-cyan-200 bg-cyan-50 text-cyan-700{% elif activo.estado_activo.permite_asignacion %}border border-amber-200 bg-amber-50 text-amber-700{% else %}border border-rose-200 bg-rose-50 text-rose-700{% endif %}">
@@ -138,7 +138,7 @@
                 </div>
             {% elif not activo.activo %}
                 <div class="mt-5 rounded-xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-600">
-                    Este activo está dado de baja y no se puede usar en nuevas asignaciones.
+                    Este activo está eliminado lógicamente. Su historial se conserva y puede restaurarse.
                 </div>
             {% elif activo.estado_activo.permite_asignacion %}
                 <div class="mt-5 rounded-xl border border-dashed border-emerald-300 px-4 py-8 text-center text-sm text-emerald-700">

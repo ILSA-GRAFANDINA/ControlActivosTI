@@ -20,7 +20,7 @@ class Notificacion(models.Model):
     class Tipo(models.TextChoices):
         ACTIVO_CREADO = "ACTIVO_CREADO", "Activo creado"
         ACTIVO_CAMBIADO = "ACTIVO_CAMBIADO", "Activo modificado"
-        ACTIVO_BAJA = "ACTIVO_BAJA", "Activo dado de baja"
+        ACTIVO_ELIMINADO = "ACTIVO_ELIMINADO", "Activo eliminado"
         ASIGNACION_CREADA = "ASIGNACION_CREADA", "Asignación creada"
         ASIGNACION_CAMBIADA = "ASIGNACION_CAMBIADA", "Asignación modificada"
         ASIGNACION_FINALIZADA = "ASIGNACION_FINALIZADA", "Asignación finalizada"
