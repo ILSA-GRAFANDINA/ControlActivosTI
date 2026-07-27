@@ -1,15 +1,18 @@
 from django.contrib import messages
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db import transaction
 from django.db.models import Count, Prefetch, Q
 from django.http import HttpResponse, HttpResponseRedirect, QueryDict
 from django.urls import reverse
 from django.utils import timezone
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views import View
 from django.views.generic import CreateView, DetailView, ListView, TemplateView
 
 from apps.asignaciones.models import AsignacionDetalle
 from apps.catalogos.models import Empresa, EstadoActivo, TipoActivo
 from apps.facturas.models import FacturaCompra
+from apps.notificaciones.services import NotificationService
 from apps.proveedores.models import Proveedor
 
 from .forms import ActivoAdminForm, FotoActivoCreateFormSet
@@ -26,6 +29,7 @@ class ActivoFilterMixin:
         "empresa",
         "proveedor",
         "factura",
+        "orden",
         "ocultar_deshabilitados",
     )
     FILTER_MULTI_FIELDS = ("tipo",)
@@ -41,13 +45,15 @@ class ActivoFilterMixin:
             value = (source.get(field, "") or "").strip()
             if field == "ocultar_deshabilitados":
                 value = "1" if source.get(field) in ("1", "on", "true", "True") else ""
+            elif field == "orden" and value not in {"recientes"}:
+                value = ""
             filtros[field] = value
         filtros["tipo"] = [valor.strip() for valor in source.getlist("tipo") if valor.strip().isdigit()]
         return filtros
 
     def _has_filter_params(self):
         source = self.request.POST if self.request.method == "POST" else self.request.GET
-        return any(source.get(field) not in (None, "") for field in self.FILTER_FIELDS) or bool(
+        return any(field in source for field in self.FILTER_FIELDS) or bool(
             [valor for valor in source.getlist("tipo") if valor.strip()]
         )
 
@@ -140,6 +146,9 @@ class ActivoFilterMixin:
         if self.get_filter_value("ocultar_deshabilitados") == "1":
             queryset = queryset.filter(activo=True)
 
+        if self.get_filter_value("orden") == "recientes":
+            queryset = queryset.order_by("-created_at", "-id")
+
         return queryset
 
     def get_filter_context(self):
@@ -152,6 +161,7 @@ class ActivoFilterMixin:
             "empresa_seleccionada": filtros["empresa"],
             "proveedor_seleccionado": filtros["proveedor"],
             "factura_seleccionada": filtros["factura"],
+            "orden_seleccionado": filtros["orden"],
             "ocultar_deshabilitados": filtros["ocultar_deshabilitados"] == "1",
             "estados_activo": EstadoActivo.objects.filter(activo=True).order_by("nombre"),
             "tipos_activo": TipoActivo.objects.filter(activo=True).order_by("nombre"),
@@ -171,6 +181,7 @@ class ActivoFilterMixin:
         params["empresa"] = filtros["empresa"]
         params["proveedor"] = filtros["proveedor"]
         params["factura"] = filtros["factura"]
+        params["orden"] = filtros["orden"]
         if filtros["ocultar_deshabilitados"] == "1":
             params["ocultar_deshabilitados"] = "1"
         else:
@@ -205,6 +216,7 @@ class ActivoFilterMixin:
         params["empresa"] = filtros["empresa"]
         params["proveedor"] = filtros["proveedor"]
         params["factura"] = filtros["factura"]
+        params["orden"] = filtros["orden"]
         if filtros["ocultar_deshabilitados"] == "1":
             params["ocultar_deshabilitados"] = "1"
 
@@ -317,6 +329,7 @@ class ActivoListView(LoginRequiredMixin, ActivoFilterMixin, ListView):
             or context["empresa_seleccionada"]
             or context["proveedor_seleccionado"]
             or context["factura_seleccionada"]
+            or context["orden_seleccionado"]
             or context["ocultar_deshabilitados"]
             or self.active_tab_type_id
         )
@@ -368,9 +381,7 @@ class ActivoExportView(LoginRequiredMixin, ActivoFilterMixin, TemplateView):
             )
             return self.render_to_response(context)
 
-        activos = list(
-            self.get_filtered_queryset().filter(pk__in=selected_ids).order_by("tipo_activo__nombre", "codigo")
-        )
+        activos = list(self.get_filtered_queryset().filter(pk__in=selected_ids))
         if not activos:
             context = self.get_context_data(
                 error_exportacion="Los activos seleccionados no estan disponibles con los filtros actuales.",
@@ -422,6 +433,7 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
+        kwargs["permitir_cambio_vigencia"] = False
         activo_en_edicion = getattr(self, "activo_en_edicion", None)
         if activo_en_edicion and kwargs.get("instance") is None:
             kwargs["instance"] = activo_en_edicion
@@ -481,12 +493,32 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
 
     def forms_valid(self, form, formset):
         es_edicion = bool(self.activo_en_edicion)
+        campos_relevantes = set(form.changed_data) & {
+            "marca",
+            "modelo",
+            "tipo_activo",
+            "estado_activo",
+            "empresa",
+            "activo",
+            "proveedor",
+            "factura_compra",
+        }
+        cambios_relevantes = {
+            campo: (form.initial.get(campo), form.cleaned_data.get(campo))
+            for campo in campos_relevantes
+        }
         with transaction.atomic():
             self.object = form.save()
             fotos = formset.save(commit=False)
             for foto in fotos:
                 foto.activo = self.object
                 foto.save()
+            if es_edicion:
+                NotificationService.activo_cambiado(
+                    self.object, self.request.user, cambios_relevantes
+                )
+            else:
+                NotificationService.activo_creado(self.object, self.request.user)
         messages.success(
             self.request,
             (
@@ -558,3 +590,111 @@ class ActivoDetailView(LoginRequiredMixin, DetailView):
         context["total_historial_asignaciones"] = len(detalles_asignacion)
         context["historial_eventos"] = list(activo.eventos.all())
         return context
+
+
+class ActivoVigenciaView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = "activos.change_activo"
+    raise_exception = True
+    template_name = "activos/confirmar_vigencia.html"
+    acciones_validas = {"baja", "reactivar"}
+
+    def dispatch(self, request, *args, **kwargs):
+        self.accion = kwargs["accion"]
+        if self.accion not in self.acciones_validas:
+            return redirect("activos:detalle", pk=kwargs["pk"])
+        return super().dispatch(request, *args, **kwargs)
+
+    def _get_activo(self):
+        return get_object_or_404(
+            Activo.objects.select_related("tipo_activo", "estado_activo"),
+            pk=self.kwargs["pk"],
+        )
+
+    @staticmethod
+    def _get_asignacion_activa(activo):
+        detalle = (
+            activo.detalles_asignacion.filter(activa=True)
+            .select_related("asignacion", "asignacion__colaborador")
+            .first()
+        )
+        return detalle.asignacion if detalle else None
+
+    def get(self, request, *args, **kwargs):
+        activo = self._get_activo()
+        if self.accion == "baja" and not activo.activo:
+            messages.info(request, f"El activo {activo.codigo} ya está dado de baja.")
+            return redirect("activos:detalle", pk=activo.pk)
+        if self.accion == "reactivar" and activo.activo:
+            messages.info(request, f"El activo {activo.codigo} ya está activo.")
+            return redirect("activos:detalle", pk=activo.pk)
+        return render(
+            request,
+            self.template_name,
+            {
+                "activo": activo,
+                "accion": self.accion,
+                "asignacion_activa": self._get_asignacion_activa(activo),
+            },
+        )
+
+    def post(self, request, *args, **kwargs):
+        with transaction.atomic():
+            activo = get_object_or_404(
+                Activo.objects.select_for_update().select_related(
+                    "tipo_activo", "estado_activo"
+                ),
+                pk=self.kwargs["pk"],
+            )
+            estado_anterior = activo.activo
+            estado_nuevo = self.accion == "reactivar"
+
+            if estado_anterior == estado_nuevo:
+                messages.info(
+                    request,
+                    f"El activo {activo.codigo} ya tiene el estado solicitado.",
+                )
+                return redirect("activos:detalle", pk=activo.pk)
+
+            asignacion_activa = self._get_asignacion_activa(activo)
+            if self.accion == "baja" and asignacion_activa:
+                messages.error(
+                    request,
+                    "No se puede dar de baja un activo con una asignación vigente. "
+                    "Registra primero su devolución.",
+                )
+                return redirect("activos:detalle", pk=activo.pk)
+
+            if self.accion == "reactivar" and not activo.estado_activo.activo:
+                messages.error(
+                    request,
+                    "No se puede reactivar el activo porque su estado de catálogo está inactivo.",
+                )
+                return redirect("activos:detalle", pk=activo.pk)
+            if (
+                self.accion == "reactivar"
+                and activo.estado_activo.nombre_normalizado == "asignado"
+            ):
+                messages.error(
+                    request,
+                    "No se puede reactivar un activo con estado “Asignado” sin una "
+                    "asignación vigente. Actualiza primero su estado operativo.",
+                )
+                return redirect("activos:detalle", pk=activo.pk)
+
+            activo.activo = estado_nuevo
+            activo.save(update_fields=["activo", "updated_at"])
+            NotificationService.activo_cambiado(
+                activo,
+                request.user,
+                {"activo": (estado_anterior, estado_nuevo)},
+            )
+
+        messages.success(
+            request,
+            (
+                f"El activo {activo.codigo} fue reactivado correctamente."
+                if estado_nuevo
+                else f"El activo {activo.codigo} fue dado de baja correctamente."
+            ),
+        )
+        return redirect("activos:detalle", pk=activo.pk)

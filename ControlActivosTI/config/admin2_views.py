@@ -26,6 +26,7 @@ from apps.catalogos.models import (
     Ubicacion,
 )
 from apps.colaboradores.models import Colaborador
+from apps.notificaciones.models import Notificacion
 
 
 User = get_user_model()
@@ -232,8 +233,8 @@ class Admin2BaseContextMixin:
                 "metric_value": activos_disponibles,
             },
             "auditoria": {
-                "metric_label": "Eventos registrados",
-                "metric_value": eventos_recientes,
+                "metric_label": "Actividad registrada",
+                "metric_value": eventos_recientes + Notificacion.objects.count(),
             },
         }
 
@@ -248,6 +249,7 @@ class Admin2BaseContextMixin:
             {"label": "Activos", "url": get_admin_changelist_url(Activo)},
             {"label": "Asignaciones", "url": get_admin_changelist_url(Asignacion)},
             {"label": "Colaboradores", "url": get_admin_changelist_url(Colaborador)},
+            {"label": "Notificaciones", "url": get_admin_changelist_url(Notificacion)},
             {"label": "Configuración", "url": reverse("admin:app_list", kwargs={"app_label": "catalogos"})},
         ]
         return context
@@ -811,13 +813,13 @@ class Admin2ModuleView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
         return {
             "stats": [
                 {"label": "Eventos de activo", "value": EventoActivo.objects.count()},
+                {"label": "Notificaciones", "value": Notificacion.objects.count()},
                 {"label": "Asignaciones activas", "value": Asignacion.objects.filter(estado_asignacion__in=ASIGNACIONES_ABIERTAS).count()},
-                {"label": "Asignaciones cerradas", "value": Asignacion.objects.filter(estado_asignacion=Asignacion.EstadoAsignacion.CERRADA).count()},
-                {"label": "Activos con eventos", "value": EventoActivo.objects.values("activo_id").distinct().count()},
+                {"label": "Pendientes", "value": Notificacion.objects.filter(read_at__isnull=True).count()},
             ],
             "module_actions": [
                 {"label": "Ver activos", "url": reverse("activos:lista"), "kind": "primary"},
-                {"label": "Ir a asignaciones", "url": reverse("asignaciones:lista"), "kind": "secondary"},
+                {"label": "Administrar notificaciones", "url": get_admin_changelist_url(Notificacion), "kind": "secondary"},
             ],
             "table_title": "Eventos recientes de activos",
             "table_columns": ["Activo", "Detalle", "Usuario", "Fecha"],

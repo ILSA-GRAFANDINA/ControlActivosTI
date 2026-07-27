@@ -114,6 +114,13 @@
                     {% for factura in facturas_compra %}<option value="{{ factura.pk }}" {% if factura_seleccionada == factura.pk|stringformat:"s" %}selected{% endif %}>{{ factura.numero_factura }} · {{ factura.proveedor }}</option>{% endfor %}
                 </select>
             </div>
+            <div>
+                <label for="filtro-orden" class="mb-2 block text-sm font-semibold text-slate-700">Ordenar por</label>
+                <select id="filtro-orden" name="orden" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-violet-500 focus:ring-4 focus:ring-violet-100">
+                    <option value="">Tipo y código</option>
+                    <option value="recientes" {% if orden_seleccionado == "recientes" %}selected{% endif %}>Más recientes primero</option>
+                </select>
+            </div>
         </div>
 
         <div class="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
@@ -125,7 +132,7 @@
                     class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
                     {% if ocultar_deshabilitados %}checked{% endif %}
                 >
-                <span>Ocultar deshabilitados</span>
+                <span>Ocultar dados de baja</span>
             </label>
             <span class="text-xs text-slate-500">Usa este filtro si solo quieres exportar activos vigentes.</span>
         </div>
@@ -194,6 +201,7 @@
         <input type="hidden" name="empresa" value="{{ empresa_seleccionada }}">
         <input type="hidden" name="proveedor" value="{{ proveedor_seleccionado }}">
         <input type="hidden" name="factura" value="{{ factura_seleccionada }}">
+        <input type="hidden" name="orden" value="{{ orden_seleccionado }}">
         {% if tab_tipo_activa %}
             <input type="hidden" name="tab_tipo" value="{{ tab_tipo_activa }}">
         {% endif %}
@@ -249,7 +257,7 @@
                                 <td class="px-4 py-3">
                                     {% if not activo.activo %}
                                         <span class="inline-flex whitespace-nowrap rounded-lg border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                                            Deshabilitado
+                                            Dado de baja
                                         </span>
                                     {% else %}
                                         <span class="inline-flex whitespace-nowrap rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">

@@ -29,9 +29,10 @@ CSRF_TRUSTED_ORIGINS = config("CSRF_TRUSTED_ORIGINS", default="", cast=Csv())
 
 INSTALLED_APPS = [
     "django.contrib.admin", "django.contrib.auth", "django.contrib.contenttypes", "django.contrib.sessions",
-    "django.contrib.messages", "django.contrib.staticfiles", "apps.accounts", "apps.catalogos",
+    "django.contrib.messages", "django.contrib.staticfiles", "django.contrib.humanize",
+    "apps.accounts", "apps.catalogos",
     "apps.colaboradores", "apps.proveedores", "apps.facturas", "apps.activos",
-    "apps.asignaciones", "apps.actas", "apps.auditoria",
+    "apps.asignaciones", "apps.actas", "apps.auditoria", "apps.notificaciones",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware", "django.contrib.sessions.middleware.SessionMiddleware",
@@ -43,6 +44,7 @@ ROOT_URLCONF = "config.urls"
 TEMPLATES = [{"BACKEND": "django.template.backends.django.DjangoTemplates", "DIRS": [BASE_DIR / "templates"], "APP_DIRS": True, "OPTIONS": {"context_processors": [
     "django.template.context_processors.request", "django.contrib.auth.context_processors.auth",
     "django.contrib.messages.context_processors.messages", "apps.accounts.context_processors.current_user_profile",
+    "apps.notificaciones.context_processors.notifications_context",
 ]}}]
 WSGI_APPLICATION = "config.wsgi.application"
 
@@ -80,6 +82,12 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = config("DATA_UPLOAD_MAX_MEMORY_SIZE", default=20 *
 FACTURAS_PDF_MAX_SIZE = config("FACTURAS_PDF_MAX_SIZE", default=15 * 1024 * 1024, cast=int)
 FACTURAS_PDF_MAX_PAGES = config("FACTURAS_PDF_MAX_PAGES", default=300, cast=int)
 LOGIN_URL, LOGIN_REDIRECT_URL, LOGOUT_REDIRECT_URL = "accounts:login", "/dashboard/", "accounts:login"
+NOTIFICATIONS_READ_RETENTION_DAYS = config(
+    "NOTIFICATIONS_READ_RETENTION_DAYS", default=180, cast=int
+)
+NOTIFICATIONS_UNREAD_RETENTION_DAYS = config(
+    "NOTIFICATIONS_UNREAD_RETENTION_DAYS", default=365, cast=int
+)
 
 USE_X_FORWARDED_HOST = IS_PRODUCTION
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

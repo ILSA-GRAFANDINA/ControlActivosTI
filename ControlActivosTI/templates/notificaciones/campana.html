@@ -1,0 +1,85 @@
+{% load humanize %}
+<div class="notification-popover" data-notification-menu>
+    <button
+        type="button"
+        class="notification-popover__trigger"
+        aria-label="Notificaciones{% if unread_notifications_count %}: {{ unread_notifications_count }} pendientes{% endif %}"
+        aria-haspopup="dialog"
+        aria-controls="notification-panel"
+        aria-expanded="false"
+        data-notification-trigger
+    >
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
+        </svg>
+        <span class="sr-only">Abrir notificaciones</span>
+        <span
+            class="notification-popover__badge{% if not unread_notifications_count %} is-hidden{% endif %}"
+            data-notification-badge
+        >{% if unread_notifications_count > 99 %}99+{% else %}{{ unread_notifications_count }}{% endif %}</span>
+    </button>
+
+    <section
+        id="notification-panel"
+        class="notification-popover__panel"
+        role="dialog"
+        aria-modal="false"
+        aria-label="Notificaciones recientes"
+        data-notification-panel
+        hidden
+    >
+        <header class="notification-popover__header">
+            <div>
+                <strong>Notificaciones</strong>
+                <span>Actividad reciente</span>
+            </div>
+            <button type="button" class="notification-popover__close" aria-label="Cerrar notificaciones" data-notification-close>
+                <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17" /></svg>
+            </button>
+        </header>
+
+        <div class="notification-popover__list">
+            {% for notification in recent_notifications %}
+                <article class="notification-card{% if not notification.read_at %} is-unread{% endif %}" data-notification-item>
+                    <span class="notification-card__icon notification-card__icon--{{ notification.entidad_tipo|lower }}" aria-hidden="true">
+                        {% if 'ASIGNACION' in notification.tipo %}
+                            <svg viewBox="0 0 24 24" width="18" height="18"><path d="M8 7h8M8 11h8M8 15h5M6 3h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/></svg>
+                        {% elif 'ACTIVO' in notification.tipo %}
+                            <svg viewBox="0 0 24 24" width="18" height="18"><path d="M4 5h16v11H4zM8 20h8M12 16v4"/></svg>
+                        {% elif 'FACTURA' in notification.tipo %}
+                            <svg viewBox="0 0 24 24" width="18" height="18"><path d="M6 3h9l3 3v15H6zM9 11h6M9 15h6"/></svg>
+                        {% else %}
+                            <svg viewBox="0 0 24 24" width="18" height="18"><path d="M4 20h16M6 20V8l6-4 6 4v12M9 12h6"/></svg>
+                        {% endif %}
+                    </span>
+                    <div class="notification-card__content">
+                        <strong>{{ notification.titulo }}</strong>
+                        <p>{{ notification.mensaje }}</p>
+                        <span title="{{ notification.created_at|date:'d/m/Y H:i:s' }}">{{ notification.actor_nombre }} · {{ notification.created_at|naturaltime }}</span>
+                        {% if notification.related_missing %}<small>El registro relacionado ya no existe.</small>{% endif %}
+                    </div>
+                    <form method="post" action="{% url 'notificaciones:abrir' notification.pk %}" class="notification-card__action">
+                        {% csrf_token %}
+                        <button type="submit" aria-label="{% if notification.display_url %}Abrir {{ notification.titulo }}{% else %}Marcar {{ notification.titulo }} como leída{% endif %}">
+                            <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
+                        </button>
+                    </form>
+                </article>
+            {% empty %}
+                <div class="notification-popover__empty">
+                    <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg>
+                    <strong>Todo al día</strong>
+                    <span>No tienes notificaciones recientes.</span>
+                </div>
+            {% endfor %}
+        </div>
+
+        <footer class="notification-popover__footer">
+            <form method="post" action="{% url 'notificaciones:leer_todas' %}" data-mark-all-form>
+                {% csrf_token %}
+                <button type="submit">Marcar todas como leídas</button>
+            </form>
+            <a href="{% url 'notificaciones:historial' %}">Ver historial</a>
+        </footer>
+    </section>
+</div>

@@ -53,6 +53,7 @@ class ActivoAdminForm(forms.ModelForm):
         fields = "__all__"
 
     def __init__(self, *args, **kwargs):
+        permitir_cambio_vigencia = kwargs.pop("permitir_cambio_vigencia", True)
         super().__init__(*args, **kwargs)
         for nombre_campo in self.campos_tecnicos:
             self.fields[nombre_campo].required = False
@@ -156,6 +157,9 @@ class ActivoAdminForm(forms.ModelForm):
             self.fields["factura_compra"].queryset = facturas.order_by("-fecha_emision", "numero_factura")
             self.fields["factura_compra"].required = False
             self.fields["factura_compra"].help_text = "Opcional. Solo se muestran facturas compatibles con proveedor y empresa."
+
+        if not permitir_cambio_vigencia:
+            self.fields.pop("activo", None)
 
     def clean(self):
         cleaned_data = super().clean()

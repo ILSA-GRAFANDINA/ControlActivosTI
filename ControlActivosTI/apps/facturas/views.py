@@ -15,6 +15,7 @@ from django.views import View
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
 from apps.catalogos.models import Empresa
+from apps.notificaciones.services import NotificationService
 from apps.proveedores.models import Proveedor
 
 from .forms import AsociarActivosForm, FacturaCompraForm, ReemplazarDocumentoForm
@@ -138,6 +139,9 @@ class FacturaCreateView(LoginRequiredMixin, PermissionRequiredMixin, FacturaForm
                         "checksum_sha256": self.object.checksum_sha256,
                     },
                 )
+                NotificationService.factura_guardada(
+                    self.object, self.request.user, creada=True
+                )
         except Exception:
             archivo = getattr(form.instance, "archivo", None)
             if archivo and archivo.name:
@@ -158,11 +162,20 @@ class FacturaUpdateView(LoginRequiredMixin, PermissionRequiredMixin, FacturaForm
         return FacturaCompra.objects.select_related("proveedor", "empresa").prefetch_related("activos")
 
     def form_valid(self, form):
+        cambios = set(form.changed_data) & {
+            "proveedor",
+            "empresa",
+            "numero_factura",
+            "fecha_emision",
+        }
         with transaction.atomic():
             response = super().form_valid(form)
             registrar_evento(
                 self.object, EventoFactura.Accion.EDICION, self.request.user,
                 {"proveedor_id": self.object.proveedor_id, "empresa_id": self.object.empresa_id},
+            )
+            NotificationService.factura_guardada(
+                self.object, self.request.user, cambios=cambios
             )
         messages.success(self.request, "Metadatos de la factura actualizados correctamente.")
         return response
@@ -285,6 +298,9 @@ class FacturaEstadoView(LoginRequiredMixin, PermissionRequiredMixin, View):
         registrar_evento(
             factura, EventoFactura.Accion.ESTADO, request.user, {"activa": factura.activa}
         )
+        NotificationService.factura_guardada(
+            factura, request.user, cambios={"estado"}
+        )
         messages.success(request, "Factura activada correctamente." if factura.activa else "Factura archivada correctamente.")
         return redirect("facturas:detalle", pk=pk)
 
@@ -336,6 +352,9 @@ class FacturaReemplazarView(LoginRequiredMixin, PermissionRequiredMixin, View):
             registrar_evento(
                 factura, EventoFactura.Accion.REEMPLAZO, request.user,
                 {"motivo": form.cleaned_data["motivo"], "checksum_anterior": reemplazo.checksum_anterior, "checksum_nuevo": reemplazo.checksum_nuevo},
+            )
+            NotificationService.factura_guardada(
+                factura, request.user, cambios={"documento"}
             )
             transaction.on_commit(lambda: storage.delete(nombre_anterior))
         messages.success(request, "Documento reemplazado y versión anterior conservada en el historial.")

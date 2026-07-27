@@ -173,7 +173,7 @@
             </div>
         </div>
 
-        <div class="grid gap-4 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] xl:items-end">
+        <div class="grid gap-4 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(12rem,.7fr)_auto_auto] xl:items-end">
             <div>
                 <label for="filtro-proveedor" class="mb-2 block text-sm font-semibold text-slate-700">Proveedor</label>
                 <select id="filtro-proveedor" name="proveedor" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
@@ -191,6 +191,14 @@
                 </select>
             </div>
 
+            <div>
+                <label for="filtro-orden" class="mb-2 block text-sm font-semibold text-slate-700">Ordenar por</label>
+                <select id="filtro-orden" name="orden" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-violet-500 focus:ring-4 focus:ring-violet-100">
+                    <option value="">Tipo y código</option>
+                    <option value="recientes" {% if orden_seleccionado == "recientes" %}selected{% endif %}>Más recientes primero</option>
+                </select>
+            </div>
+
             <div class="flex min-h-[46px] items-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                 <label class="inline-flex cursor-pointer items-center gap-3 whitespace-nowrap text-sm font-semibold text-slate-700">
                     <input
@@ -200,7 +208,7 @@
                         class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
                         {% if ocultar_deshabilitados %}checked{% endif %}
                     >
-                    <span>Ocultar deshabilitados</span>
+                    <span>Ocultar dados de baja</span>
                 </label>
             </div>
 
@@ -214,7 +222,7 @@
             </div>
         </div>
 
-        {% if busqueda or estado_seleccionado or disponibilidad_seleccionada or tipos_seleccionados or empresa_seleccionada or proveedor_seleccionado or factura_seleccionada or ocultar_deshabilitados %}
+        {% if busqueda or estado_seleccionado or disponibilidad_seleccionada or tipos_seleccionados or empresa_seleccionada or proveedor_seleccionado or factura_seleccionada or orden_seleccionado or ocultar_deshabilitados %}
             <div class="flex flex-wrap items-center gap-2">
                 <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Filtros activos</span>
                 {% if busqueda %}
@@ -248,8 +256,11 @@
                 {% endif %}
                 {% if proveedor_seleccionado %}{% for proveedor in proveedores %}{% if proveedor_seleccionado == proveedor.pk|stringformat:"s" %}<span class="rounded-full border border-teal-200 bg-teal-50 px-3 py-1 text-xs font-medium text-teal-700">Proveedor: {{ proveedor }}</span>{% endif %}{% endfor %}{% endif %}
                 {% if factura_seleccionada %}<span class="rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700">Factura: {% if factura_seleccionada == 'sin_factura' %}Sin registrar{% else %}{% for factura in facturas_compra %}{% if factura_seleccionada == factura.pk|stringformat:"s" %}{{ factura.numero_factura }}{% endif %}{% endfor %}{% endif %}</span>{% endif %}
+                {% if orden_seleccionado == "recientes" %}
+                    <span class="rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700">Orden: Más recientes</span>
+                {% endif %}
                 {% if ocultar_deshabilitados %}
-                    <span class="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">Deshabilitados ocultos</span>
+                    <span class="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">Dados de baja ocultos</span>
                 {% endif %}
             </div>
         {% endif %}
@@ -366,7 +377,7 @@
                             <td class="px-4 py-3">
                                 {% if not activo.activo %}
                                     <span class="inline-flex whitespace-nowrap rounded-lg border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                                        Deshabilitado
+                                        Dado de baja
                                     </span>
                                     <span class="ml-2 whitespace-nowrap text-xs text-slate-500">{{ activo.estado_activo }}</span>
                                 {% else %}

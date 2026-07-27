@@ -17,7 +17,7 @@
         })();
     </script>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <link rel="stylesheet" href="{% static 'css/app-theme.css' %}?v=20260723-6">
+    <link rel="stylesheet" href="{% static 'css/app-theme.css' %}?v=20260727-8">
     <link rel="stylesheet" href="{% static 'css/toasts.css' %}?v=20260723-1">
     <style>
         html {
@@ -177,6 +177,7 @@
 
                 <div class="app-topbar-actions flex flex-col gap-3 sm:flex-row sm:items-center">
                     {% if user.is_authenticated %}
+                        {% include "notificaciones/campana.html" %}
                         <details class="app-user-menu" data-user-menu>
                             <summary class="app-user-menu__trigger" data-user-menu-trigger aria-haspopup="menu" aria-expanded="false">
                                 {% if current_user_profile and current_user_profile.foto %}
@@ -227,6 +228,7 @@
     {% include "includes/toasts.html" %}
     <script src="{% static 'js/app-theme.js' %}?v=20260714-3"></script>
     <script src="{% static 'js/toasts.js' %}?v=20260723-2"></script>
+    <script src="{% static 'js/notifications.js' %}?v=20260727-3"></script>
     <script>
         document.addEventListener("submit", function (event) {
             if (event.target.matches("[data-scroll-to-results]")) {

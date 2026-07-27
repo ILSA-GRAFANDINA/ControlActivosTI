@@ -8,6 +8,7 @@ from django.utils.dateparse import parse_date
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
 from apps.actas.services import generar_o_actualizar_acta, generar_o_actualizar_actas_devolucion
+from apps.notificaciones.services import NotificationService
 
 from .forms import (
     AsignacionCreateForm,
@@ -189,7 +190,9 @@ class AsignacionCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         form.instance.usuario_responsable = self.request.user
-        self.object = form.save()
+        with transaction.atomic():
+            self.object = form.save()
+            NotificationService.asignacion_creada(self.object, self.request.user)
 
         try:
             generar_o_actualizar_acta(self.object, self.request.user)
@@ -277,6 +280,11 @@ class AsignacionDevolucionView(LoginRequiredMixin, UpdateView):
         return self.forms_invalid(form, formset)
 
     def forms_valid(self, form, formset):
+        codigos_devueltos = [
+            detalle_form.instance.activo.codigo
+            for detalle_form in formset.forms
+            if detalle_form.cleaned_data.get("devolver")
+        ]
         with transaction.atomic():
             devolucion = form.save(commit=False)
             devolucion.asignacion = self.object
@@ -290,6 +298,13 @@ class AsignacionDevolucionView(LoginRequiredMixin, UpdateView):
                 detalle_form.save_devolucion_detalle(devolucion)
 
             generar_o_actualizar_actas_devolucion(devolucion, self.request.user)
+            self.object.refresh_from_db(fields=["estado_asignacion", "updated_at"])
+            NotificationService.asignacion_devuelta(
+                self.object,
+                devolucion,
+                self.request.user,
+                codigos_devueltos,
+            )
 
         messages.success(self.request, "La devolución fue registrada correctamente.")
         return HttpResponseRedirect(reverse("asignaciones:devolucion_detalle", args=[devolucion.pk]))

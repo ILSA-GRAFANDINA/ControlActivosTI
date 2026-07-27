@@ -8,9 +8,10 @@ from django.urls import reverse, reverse_lazy
 from django.views import View
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
+from apps.notificaciones.services import NotificationService
+
 from .forms import ProveedorForm
 from .models import Proveedor
-
 
 class ProveedorListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     permission_required = "proveedores.view_proveedor"
@@ -86,8 +87,12 @@ class ProveedorCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateVie
     success_url = reverse_lazy("proveedores:lista")
 
     def form_valid(self, form):
+        response = super().form_valid(form)
+        NotificationService.proveedor_guardado(
+            self.object, self.request.user, creado=True
+        )
         messages.success(self.request, "Proveedor registrado correctamente.")
-        return super().form_valid(form)
+        return response
 
 
 class ProveedorUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
@@ -98,8 +103,23 @@ class ProveedorUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateVie
     template_name = "proveedores/formulario.html"
 
     def form_valid(self, form):
+        cambios = set(form.changed_data) & {
+            "identificacion",
+            "razon_social",
+            "nombre_comercial",
+            "nombre_contacto",
+            "correo_electronico",
+            "telefono",
+            "direccion",
+            "ciudad",
+            "pais",
+        }
+        response = super().form_valid(form)
+        NotificationService.proveedor_guardado(
+            self.object, self.request.user, cambios=cambios
+        )
         messages.success(self.request, "Proveedor actualizado correctamente.")
-        return super().form_valid(form)
+        return response
 
     def get_success_url(self):
         return reverse("proveedores:detalle", args=[self.object.pk])
@@ -127,6 +147,9 @@ class ProveedorEstadoView(LoginRequiredMixin, PermissionRequiredMixin, View):
         proveedor = get_object_or_404(Proveedor, pk=pk)
         proveedor.activo = not proveedor.activo
         proveedor.save(update_fields=["activo", "updated_at"])
+        NotificationService.proveedor_guardado(
+            proveedor, request.user, cambios={"activo"}
+        )
         accion = "activado" if proveedor.activo else "desactivado"
         messages.success(request, f"Proveedor {accion} correctamente.")
         return HttpResponseRedirect(reverse("proveedores:detalle", args=[pk]))

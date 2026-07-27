@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime, timezone as dt_timezone
 from decimal import Decimal
 from io import BytesIO
 from pathlib import Path
@@ -6,6 +6,7 @@ import shutil
 import uuid
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.files.storage import default_storage
@@ -21,6 +22,7 @@ from PIL import Image
 
 from apps.activos.admin import ActivoAdminForm, EventoActivoAdminForm, FotoActivoInlineForm
 from apps.activos.models import Activo, EventoActivo, FotoActivo
+from apps.notificaciones.models import Notificacion
 
 
 User = get_user_model()
@@ -533,9 +535,50 @@ class ActivoListViewTests(TestCase):
         response = self.client.get(reverse("activos:lista"), {"ocultar_deshabilitados": "1"})
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Deshabilitados ocultos")
+        self.assertContains(response, "Dados de baja ocultos")
         self.assertContains(response, "LAP-001")
         self.assertNotContains(response, "MOU-002")
+
+    def test_list_view_can_order_assets_by_most_recent(self):
+        activos = list(Activo.objects.order_by("pk"))
+        for index, activo in enumerate(activos):
+            Activo.objects.filter(pk=activo.pk).update(
+                created_at=datetime(2026, 1, index + 1, tzinfo=dt_timezone.utc)
+            )
+        newest = activos[-1]
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse("activos:lista"),
+            {"orden": "recientes"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["orden_seleccionado"], "recientes")
+        self.assertEqual(response.context["activos"][0].pk, newest.pk)
+        self.assertContains(response, "Orden: Más recientes")
+        self.assertIn("orden=recientes", response.context["exportar_url"])
+
+    def test_list_view_rejects_unknown_order_value(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse("activos:lista"),
+            {"orden": "campo_inseguro"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["orden_seleccionado"], "")
+
+    def test_list_view_can_return_from_recent_order_to_default(self):
+        self.client.force_login(self.user)
+        self.client.get(reverse("activos:lista"), {"orden": "recientes"})
+
+        response = self.client.get(reverse("activos:lista"), {"orden": ""})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["orden_seleccionado"], "")
+        self.assertNotContains(response, "Orden: Más recientes")
 
     def test_list_view_shows_export_button(self):
         self.client.force_login(self.user)
@@ -1160,3 +1203,125 @@ class DashboardInventarioTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["total_activos"], 1)
         self.assertEqual(response.context["valor_total_activos"], 1000)
+
+
+class ActivoVigenciaViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="vigencia", password="testpass123")
+        self.user.user_permissions.add(
+            Permission.objects.get(codename="change_activo", content_type__app_label="activos")
+        )
+        self.estado = EstadoActivo.objects.create(nombre="Disponible", permite_asignacion=True)
+        self.estado_asignado = EstadoActivo.objects.create(
+            nombre="Asignado", permite_asignacion=False
+        )
+        self.tipo = TipoActivo.objects.create(nombre="Laptop")
+        self.activo = Activo.objects.create(
+            tipo_activo=self.tipo,
+            marca="Dell",
+            modelo="Latitude",
+            serie="VIG-001",
+            codigo_sap="SAP-VIG-001",
+            estado_activo=self.estado,
+        )
+
+    def test_portal_form_does_not_expose_vigencia_checkbox(self):
+        form = ActivoAdminForm(
+            instance=self.activo,
+            permitir_cambio_vigencia=False,
+        )
+        self.assertNotIn("activo", form.fields)
+        self.assertIn("activo", ActivoAdminForm(instance=self.activo).fields)
+
+    def test_baja_requires_change_permission(self):
+        unauthorized = User.objects.create_user(
+            username="sin-permiso", password="testpass123"
+        )
+        self.client.force_login(unauthorized)
+        response = self.client.post(
+            reverse("activos:vigencia", args=[self.activo.pk, "baja"])
+        )
+        self.assertEqual(response.status_code, 403)
+        self.activo.refresh_from_db()
+        self.assertTrue(self.activo.activo)
+
+    def test_baja_changes_vigencia_and_creates_notification(self):
+        self.client.force_login(self.user)
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                reverse("activos:vigencia", args=[self.activo.pk, "baja"])
+            )
+        self.assertRedirects(
+            response,
+            reverse("activos:detalle", args=[self.activo.pk]),
+            fetch_redirect_response=False,
+        )
+        self.activo.refresh_from_db()
+        self.assertFalse(self.activo.activo)
+        notification = Notificacion.objects.get(
+            destinatario=self.user,
+            tipo=Notificacion.Tipo.ACTIVO_BAJA,
+        )
+        self.assertIn("Dado de baja", notification.mensaje)
+
+    def test_baja_is_blocked_while_assignment_is_active(self):
+        empresa = Empresa.objects.create(nombre="Empresa Vigencia")
+        area = Area.objects.create(nombre="TI Vigencia")
+        cargo = Cargo.objects.create(nombre="Analista Vigencia")
+        ubicacion = Ubicacion.objects.create(nombre="Matriz Vigencia")
+        centro_costo = CentroCosto.objects.create(
+            codigo="VIG001",
+            nombre="Tecnología",
+            empresa=empresa,
+        )
+        colaborador = Colaborador.objects.create(
+            nombres="Ana",
+            apellidos="Pérez",
+            cedula="0912345678",
+            correo_corporativo="ana.vigencia@example.com",
+            empresa=empresa,
+            cargo=cargo,
+            area=area,
+            ubicacion=ubicacion,
+            centro_costo=centro_costo,
+            fecha_ingreso=date(2025, 1, 1),
+        )
+        asignacion = Asignacion.objects.create(
+            colaborador=colaborador,
+            fecha_asignacion=date(2026, 1, 1),
+            usuario_responsable=self.user,
+        )
+        AsignacionDetalle.objects.create(
+            asignacion=asignacion,
+            activo=self.activo,
+        )
+
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse("activos:vigencia", args=[self.activo.pk, "baja"])
+        )
+        self.assertRedirects(
+            response,
+            reverse("activos:detalle", args=[self.activo.pk]),
+            fetch_redirect_response=False,
+        )
+        self.activo.refresh_from_db()
+        self.assertTrue(self.activo.activo)
+        self.assertFalse(
+            Notificacion.objects.filter(
+                destinatario=self.user,
+                tipo=Notificacion.Tipo.ACTIVO_BAJA,
+            ).exists()
+        )
+
+    def test_inactive_asset_can_be_reactivated(self):
+        Activo.objects.filter(pk=self.activo.pk).update(activo=False)
+        self.activo.refresh_from_db()
+        self.client.force_login(self.user)
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                reverse("activos:vigencia", args=[self.activo.pk, "reactivar"])
+            )
+        self.assertEqual(response.status_code, 302)
+        self.activo.refresh_from_db()
+        self.assertTrue(self.activo.activo)
