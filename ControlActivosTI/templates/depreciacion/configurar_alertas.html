@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Configurar depreciación - ControlActivosTI{% endblock %}
+{% block page_title %}Configuración de depreciación{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+    <div>
+        <h2 class="text-xl font-semibold text-slate-900">Configuración global</h2>
+        <p class="text-sm text-slate-500">Controla las alertas y la información presentada en el detalle de los activos.</p>
+    </div>
+    <a href="{% url 'depreciacion:reporte' %}" class="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Volver al reporte</a>
+</div>
+
+<div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+    <form method="post" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div class="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{{ form.non_field_errors }}</div>
+        {% endif %}
+        <div class="grid gap-5 md:grid-cols-2">
+            {% for field in form %}
+                {% if field.name == "mostrar_valor_residual" %}
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 md:col-span-2">
+                    <label for="{{ field.id_for_label }}" class="flex cursor-pointer items-start gap-3">
+                        <span class="mt-0.5">{{ field }}</span>
+                        <span>
+                            <span class="block text-sm font-semibold text-slate-700">{{ field.label }}</span>
+                            {% if field.help_text %}<span class="mt-1 block text-xs leading-5 text-slate-500">{{ field.help_text }}</span>{% endif %}
+                        </span>
+                    </label>
+                    {% for error in field.errors %}<p class="mt-2 text-sm text-red-600">{{ error }}</p>{% endfor %}
+                </div>
+                {% else %}
+                <div>
+                    <label for="{{ field.id_for_label }}" class="mb-2 block text-sm font-semibold text-slate-700">
+                        {{ field.label }}{% if field.field.required %} *{% endif %}
+                    </label>
+                    {{ field }}
+                    {% if field.help_text %}<p class="mt-2 text-xs text-slate-500">{{ field.help_text }}</p>{% endif %}
+                    {% for error in field.errors %}<p class="mt-2 text-sm text-red-600">{{ error }}</p>{% endfor %}
+                </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+        <div class="mt-6 flex justify-end">
+            <button type="submit" class="rounded-xl bg-cyan-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700">Guardar configuración</button>
+        </div>
+    </form>
+
+    <aside class="rounded-2xl border border-cyan-100 bg-cyan-50/60 p-6 shadow-sm">
+        <span class="inline-flex rounded-lg bg-cyan-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-cyan-700">Importante</span>
+        <h3 class="mt-4 font-semibold text-slate-900">Vida útil fija</h3>
+        <p class="mt-2 text-sm leading-6 text-slate-600">La vida útil permanece en 36 meses. Estos valores solo controlan la anticipación de la primera alerta y la frecuencia de sus recordatorios.</p>
+    </aside>
+</div>
+{% endblock %}

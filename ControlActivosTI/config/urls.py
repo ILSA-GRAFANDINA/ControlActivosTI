@@ -43,6 +43,7 @@ urlpatterns = [
     path("facturas/", include("apps.facturas.urls")),
     path("asignaciones/", include("apps.asignaciones.urls")),
     path("notificaciones/", include("apps.notificaciones.urls")),
+    path("depreciacion/", include("apps.depreciacion.urls")),
     path("actas/", include("apps.actas.urls")),
     path("media/<path:path>", ProtectedImageView.as_view(), name="protected-image"),
 ]

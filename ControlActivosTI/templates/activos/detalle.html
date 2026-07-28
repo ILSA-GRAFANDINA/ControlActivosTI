@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load l10n %}
 
 {% block title %}Detalle de activo - ControlActivosTI{% endblock %}
 {% block page_title %}Detalle del activo{% endblock %}
@@ -305,6 +306,50 @@
             {% endif %}
         </div>
     </div>
+
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm" aria-labelledby="depreciacion-titulo">
+        <h3 id="depreciacion-titulo" class="mt-1 text-xl font-bold text-slate-900">Depreciación</h3>
+
+        {% if calculo_depreciacion.configurado %}
+            <div class="mt-5 flex flex-wrap items-center justify-between gap-3">
+                <span class="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700">
+                    {{ calculo_depreciacion.estado }}
+                </span>
+                <span class="text-sm font-semibold text-slate-700">{{ calculo_depreciacion.porcentaje_depreciado|floatformat:2 }} % depreciado</span>
+            </div>
+            <div class="mt-3 h-4 overflow-hidden rounded-full bg-slate-200" role="progressbar"
+                 aria-label="Porcentaje depreciado del activo" aria-valuemin="0" aria-valuemax="100"
+                 aria-valuenow="{{ calculo_depreciacion.porcentaje_depreciado|unlocalize }}">
+                <div class="h-full rounded-full bg-cyan-600 transition-[width] duration-500" style="width: {{ calculo_depreciacion.porcentaje_depreciado|unlocalize }}%"></div>
+            </div>
+
+            <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div><p class="text-sm text-slate-500">Costo de adquisición</p><p class="font-semibold">${{ calculo_depreciacion.costo_adquisicion|floatformat:2 }}</p></div>
+                {% if mostrar_valor_residual %}
+                <div><p class="text-sm text-slate-500">Valor residual</p><p class="font-semibold">${{ calculo_depreciacion.valor_residual|floatformat:2 }}</p></div>
+                {% endif %}
+                <div><p class="text-sm text-slate-500">Base depreciable</p><p class="font-semibold">${{ calculo_depreciacion.base_depreciable|floatformat:2 }}</p></div>
+                <div><p class="text-sm text-slate-500">Método</p><p class="font-semibold">Línea recta</p></div>
+                <div><p class="text-sm text-slate-500">Fecha de inicio</p><p class="font-semibold">{{ calculo_depreciacion.fecha_inicio|date:"d/m/Y" }}</p></div>
+                <div><p class="text-sm text-slate-500">Finalización estimada</p><p class="font-semibold">{{ calculo_depreciacion.fecha_fin|date:"d/m/Y" }}</p></div>
+                <div><p class="text-sm text-slate-500">Vida útil aplicada</p><p class="font-semibold">{{ vida_util_texto }} (36 meses)</p></div>
+                <div><p class="text-sm text-slate-500">Tiempo transcurrido</p><p class="font-semibold">{{ calculo_depreciacion.dias_transcurridos }} días calendario</p></div>
+                <div><p class="text-sm text-slate-500">Tiempo restante</p><p class="font-semibold">{{ calculo_depreciacion.dias_restantes }} días</p></div>
+                <div><p class="text-sm text-slate-500">Depreciación acumulada</p><p class="font-semibold">${{ calculo_depreciacion.depreciacion_acumulada|floatformat:2 }}</p></div>
+                <div><p class="text-sm text-slate-500">Valor contable estimado</p><p class="font-semibold">${{ calculo_depreciacion.valor_contable_estimado|floatformat:2 }}</p></div>
+                <div><p class="text-sm text-slate-500">Próxima notificación</p><p class="font-semibold">{{ calculo_depreciacion.proxima_alerta|date:"d/m/Y"|default:"-" }}</p></div>
+            </div>
+            {% if calculo_depreciacion.estado == "Vida útil cumplida" and activo.activo %}
+                <div class="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4 font-semibold text-emerald-800">
+                    Vida útil interna cumplida. El activo continúa registrado como operativo.
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="mt-5 rounded-xl border border-dashed border-amber-300 bg-amber-50 p-5 text-amber-900">
+                <strong>Pendiente de información.</strong> Para calcular automáticamente la depreciación, registra la fecha de compra y el valor del activo.
+            </div>
+        {% endif %}
+    </section>
 
     <div class="grid gap-6 xl:grid-cols-2">
         <div class="rounded-2xl border border-slate-200 bg-white shadow-sm">

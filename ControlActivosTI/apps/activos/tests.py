@@ -1028,6 +1028,7 @@ class ActivoCreateViewTests(TestCase):
         self.assertContains(response, "Guardar cambios")
         self.assertContains(response, "ThinkPad T14")
         self.assertContains(response, "SAP-EDIT-001")
+        self.assertContains(response, 'value="2025-05-07"')
         self.assertContains(response, "Foto 1")
 
         data = self._datos_base()

@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "apps.accounts", "apps.catalogos",
     "apps.colaboradores", "apps.proveedores", "apps.facturas", "apps.activos",
     "apps.asignaciones", "apps.actas", "apps.auditoria", "apps.notificaciones",
+    "apps.depreciacion",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware", "django.contrib.sessions.middleware.SessionMiddleware",

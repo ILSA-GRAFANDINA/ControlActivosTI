@@ -1,0 +1,12 @@
+[Unit]
+Description=Ejecuta diariamente la revisión de depreciación de ControlActivosTI
+
+[Timer]
+OnCalendar=*-*-* 02:15:00 America/Guayaquil
+Persistent=true
+RandomizedDelaySec=300
+Unit=controlactivosti-depreciation.service
+
+[Install]
+WantedBy=timers.target
+

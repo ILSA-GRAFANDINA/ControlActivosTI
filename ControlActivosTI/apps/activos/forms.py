@@ -101,6 +101,7 @@ class ActivoAdminForm(forms.ModelForm):
 
         if "fecha_compra" in self.fields:
             self.fields["fecha_compra"].widget = forms.DateInput(
+                format="%Y-%m-%d",
                 attrs={
                     "type": "date",
                     "class": BASE_INPUT_CLASS,

@@ -1,0 +1,15 @@
+[Unit]
+Description=ControlActivosTI - revisión diaria de depreciación
+After=network.target postgresql.service
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/controlactivosti/app
+EnvironmentFile=/var/www/controlactivosti/app/.env
+ExecStart=/var/www/controlactivosti/venv/bin/python manage.py check_asset_depreciation --batch-size 200
+Nice=10
+PrivateTmp=true
+NoNewPrivileges=true
+

@@ -772,6 +772,8 @@ class Admin2ModuleView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
             ],
             "module_actions": [
                 {"label": "Ver inventario completo", "url": reverse("activos:lista"), "kind": "primary"},
+                {"label": "Depreciaciones de activos", "url": reverse("depreciacion:reporte"), "kind": "secondary"},
+                {"label": "Configurar depreciación", "url": reverse("depreciacion:configurar-alertas"), "kind": "secondary"},
                 {"label": "Crear asignación", "url": reverse("asignaciones:nueva"), "kind": "secondary"},
             ],
             "table_title": "Ultimos activos incorporados",

@@ -28,6 +28,18 @@ class Notificacion(models.Model):
         PROVEEDOR_CAMBIADO = "PROVEEDOR_CAMBIADO", "Proveedor modificado"
         FACTURA_CREADA = "FACTURA_CREADA", "Factura creada"
         FACTURA_CAMBIADA = "FACTURA_CAMBIADA", "Factura modificada"
+        ASSET_DEPRECIATION_WARNING = (
+            "ASSET_DEPRECIATION_WARNING",
+            "Alerta de depreciación",
+        )
+        ASSET_USEFUL_LIFE_COMPLETED = (
+            "ASSET_USEFUL_LIFE_COMPLETED",
+            "Vida útil cumplida",
+        )
+        ASSET_DEPRECIATED_REMINDER = (
+            "ASSET_DEPRECIATED_REMINDER",
+            "Recordatorio de activo depreciado",
+        )
 
     class Entidad(models.TextChoices):
         ACTIVO = "ACTIVO", "Activo"

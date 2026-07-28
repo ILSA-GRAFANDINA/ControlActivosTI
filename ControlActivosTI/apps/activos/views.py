@@ -13,6 +13,7 @@ from apps.asignaciones.models import AsignacionDetalle
 from apps.catalogos.models import Empresa, EstadoActivo, TipoActivo
 from apps.facturas.models import FacturaCompra
 from apps.notificaciones.services import NotificationService
+from apps.depreciacion.services import DepreciationService
 from apps.proveedores.models import Proveedor
 
 from .forms import ActivoAdminForm, FotoActivoCreateFormSet
@@ -589,6 +590,12 @@ class ActivoDetailView(LoginRequiredMixin, DetailView):
         context["historial_asignaciones_completo"] = historial_completo
         context["total_historial_asignaciones"] = len(detalles_asignacion)
         context["historial_eventos"] = list(activo.eventos.all())
+        configuracion_depreciacion = DepreciationService.configuracion()
+        context["calculo_depreciacion"] = DepreciationService.calcular(activo)
+        context["mostrar_valor_residual"] = (
+            configuracion_depreciacion.mostrar_valor_residual
+        )
+        context["vida_util_texto"] = "3 años"
         return context
 
 
