@@ -74,7 +74,7 @@ def _nombre_archivo(asignacion, tipo, devolucion=None):
 def _cargo_con_area(colaborador, default="-"):
     cargo = _texto(colaborador.cargo, default="").strip()
     area = _texto(colaborador.area, default="").strip()
-    return " ".join(parte for parte in (cargo, area) if parte) or default
+    return " - ".join(parte for parte in (cargo, area) if parte) or default
 
 
 def _clave_empresa(empresa):

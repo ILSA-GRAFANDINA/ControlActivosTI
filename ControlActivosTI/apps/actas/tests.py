@@ -144,9 +144,9 @@ class ActaEntregaExcelTests(TestCase):
         self.assertEqual(ws["E6"].value.date(), timezone.localdate())
         self.assertEqual(ws["E10"].value, "Ana Perez")
         self.assertEqual(ws["E11"].value, "0123456789")
-        self.assertEqual(ws["I10"].value, "Analista de soporte TI")
+        self.assertEqual(ws["I10"].value, "Analista de soporte - TI")
         self.assertEqual(ws["D62"].value, "Ana Perez")
-        self.assertEqual(ws["D63"].value, "Analista de soporte TI")
+        self.assertEqual(ws["D63"].value, "Analista de soporte - TI")
         self.assertIsNone(ws["B1"].value)
         self.assertEqual(ws["B14"].value, "Laptop")
         self.assertEqual(ws["D14"].value, "Dell")
@@ -191,6 +191,7 @@ class ActaEntregaExcelTests(TestCase):
         _acta, workbook = self.cargar_workbook_generado()
 
         self.assertEqual(workbook.active["I1"].value, "F-TI-04")
+        self.assertEqual(workbook.active["I10"].value, "Analista de soporte - TI")
         self.assertIsNone(workbook.active["G14"].value)
 
 
@@ -266,7 +267,7 @@ class ActaRecepcionExcelTests(ActaEntregaExcelTests):
         self.assertEqual(ws["E6"].value.date(), date(2026, 4, 25))
         self.assertEqual(ws["E10"].value, "Ana Perez")
         self.assertEqual(ws["E11"].value, "0123456789")
-        self.assertEqual(ws["I10"].value, "Analista de soporte TI")
+        self.assertEqual(ws["I10"].value, "Analista de soporte - TI")
         self.assertEqual(ws["B14"].value, "Laptop")
         self.assertEqual(ws["D14"].value, "Dell")
         self.assertEqual(ws["F14"].value, 987.65)
@@ -279,7 +280,7 @@ class ActaRecepcionExcelTests(ActaEntregaExcelTests):
         self.assertEqual(ws["D54"].value, "Juan Villacres")
         self.assertEqual(ws["D55"].value, "Asistente de TIC")
         self.assertEqual(ws["D58"].value, "Ana Perez")
-        self.assertEqual(ws["D59"].value, "Analista de soporte TI")
+        self.assertEqual(ws["D59"].value, "Analista de soporte - TI")
         self.assertEqual(ws["G54"].value, "Firma")
         self.assertEqual(ws["G58"].value, "Firma")
         self.assertIsNone(ws["H54"].value)
@@ -311,6 +312,7 @@ class ActaRecepcionExcelTests(ActaEntregaExcelTests):
         _acta, workbook = self.generar_recepcion(devolucion)
 
         self.assertEqual(workbook.active["I1"].value, "F-TI-05")
+        self.assertEqual(workbook.active["I10"].value, "Analista de soporte - TI")
         self.assertIsNone(workbook.active["G14"].value)
 
     def test_reception_contains_only_assets_from_that_partial_return(self):
