@@ -25,7 +25,7 @@ class AsignacionCreateFormTests(TestCase):
         self.area = Area.objects.create(nombre="TI")
         self.cargo = Cargo.objects.create(nombre="Analista")
         self.ubicacion = Ubicacion.objects.create(nombre="Matriz")
-        self.empresa = Empresa.objects.create(nombre="Acme")
+        self.empresa = Empresa.objects.create(nombre="ILSA S.A")
         self.centro_costo = CentroCosto.objects.create(
             codigo="TI001",
             nombre="Tecnologia",
@@ -57,6 +57,7 @@ class AsignacionCreateFormTests(TestCase):
             apellidos="Perez",
             cedula="0123456789",
             correo_corporativo="ana.perez@example.com",
+            empresa=self.empresa,
             cargo=self.cargo,
             area=self.area,
             ubicacion=self.ubicacion,
@@ -402,7 +403,7 @@ class AsignacionListViewTests(TestCase):
         self.area = Area.objects.create(nombre="Soporte")
         self.cargo = Cargo.objects.create(nombre="Tecnico")
         self.ubicacion = Ubicacion.objects.create(nombre="Sucursal")
-        self.empresa = Empresa.objects.create(nombre="Beta")
+        self.empresa = Empresa.objects.create(nombre="GRAFANDINA")
         self.centro_costo = CentroCosto.objects.create(
             codigo="OPS001",
             nombre="Operaciones TI",
@@ -427,6 +428,7 @@ class AsignacionListViewTests(TestCase):
             apellidos="Perez",
             cedula="1111111111",
             correo_corporativo="ana.list@example.com",
+            empresa=self.empresa,
             cargo=self.cargo,
             area=self.area,
             ubicacion=self.ubicacion,
@@ -438,6 +440,7 @@ class AsignacionListViewTests(TestCase):
             apellidos="Mena",
             cedula="2222222222",
             correo_corporativo="luis.list@example.com",
+            empresa=self.empresa,
             cargo=self.cargo,
             area=self.area,
             ubicacion=self.ubicacion,
@@ -497,6 +500,7 @@ class AsignacionListViewTests(TestCase):
             apellidos="Extra",
             cedula=f"9{indice:09d}",
             correo_corporativo=f"extra{indice}@example.com",
+            empresa=self.empresa,
             cargo=self.cargo,
             area=self.area,
             ubicacion=self.ubicacion,

@@ -171,11 +171,6 @@
                                         Acta entrega
                                     </a>
                                 {% endif %}
-                                {% comment %}
-                                    <a href="{% url 'actas:descargar_por_asignacion' asignacion.pk 'RECEPCION' %}" class="rounded-lg bg-slate-700 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800">
-                                        Acta recepción
-                                    </a>
-                                {% endcomment %}
                                 {% if asignacion.estado_asignacion == "ACTIVA" or asignacion.estado_asignacion == "PARCIAL" %}
                                     <a href="{% url 'asignaciones:devolver' asignacion.pk %}" class="rounded-lg bg-cyan-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-cyan-700">
                                         Registrar devolución

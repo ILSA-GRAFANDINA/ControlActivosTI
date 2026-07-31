@@ -1,21 +1,22 @@
 from decimal import Decimal
 from io import BytesIO
-from copy import copy
+from copy import copy, deepcopy
 from math import ceil
+import unicodedata
+import xml.etree.ElementTree as ET
 from zipfile import ZIP_DEFLATED, ZipFile
 
 from django.conf import settings
 from django.core.files.base import ContentFile
 from django.utils import timezone
+from django.utils.text import slugify
 
-from docx import Document
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.shared import Pt
 from openpyxl import load_workbook
 from openpyxl.drawing.image import Image as ExcelImage
 from openpyxl.drawing.spreadsheet_drawing import AnchorMarker, OneCellAnchor
 from openpyxl.drawing.xdr import XDRPositiveSize2D
 from openpyxl.styles import Alignment
+from openpyxl.utils import get_column_letter, range_boundaries
 
 from .models import ActaEntrega
 
@@ -24,10 +25,33 @@ TIPO_ENTREGA = ActaEntrega.TipoActa.ENTREGA
 TIPO_RECEPCION = ActaEntrega.TipoActa.RECEPCION
 FILA_INICIO_ACTIVOS = 14
 FILAS_ACTIVOS_PLANTILLA = 3
-FILA_DESPUES_ACTIVOS = FILA_INICIO_ACTIVOS + FILAS_ACTIVOS_PLANTILLA
 COLUMNAS_ACTIVOS = range(2, 10)
 FORMATOS_LOGO = ("*.png", "*.jpg", "*.jpeg")
 EMU_POR_PIXEL = 9525
+PLANTILLAS_POR_EMPRESA = {
+    "ILSA": {
+        TIPO_ENTREGA: "F-TI-01",
+        TIPO_RECEPCION: "F-TI-02",
+        "logo": "logo_ilsa",
+    },
+    "GRAFANDINA": {
+        TIPO_ENTREGA: "F-TI-04",
+        TIPO_RECEPCION: "F-TI-05",
+        "logo": "logo_grafa",
+    },
+}
+ENCABEZADOS_ACTIVOS = (
+    "ARTICULO",
+    "MARCA",
+    "VALOR",
+    "ESTADO",
+    "CARACTERISTICAS",
+    "OBSERVACIONES",
+)
+XMLNS_HOJA = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+TIPO_RELACION_CHECKBOX = (
+    "http://schemas.microsoft.com/office/2022/11/relationships/FeaturePropertyBag"
+)
 
 
 def _texto(valor, default="-"):
@@ -37,86 +61,14 @@ def _texto(valor, default="-"):
     return valor or default
 
 
-def _moneda(valor):
-    if valor in (None, ""):
-        return "-"
-    if isinstance(valor, Decimal):
-        return f"USD {valor:,.2f}"
-    try:
-        return f"USD {Decimal(valor):,.2f}"
-    except Exception:
-        return _texto(valor)
-
-
 def _nombre_archivo(asignacion, tipo, devolucion=None):
     codigo = asignacion.codigo_asignacion or f"ASG-{asignacion.pk}"
     if devolucion:
-        codigo = devolucion.codigo_devolucion or f"{codigo}-DEV-{devolucion.pk}"
-    prefijo = "acta_recepcion" if tipo == TIPO_RECEPCION else "acta_entrega"
-    extension = "xlsx" if tipo == TIPO_ENTREGA and devolucion is None else "docx"
-    return f"{prefijo}_{codigo}.{extension}"
-
-
-def _fecha_acta(asignacion, tipo, devolucion=None):
-    if devolucion:
-        return devolucion.fecha_devolucion
-    if tipo == TIPO_RECEPCION:
-        return asignacion.fecha_devolucion or asignacion.fecha_asignacion
-    return asignacion.fecha_asignacion
-
-
-def _configuracion_acta(tipo):
-    if tipo == TIPO_RECEPCION:
-        return {
-            "titulo": "ACTA DE RECEPCION DE BIENES INFORMATICOS",
-            "intro": (
-                "Por medio de la presente se deja constancia de la recepcion de los bienes "
-                "informaticos detallados a continuacion, devueltos por el colaborador al area responsable."
-            ),
-            "declaracion": (
-                "El area responsable declara haber recibido los bienes descritos y registra el estado "
-                "final informado al momento de la devolucion."
-            ),
-            "firma_izquierda": "Entrega conforme",
-            "firma_derecha": "Recibe",
-        }
-    return {
-        "titulo": "ACTA DE ENTREGA DE BIENES INFORMATICOS",
-        "intro": (
-            "Por medio de la presente se deja constancia de la entrega de los bienes "
-            "informaticos detallados a continuacion, los cuales quedan bajo custodia del colaborador."
-        ),
-        "declaracion": (
-            "El colaborador declara haber recibido los bienes descritos en buen estado y se compromete "
-            "a su uso adecuado, custodia y devolucion cuando corresponda."
-        ),
-        "firma_izquierda": "Entrega",
-        "firma_derecha": "Recibe conforme",
-    }
-
-
-def _estado_detalle(detalle, tipo):
-    if tipo == TIPO_RECEPCION and detalle.estado_activo_devolucion_id:
-        return detalle.estado_activo_devolucion.nombre
-    return detalle.activo.estado_activo.nombre
-
-
-def _observaciones_detalle(detalle, tipo, devolucion_detalle=None):
-    if devolucion_detalle:
-        partes = []
-        if devolucion_detalle.observaciones:
-            partes.append(devolucion_detalle.observaciones.strip())
-        if devolucion_detalle.devolucion.observaciones:
-            partes.append(devolucion_detalle.devolucion.observaciones.strip())
-        return " | ".join([parte for parte in partes if parte]) or "-"
-    if tipo == TIPO_RECEPCION:
-        partes = []
-        if detalle.observaciones_devolucion:
-            partes.append(detalle.observaciones_devolucion.strip())
-        if detalle.asignacion.observaciones_devolucion:
-            partes.append(detalle.asignacion.observaciones_devolucion.strip())
-        return " | ".join([parte for parte in partes if parte]) or "-"
-    return detalle.observaciones_acta
+        codigo_devolucion = devolucion.codigo_devolucion or f"DEV-{devolucion.pk}"
+        colaborador = slugify(asignacion.nombre_colaborador_completo).replace("-", "_") or "colaborador"
+        fecha = devolucion.fecha_devolucion.strftime("%Y-%m-%d")
+        return f"Acta_Recepcion_{colaborador}_{fecha}_{codigo_devolucion}.xlsx"
+    return f"acta_entrega_{codigo}.xlsx"
 
 
 def _cargo_con_area(colaborador, default="-"):
@@ -125,47 +77,43 @@ def _cargo_con_area(colaborador, default="-"):
     return " ".join(parte for parte in (cargo, area) if parte) or default
 
 
-def _firmas(asignacion, tipo, devolucion=None):
-    colaborador = f"{_texto(asignacion.nombre_colaborador_completo)}\n{_cargo_con_area(asignacion.colaborador)}"
-    responsable_entrega = _texto(
-        asignacion.usuario_responsable.get_full_name() or asignacion.usuario_responsable.username
+def _clave_empresa(empresa):
+    nombre = getattr(empresa, "nombre", empresa)
+    nombre = _normalizar_encabezado(nombre)
+    for clave in PLANTILLAS_POR_EMPRESA:
+        if nombre == clave or nombre.startswith(f"{clave} "):
+            return clave
+    nombre_visible = _texto(getattr(empresa, "nombre", empresa), default="sin empresa")
+    raise ValueError(
+        f'No existe una configuracion de actas para la empresa "{nombre_visible}".'
     )
-    responsable_recepcion = responsable_entrega
-    if devolucion:
-        responsable_recepcion = _texto(
-            devolucion.usuario_recepcion.get_full_name() or devolucion.usuario_recepcion.username
-        )
-    elif asignacion.usuario_recepcion_id:
-        responsable_recepcion = _texto(
-            asignacion.usuario_recepcion.get_full_name() or asignacion.usuario_recepcion.username
-        )
-
-    if tipo == TIPO_RECEPCION:
-        return colaborador, responsable_recepcion
-    return responsable_entrega, colaborador
 
 
-def _plantilla_acta_entrega_path():
+def obtener_plantilla_acta(tipo, empresa):
     plantilla_dir = settings.BASE_DIR / "templates" / "actas"
-    plantillas = sorted(plantilla_dir.glob("*.xlsx"))
-    if not plantillas:
-        raise FileNotFoundError(f"No existe una plantilla .xlsx en {plantilla_dir}.")
-    for plantilla in plantillas:
-        nombre = plantilla.name.lower()
-        if "entrega" in nombre or "asignaci" in nombre:
+    clave_empresa = _clave_empresa(empresa)
+    try:
+        codigo = PLANTILLAS_POR_EMPRESA[clave_empresa][tipo]
+    except KeyError as exc:
+        raise ValueError(f'El tipo de acta "{tipo}" no es valido.') from exc
+    for plantilla in sorted(plantilla_dir.glob("*.xlsx")):
+        if codigo.lower() in plantilla.name.lower():
             return plantilla
-    return plantillas[0]
+    raise FileNotFoundError(
+        f"No existe la plantilla {codigo} en el directorio interno {plantilla_dir}."
+    )
 
 
-def _logo_acta_path():
+def _plantilla_acta_entrega_path(asignacion):
+    return obtener_plantilla_acta(TIPO_ENTREGA, asignacion.colaborador.empresa)
+
+
+def _logo_acta_path(empresa):
     plantilla_dir = settings.BASE_DIR / "templates" / "actas"
+    nombre_logo = PLANTILLAS_POR_EMPRESA[_clave_empresa(empresa)]["logo"]
     for formato in FORMATOS_LOGO:
         for archivo in sorted(plantilla_dir.glob(formato)):
-            if "logo_ilsa" in archivo.name.lower():
-                return archivo
-    for formato in FORMATOS_LOGO:
-        for archivo in sorted(plantilla_dir.glob(formato)):
-            if "logo" in archivo.name.lower():
+            if nombre_logo in archivo.name.lower():
                 return archivo
     return None
 
@@ -193,6 +141,7 @@ def _insertar_filas_preservando_combinadas(ws, indice, cantidad):
         return
 
     rangos = list(ws.merged_cells.ranges)
+    area_impresion = str(ws.print_area) if ws.print_area else ""
     for rango in rangos:
         ws.unmerge_cells(str(rango))
 
@@ -212,6 +161,16 @@ def _insertar_filas_preservando_combinadas(ws, indice, cantidad):
             end_column=max_col,
         )
 
+    if area_impresion:
+        referencia = area_impresion.split("!")[-1].replace("'", "")
+        min_col, min_row, max_col, max_row = range_boundaries(referencia)
+        if max_row >= indice:
+            max_row += cantidad
+        ws.print_area = (
+            f"${get_column_letter(min_col)}${min_row}:"
+            f"${get_column_letter(max_col)}${max_row}"
+        )
+
 
 def _copiar_formato_fila(ws, fila_origen, fila_destino):
     ws.row_dimensions[fila_destino].height = ws.row_dimensions[fila_origen].height
@@ -228,14 +187,44 @@ def _copiar_formato_fila(ws, fila_origen, fila_destino):
         destino.value = None
 
 
-def _preparar_filas_activos(ws, cantidad_activos):
-    filas_extra = max(0, cantidad_activos - FILAS_ACTIVOS_PLANTILLA)
+def _preparar_filas_activos(
+    ws,
+    cantidad_activos,
+    fila_inicio=FILA_INICIO_ACTIVOS,
+    filas_plantilla=FILAS_ACTIVOS_PLANTILLA,
+):
+    fila_despues_activos = fila_inicio + filas_plantilla
+    filas_extra = max(0, cantidad_activos - filas_plantilla)
     if filas_extra:
-        _insertar_filas_preservando_combinadas(ws, FILA_DESPUES_ACTIVOS, filas_extra)
-        for fila in range(FILA_DESPUES_ACTIVOS, FILA_DESPUES_ACTIVOS + filas_extra):
-            _copiar_formato_fila(ws, FILA_DESPUES_ACTIVOS - 1, fila)
+        _insertar_filas_preservando_combinadas(ws, fila_despues_activos, filas_extra)
+        for fila in range(fila_despues_activos, fila_despues_activos + filas_extra):
+            _copiar_formato_fila(ws, fila_despues_activos - 1, fila)
             ws.merge_cells(start_row=fila, start_column=2, end_row=fila, end_column=3)
             ws.merge_cells(start_row=fila, start_column=4, end_row=fila, end_column=5)
+
+    total_filas = max(cantidad_activos, filas_plantilla)
+    for fila in range(fila_inicio, fila_inicio + total_filas):
+        for columna in (2, 4, 6, 7, 8, 9):
+            ws.cell(fila, columna).value = None
+
+
+def _normalizar_encabezado(valor):
+    texto = unicodedata.normalize("NFKD", str(valor or ""))
+    return "".join(caracter for caracter in texto if not unicodedata.combining(caracter)).strip().upper()
+
+
+def _localizar_tabla_activos(ws):
+    for fila in range(1, ws.max_row + 1):
+        valores = {
+            _normalizar_encabezado(ws.cell(fila, columna).value)
+            for columna in COLUMNAS_ACTIVOS
+        }
+        if set(ENCABEZADOS_ACTIVOS).issubset(valores):
+            fila_inicio = fila + 1
+            for candidata in range(fila_inicio, ws.max_row + 1):
+                if any(ws.cell(candidata, columna).value not in (None, "") for columna in COLUMNAS_ACTIVOS):
+                    return fila, fila_inicio, candidata - fila_inicio
+    raise ValueError("No se encontro la tabla de activos mediante sus encabezados.")
 
 
 def _alineacion_con_ajuste(celda, vertical="top"):
@@ -292,7 +281,116 @@ def _alto_filas_px(ws, filas):
     return alto
 
 
-def _sanear_texto_enriquecido_xlsx(contenido):
+def _restaurar_controles_checkbox(contenido, plantilla_path):
+    entrada = BytesIO(contenido)
+    salida = BytesIO()
+    with ZipFile(plantilla_path, "r") as plantilla, ZipFile(entrada, "r") as generado:
+        archivos = {item.filename: generado.read(item.filename) for item in generado.infolist()}
+        extras = {}
+
+        feature_bags = [
+            nombre
+            for nombre in plantilla.namelist()
+            if nombre.startswith("xl/featurePropertyBag/")
+        ]
+        if not feature_bags:
+            return contenido
+        for nombre in feature_bags:
+            extras[nombre] = plantilla.read(nombre)
+
+        estilos_originales = ET.fromstring(plantilla.read("xl/styles.xml"))
+        estilos_generados = ET.fromstring(archivos["xl/styles.xml"])
+        ruta_xfs = f"{{{XMLNS_HOJA}}}cellXfs"
+        ruta_extensiones = f"{{{XMLNS_HOJA}}}extLst"
+        xfs_originales = list(estilos_originales.find(ruta_xfs) or [])
+        xfs_generados = list(estilos_generados.find(ruta_xfs) or [])
+        extension_checkbox = None
+        for indice, xf_original in enumerate(xfs_originales):
+            extensiones = xf_original.find(ruta_extensiones)
+            if extensiones is None or "xfComplement" not in ET.tostring(
+                extensiones,
+                encoding="unicode",
+            ):
+                continue
+            if extension_checkbox is None:
+                extension_checkbox = deepcopy(extensiones)
+            if indice >= len(xfs_generados):
+                continue
+            extensiones_generadas = xfs_generados[indice].find(ruta_extensiones)
+            if extensiones_generadas is not None:
+                xfs_generados[indice].remove(extensiones_generadas)
+            xfs_generados[indice].append(deepcopy(extensiones))
+
+        # OpenPyXL puede reasignar una celda checkbox a un estilo visualmente
+        # identico pero con otro indice (por ejemplo, E22 pasa de 12 a 51).
+        # Restauramos el control sobre los estilos que el XML generado usa
+        # realmente para sus valores booleanos.
+        hoja_generada = ET.fromstring(archivos["xl/worksheets/sheet1.xml"])
+        estilos_booleanos = {
+            int(celda.get("s", "0"))
+            for celda in hoja_generada.iter(f"{{{XMLNS_HOJA}}}c")
+            if celda.get("t") == "b"
+        }
+        if extension_checkbox is not None:
+            for indice in estilos_booleanos:
+                if indice >= len(xfs_generados):
+                    continue
+                extensiones = xfs_generados[indice].find(ruta_extensiones)
+                if extensiones is None:
+                    xfs_generados[indice].append(deepcopy(extension_checkbox))
+        archivos["xl/styles.xml"] = ET.tostring(
+            estilos_generados,
+            encoding="utf-8",
+            xml_declaration=True,
+        )
+
+        relaciones = ET.fromstring(archivos["xl/_rels/workbook.xml.rels"])
+        if not any(
+            relacion.get("Type") == TIPO_RELACION_CHECKBOX
+            for relacion in relaciones
+        ):
+            relacion_original = next(
+                relacion
+                for relacion in ET.fromstring(
+                    plantilla.read("xl/_rels/workbook.xml.rels")
+                )
+                if relacion.get("Type") == TIPO_RELACION_CHECKBOX
+            )
+            relacion_checkbox = deepcopy(relacion_original)
+            ids_usados = {relacion.get("Id") for relacion in relaciones}
+            if relacion_checkbox.get("Id") in ids_usados:
+                relacion_checkbox.set("Id", "rIdCheckboxControls")
+            relaciones.append(relacion_checkbox)
+        archivos["xl/_rels/workbook.xml.rels"] = ET.tostring(
+            relaciones,
+            encoding="utf-8",
+            xml_declaration=True,
+        )
+
+        tipos = ET.fromstring(archivos["[Content_Types].xml"])
+        tipo_original = ET.fromstring(plantilla.read("[Content_Types].xml"))
+        partes_existentes = {item.get("PartName") for item in tipos}
+        for item in tipo_original:
+            if item.get("PartName", "").startswith("/xl/featurePropertyBag/"):
+                if item.get("PartName") not in partes_existentes:
+                    tipos.append(deepcopy(item))
+        archivos["[Content_Types].xml"] = ET.tostring(
+            tipos,
+            encoding="utf-8",
+            xml_declaration=True,
+        )
+
+        with ZipFile(salida, "w", ZIP_DEFLATED) as destino:
+            for item in generado.infolist():
+                destino.writestr(item, archivos[item.filename])
+            for nombre, datos in extras.items():
+                if nombre not in archivos:
+                    destino.writestr(plantilla.getinfo(nombre), datos)
+    salida.seek(0)
+    return salida.getvalue()
+
+
+def _sanear_texto_enriquecido_xlsx(contenido, plantilla_path):
     entrada = BytesIO(contenido)
     salida = BytesIO()
     with ZipFile(entrada, "r") as origen, ZipFile(salida, "w", ZIP_DEFLATED) as destino:
@@ -302,12 +400,12 @@ def _sanear_texto_enriquecido_xlsx(contenido):
                 datos = datos.replace(b"<t> </t>", b'<t xml:space="preserve"> </t>')
             destino.writestr(item, datos)
     salida.seek(0)
-    return salida.getvalue()
+    return _restaurar_controles_checkbox(salida.getvalue(), plantilla_path)
 
 
-def _colocar_logo(ws):
+def _colocar_logo(ws, empresa):
     ws["B1"] = None
-    logo_path = _logo_acta_path()
+    logo_path = _logo_acta_path(empresa)
     if not logo_path:
         return
 
@@ -342,7 +440,8 @@ def _llenar_firmas_entrega(ws, asignacion):
 
 
 def construir_hoja_acta_entrega(asignacion):
-    workbook = load_workbook(_plantilla_acta_entrega_path(), rich_text=True)
+    plantilla_path = _plantilla_acta_entrega_path(asignacion)
+    workbook = load_workbook(plantilla_path, rich_text=True)
     ws = workbook.active
 
     detalles = list(
@@ -351,15 +450,21 @@ def construir_hoja_acta_entrega(asignacion):
             "activo__estado_activo",
         ).order_by("orden", "id")
     )
-    _preparar_filas_activos(ws, len(detalles))
+    _fila_encabezado, fila_inicio, filas_plantilla = _localizar_tabla_activos(ws)
+    _preparar_filas_activos(
+        ws,
+        len(detalles),
+        fila_inicio=fila_inicio,
+        filas_plantilla=filas_plantilla,
+    )
 
     ws["E6"] = timezone.localdate()
     ws["E10"] = _texto(asignacion.nombre_colaborador_completo, default="")
     ws["E11"] = _texto(asignacion.colaborador.cedula, default="")
     ws["I10"] = _cargo_con_area(asignacion.colaborador, default="")
-    _colocar_logo(ws)
+    _colocar_logo(ws, asignacion.colaborador.empresa)
 
-    for indice, detalle in enumerate(detalles, start=FILA_INICIO_ACTIVOS):
+    for indice, detalle in enumerate(detalles, start=fila_inicio):
         ws.cell(indice, 2).value = _texto(detalle.articulo_acta, default="")
         ws.cell(indice, 4).value = _texto(detalle.activo.marca, default="")
         ws.cell(indice, 6).value = _valor_excel(detalle.activo.valor)
@@ -374,112 +479,130 @@ def construir_hoja_acta_entrega(asignacion):
     salida = BytesIO()
     workbook.save(salida)
     salida.seek(0)
-    return _sanear_texto_enriquecido_xlsx(salida.getvalue())
+    return _sanear_texto_enriquecido_xlsx(salida.getvalue(), plantilla_path)
 
 
-def construir_documento_acta(asignacion, tipo=TIPO_ENTREGA, devolucion=None):
-    config = _configuracion_acta(tipo)
-    document = Document()
+def _nombre_usuario(usuario):
+    return _texto(usuario.get_full_name() or usuario.get_username(), default="")
 
-    style = document.styles["Normal"]
-    style.font.name = "Calibri"
-    style.font.size = Pt(10)
 
-    titulo = document.add_paragraph()
-    titulo.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run = titulo.add_run(config["titulo"])
-    run.bold = True
-    run.font.size = Pt(14)
+def _cargo_usuario(usuario):
+    perfil = getattr(usuario, "perfil", None)
+    return _texto(getattr(perfil, "cargo_visible", ""), default="")
 
-    subtitulo = document.add_paragraph()
-    subtitulo.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    if devolucion:
-        subtitulo.add_run(f"Codigo de devolucion: {_texto(devolucion.codigo_devolucion)}").bold = True
-        referencia = document.add_paragraph()
-        referencia.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        referencia.add_run(f"Asignacion original: {_texto(asignacion.codigo_asignacion)}")
-    else:
-        subtitulo.add_run(f"Codigo de asignacion: {_texto(asignacion.codigo_asignacion)}").bold = True
 
-    document.add_paragraph()
+def _caracteristicas_recepcion(detalle):
+    partes = []
+    if detalle.activo.codigo:
+        partes.append(f"Codigo: {detalle.activo.codigo}")
+    caracteristicas = detalle.caracteristicas_acta
+    if caracteristicas and caracteristicas != "-":
+        partes.append(caracteristicas)
+    return " | ".join(partes)
 
-    fecha_acta = _fecha_acta(asignacion, tipo, devolucion=devolucion)
-    datos = [
-        ("Fecha de suscripcion", fecha_acta.strftime("%d/%m/%Y")),
-        ("Colaborador", asignacion.nombre_colaborador_completo),
-        ("Cedula", _texto(asignacion.colaborador.cedula)),
-        ("Cargo", _cargo_con_area(asignacion.colaborador)),
-        ("Area", _texto(asignacion.colaborador.area)),
-        ("Empresa", _texto(asignacion.colaborador.empresa)),
-        ("Ubicacion", _texto(asignacion.colaborador.ubicacion)),
+
+def _observaciones_recepcion(devolucion_detalle):
+    observaciones = []
+    for valor in (
+        devolucion_detalle.observaciones,
+        devolucion_detalle.devolucion.observaciones,
+    ):
+        texto = _texto(valor, default="")
+        if texto and texto not in observaciones:
+            observaciones.append(texto)
+    return " | ".join(observaciones)
+
+
+def construir_filas_recepcion(devolucion):
+    detalles = devolucion.detalles.select_related(
+        "detalle_asignacion__activo__tipo_activo",
+        "detalle_asignacion__activo__estado_activo",
+        "devolucion",
+    ).order_by("detalle_asignacion__orden", "id")
+
+    return [
+        {
+            "articulo": _texto(item.detalle_asignacion.articulo_acta, default=""),
+            "marca": _texto(item.detalle_asignacion.activo.marca, default=""),
+            "valor": _valor_excel(item.detalle_asignacion.activo.valor),
+            "caracteristicas": _caracteristicas_recepcion(item.detalle_asignacion),
+            "observaciones": _observaciones_recepcion(item),
+        }
+        for item in detalles
     ]
 
-    tabla_datos = document.add_table(rows=0, cols=2)
-    tabla_datos.style = "Table Grid"
-    for etiqueta, valor in datos:
-        row = tabla_datos.add_row().cells
-        row[0].text = etiqueta
-        row[1].text = _texto(valor)
 
-    document.add_paragraph()
-    document.add_paragraph(config["intro"])
+def _llenar_firmas_recepcion(ws, devolucion):
+    fila_recibe = _buscar_fila_por_texto(ws, "RECIBE CONFORME")
+    if fila_recibe:
+        ws.cell(fila_recibe + 1, 4).value = _nombre_usuario(devolucion.usuario_recepcion)
+        ws.cell(fila_recibe + 2, 4).value = _cargo_usuario(devolucion.usuario_recepcion)
 
-    document.add_paragraph()
+    fila_entrega = _buscar_fila_por_texto(ws, "ENTREGA CONFORME")
+    if fila_entrega:
+        ws.cell(fila_entrega + 1, 4).value = _texto(
+            devolucion.asignacion.nombre_colaborador_completo,
+            default="",
+        )
+        ws.cell(fila_entrega + 2, 4).value = _cargo_con_area(
+            devolucion.asignacion.colaborador,
+            default="",
+        )
 
-    tabla = document.add_table(rows=1, cols=6)
-    tabla.style = "Table Grid"
-    encabezados = ["Articulo", "Marca", "Valor de Compra", "Estado", "Caracteristicas", "Observaciones"]
-    for idx, texto in enumerate(encabezados):
-        tabla.rows[0].cells[idx].text = texto
 
-    if devolucion:
-        detalles = devolucion.detalles.select_related(
-            "detalle_asignacion__activo__tipo_activo",
-            "detalle_asignacion__activo__estado_activo",
-            "estado_activo_devolucion",
-            "devolucion",
-        ).order_by("detalle_asignacion__orden", "id")
-    else:
-        detalles = asignacion.detalles.select_related(
-            "activo__tipo_activo",
-            "activo__estado_activo",
-            "estado_activo_devolucion",
-        ).order_by("orden", "id")
+def generar_acta_recepcion(devolucion):
+    asignacion = devolucion.asignacion
+    plantilla_path = obtener_plantilla_acta(
+        TIPO_RECEPCION,
+        asignacion.colaborador.empresa,
+    )
+    workbook = load_workbook(plantilla_path, rich_text=True)
+    ws = workbook.active
+    filas = construir_filas_recepcion(devolucion)
+    _fila_encabezado, fila_inicio, filas_plantilla = _localizar_tabla_activos(ws)
+    _preparar_filas_activos(
+        ws,
+        len(filas),
+        fila_inicio=fila_inicio,
+        filas_plantilla=filas_plantilla,
+    )
 
-    for item in detalles:
-        detalle = item.detalle_asignacion if devolucion else item
-        row = tabla.add_row().cells
-        row[0].text = _texto(detalle.articulo_acta)
-        row[1].text = _texto(detalle.activo.marca)
-        row[2].text = _moneda(detalle.activo.valor)
-        estado = item.estado_activo_devolucion.nombre if devolucion else _estado_detalle(detalle, tipo)
-        row[3].text = _texto(estado)
-        row[4].text = detalle.caracteristicas_acta
-        row[5].text = _observaciones_detalle(detalle, tipo, devolucion_detalle=item if devolucion else None)
+    ws["E6"] = devolucion.fecha_devolucion
+    ws["E10"] = _texto(asignacion.nombre_colaborador_completo, default="")
+    ws["E11"] = _texto(asignacion.colaborador.cedula, default="")
+    ws["I10"] = _cargo_con_area(asignacion.colaborador, default="")
+    _colocar_logo(ws, asignacion.colaborador.empresa)
 
-    document.add_paragraph()
-    document.add_paragraph(config["declaracion"])
+    for indice, fila in enumerate(filas, start=fila_inicio):
+        ws.cell(indice, 2).value = fila["articulo"]
+        ws.cell(indice, 4).value = fila["marca"]
+        ws.cell(indice, 6).value = fila["valor"]
+        ws.cell(indice, 6).number_format = "$#,##0.00"
+        # El estado se completa manualmente una vez impresa el acta.
+        ws.cell(indice, 7).value = None
+        ws.cell(indice, 8).value = fila["caracteristicas"]
+        ws.cell(indice, 9).value = fila["observaciones"]
+        _ajustar_alto_fila_activo(ws, indice)
 
-    document.add_paragraph()
-    firmas = document.add_table(rows=2, cols=2)
-    firmas.style = "Table Grid"
-    firmas.cell(0, 0).text = config["firma_izquierda"]
-    firmas.cell(0, 1).text = config["firma_derecha"]
-    firma_izquierda, firma_derecha = _firmas(asignacion, tipo, devolucion=devolucion)
-    firmas.cell(1, 0).text = firma_izquierda
-    firmas.cell(1, 1).text = firma_derecha
+    _llenar_firmas_recepcion(ws, devolucion)
 
     salida = BytesIO()
-    document.save(salida)
+    workbook.save(salida)
     salida.seek(0)
-    return salida.getvalue()
+    return _sanear_texto_enriquecido_xlsx(salida.getvalue(), plantilla_path)
+
+
+def generar_acta_asignacion(asignacion):
+    return construir_hoja_acta_entrega(asignacion)
 
 
 def generar_o_actualizar_acta(asignacion, usuario, tipo=TIPO_ENTREGA, devolucion=None):
     if tipo == TIPO_ENTREGA and devolucion is None:
-        contenido = construir_hoja_acta_entrega(asignacion)
+        contenido = generar_acta_asignacion(asignacion)
+    elif tipo == TIPO_RECEPCION and devolucion is not None:
+        contenido = generar_acta_recepcion(devolucion)
     else:
-        contenido = construir_documento_acta(asignacion, tipo=tipo, devolucion=devolucion)
+        raise ValueError("La recepcion requiere una devolucion y la entrega no debe asociarla.")
     nombre_archivo = _nombre_archivo(asignacion, tipo, devolucion=devolucion)
 
     filtros = {"asignacion": asignacion, "tipo": tipo, "devolucion": devolucion}
