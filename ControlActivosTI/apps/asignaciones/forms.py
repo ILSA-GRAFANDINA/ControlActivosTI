@@ -57,6 +57,7 @@ class ActivoSelectMultiple(forms.SelectMultiple):
                 {
                     "data-search": self._build_search_value(activo),
                     "data-codigo": activo.codigo,
+                    "data-codigo-sap": activo.codigo_sap or "",
                     "data-tipo": activo.tipo_activo.nombre,
                     "data-marca-modelo": f"{activo.marca} {activo.modelo}".strip(),
                     "data-serie": activo.serie or "S/N",
@@ -69,6 +70,7 @@ class ActivoSelectMultiple(forms.SelectMultiple):
     def _build_search_value(self, activo):
         valores = [
             activo.codigo,
+            activo.codigo_sap,
             activo.tipo_activo.nombre,
             activo.marca,
             activo.modelo,
@@ -118,6 +120,60 @@ class ActivoMultipleChoiceField(forms.ModelMultipleChoiceField):
         return " | ".join(partes)
 
 
+class ColaboradorSelect(forms.Select):
+    """Expone metadatos para el buscador accesible de colaboradores."""
+
+    def create_option(
+        self,
+        name,
+        value,
+        label,
+        selected,
+        index,
+        subindex=None,
+        attrs=None,
+    ):
+        option = super().create_option(
+            name,
+            value,
+            label,
+            selected,
+            index,
+            subindex=subindex,
+            attrs=attrs,
+        )
+        colaborador = getattr(value, "instance", None)
+        if colaborador:
+            empresa = colaborador.empresa.nombre if colaborador.empresa else "Sin empresa"
+            ubicacion = colaborador.ubicacion.nombre if colaborador.ubicacion else "Sin ubicación"
+            ceco = str(colaborador.centro_costo) if colaborador.centro_costo else "Sin CECO"
+            searchable = [
+                colaborador.nombres,
+                colaborador.apellidos,
+                colaborador.cedula,
+                colaborador.correo_corporativo,
+                empresa,
+                colaborador.area.nombre,
+                colaborador.cargo.nombre,
+                ubicacion,
+                ceco,
+            ]
+            option["attrs"].update(
+                {
+                    "data-search": " ".join(str(value) for value in searchable if value),
+                    "data-nombre": f"{colaborador.apellidos}, {colaborador.nombres}",
+                    "data-cedula": colaborador.cedula,
+                    "data-correo": colaborador.correo_corporativo,
+                    "data-empresa": empresa,
+                    "data-area": colaborador.area.nombre,
+                    "data-cargo": colaborador.cargo.nombre,
+                    "data-ubicacion": ubicacion,
+                    "data-ceco": ceco,
+                }
+            )
+        return option
+
+
 class AsignacionCreateForm(forms.ModelForm):
     activos = ActivoMultipleChoiceField(
         queryset=Activo.objects.none(),
@@ -139,6 +195,7 @@ class AsignacionCreateForm(forms.ModelForm):
             "activos",
         ]
         widgets = {
+            "colaborador": ColaboradorSelect(attrs={"data-role": "colaborador-select"}),
             "fecha_asignacion": forms.DateInput(attrs={"type": "date"}),
             "observaciones_entrega": forms.Textarea(attrs={"rows": 3}),
         }
@@ -146,7 +203,14 @@ class AsignacionCreateForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["colaborador"].queryset = (
-            Colaborador.objects.select_related("area", "cargo", "centro_costo")
+            Colaborador.objects.select_related(
+                "area",
+                "cargo",
+                "centro_costo",
+                "centro_costo__empresa",
+                "empresa",
+                "ubicacion",
+            )
             .filter(estado=Colaborador.EstadoColaborador.ACTIVO)
             .order_by("apellidos", "nombres")
         )

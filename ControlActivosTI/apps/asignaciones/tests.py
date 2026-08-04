@@ -131,7 +131,21 @@ class AsignacionCreateFormTests(TestCase):
         self.assertIn("Serie: ABC123", rendered)
         self.assertIn("CPU: Intel Core i7", rendered)
         self.assertIn('data-search="', rendered)
+        self.assertIn('data-codigo-sap="SAP-ASG-001"', rendered)
         self.assertNotIn("SAP:", rendered)
+
+    def test_form_exposes_collaborator_search_metadata(self):
+        form = AsignacionCreateForm()
+        rendered = str(form["colaborador"])
+
+        self.assertIn('data-role="colaborador-select"', rendered)
+        self.assertIn('data-search="', rendered)
+        self.assertIn('data-nombre="Perez, Ana"', rendered)
+        self.assertIn('data-cedula="0123456789"', rendered)
+        self.assertIn('data-correo="ana.perez@example.com"', rendered)
+        self.assertIn('data-area="TI"', rendered)
+        self.assertIn('data-cargo="Analista"', rendered)
+        self.assertIn("TI001", rendered)
 
     def test_asignacion_detalle_rejects_repair_assets_even_if_state_allows_assignment(self):
         activo_reparacion = Activo.objects.create(
@@ -165,10 +179,14 @@ class AsignacionCreateFormTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Filtrar por estado", html=False)
+        self.assertContains(response, "Buscar por nombre, cédula, correo, empresa, área, cargo o CECO")
+        self.assertContains(response, "data-colaborador-picker", html=False)
+        self.assertContains(response, "activos-resultados-contador")
         self.assertContains(response, "Seleccionar visibles")
         self.assertContains(response, "Marca / Modelo")
         self.assertContains(response, 'type="checkbox"', html=False)
         self.assertContains(response, f'value="{self.activo_disponible.pk}"', html=False)
+        self.assertContains(response, self.activo_disponible.codigo_sap)
         self.assertContains(response, "Todos los estados")
         self.assertContains(response, 'selected', html=False)
         self.assertContains(response, f'value="{self.activo_reparacion.pk}"', html=False)

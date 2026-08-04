@@ -110,6 +110,10 @@ class Admin2ViewsTests(TestCase):
         response = self.client.get(reverse("dashboard-inicio"))
 
         self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            f'href="{reverse("dashboard-inicio")}" aria-label="Ir al dashboard"',
+        )
         self.assertContains(response, "Disponibilidad por tipo de activo")
 
         resumen_por_tipo = {
