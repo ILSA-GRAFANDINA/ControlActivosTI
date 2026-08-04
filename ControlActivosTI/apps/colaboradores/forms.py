@@ -36,7 +36,10 @@ class ColaboradorForm(forms.ModelForm):
             "observaciones",
         ]
         widgets = {
-            "fecha_ingreso": forms.DateInput(attrs={"type": "date"}),
+            "fecha_ingreso": forms.DateInput(
+                format="%Y-%m-%d",
+                attrs={"type": "date"},
+            ),
             "observaciones": forms.Textarea(attrs={"rows": 4}),
         }
 

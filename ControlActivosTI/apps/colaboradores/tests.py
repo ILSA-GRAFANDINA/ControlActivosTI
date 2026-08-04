@@ -449,6 +449,10 @@ class ColaboradorUpdateViewTests(TestCase):
         self.assertContains(response, "Editar colaborador")
         self.assertContains(response, "Guardar cambios")
         self.assertEqual(response.context["form"].instance, self.colaborador)
+        self.assertContains(
+            response,
+            'name="fecha_ingreso" value="2024-01-10"',
+        )
 
     def test_update_view_persists_changes_and_redirects_to_detail(self):
         self.client.force_login(self.user)
