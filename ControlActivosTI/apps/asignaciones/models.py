@@ -313,13 +313,17 @@ class AsignacionDetalle(models.Model):
             partes.append(f"Modelo: {self.activo.modelo}")
         if self.activo.serie:
             partes.append(f"Serie: {self.activo.serie}")
-        if self.activo.cpu:
+        from apps.activos.attribute_services import caracteristicas_para_acta
+        dinamicas = caracteristicas_para_acta(self.activo)
+        if dinamicas:
+            partes.extend(dinamicas)
+        elif self.activo.cpu:
             partes.append(f"CPU: {self.activo.cpu}")
-        if self.activo.ram:
+        if not dinamicas and self.activo.ram:
             partes.append(f"RAM: {self.activo.ram}")
-        if self.activo.disco:
+        if not dinamicas and self.activo.disco:
             partes.append(f"Disco: {self.activo.disco}")
-        if self.activo.sistema_operativo:
+        if not dinamicas and self.activo.sistema_operativo:
             partes.append(f"SO: {self.activo.sistema_operativo}")
         return " | ".join(partes) if partes else "-"
 

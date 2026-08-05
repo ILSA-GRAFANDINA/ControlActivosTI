@@ -1,8 +1,8 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db import transaction
-from django.db.models import Count, Prefetch, Q
-from django.http import HttpResponse, HttpResponseRedirect, QueryDict
+from django.db.models import Count, F, Prefetch, Q
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse, QueryDict
 from django.urls import reverse
 from django.utils import timezone
 from django.shortcuts import get_object_or_404, redirect, render
@@ -17,8 +17,11 @@ from apps.depreciacion.services import DepreciationService
 from apps.proveedores.models import Proveedor
 
 from .forms import ActivoAdminForm, FotoActivoCreateFormSet
-from .models import Activo, EventoActivo, FotoActivo
+from .models import Activo, EventoActivo, FotoActivo, ValorAtributoActivo
 from .services import build_activos_export_workbook
+from .attribute_services import configuraciones_para_tipo, guardar_valores_atributos
+from apps.auditoria.models import RegistroAuditoria
+from apps.auditoria.services import registrar_evento
 
 
 class ActivoFilterMixin:
@@ -87,7 +90,11 @@ class ActivoFilterMixin:
     def get_filtered_queryset(self):
         queryset = (
             Activo.objects.select_related("tipo_activo", "estado_activo", "empresa", "proveedor", "factura_compra")
-            .prefetch_related("fotos")
+            .prefetch_related(
+                "fotos",
+                "valores_atributos__atributo",
+                "valores_atributos__valor_opcion",
+            )
             .order_by("tipo_activo__nombre", "codigo")
         )
 
@@ -104,6 +111,19 @@ class ActivoFilterMixin:
                 | Q(proveedor__nombre_comercial__icontains=busqueda)
                 | Q(proveedor__identificacion__icontains=busqueda)
                 | Q(factura_compra__numero_factura__icontains=busqueda)
+                | Q(
+                    valores_atributos__vigente=True,
+                    valores_atributos__atributo__configuraciones_tipo__filtrable=True,
+                    valores_atributos__atributo__configuraciones_tipo__activo=True,
+                    valores_atributos__atributo__configuraciones_tipo__tipo_activo_id=F("tipo_activo_id"),
+                    valores_atributos__valor_texto__icontains=busqueda,
+                )
+                | Q(
+                    valores_atributos__vigente=True,
+                    valores_atributos__atributo__configuraciones_tipo__filtrable=True,
+                    valores_atributos__atributo__configuraciones_tipo__tipo_activo_id=F("tipo_activo_id"),
+                    valores_atributos__valor_opcion__nombre__icontains=busqueda,
+                )
             )
 
         estado_id = self.get_filter_value("estado")
@@ -150,7 +170,7 @@ class ActivoFilterMixin:
         if self.get_filter_value("orden") == "recientes":
             queryset = queryset.order_by("-created_at", "-id")
 
-        return queryset
+        return queryset.distinct()
 
     def get_filter_context(self):
         filtros = self.get_active_filters()
@@ -435,6 +455,7 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs["permitir_cambio_vigencia"] = False
+        kwargs["usuario"] = self.request.user
         activo_en_edicion = getattr(self, "activo_en_edicion", None)
         if activo_en_edicion and kwargs.get("instance") is None:
             kwargs["instance"] = activo_en_edicion
@@ -494,6 +515,7 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
 
     def forms_valid(self, form, formset):
         es_edicion = bool(self.activo_en_edicion)
+        tipo_anterior_id = self.activo_en_edicion.tipo_activo_id if self.activo_en_edicion else None
         campos_relevantes = set(form.changed_data) & {
             "marca",
             "modelo",
@@ -510,6 +532,24 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
         }
         with transaction.atomic():
             self.object = form.save()
+            guardar_valores_atributos(
+                self.object,
+                form.valores_atributos_limpios(),
+                usuario=self.request.user,
+            )
+            if tipo_anterior_id and tipo_anterior_id != self.object.tipo_activo_id:
+                registrar_evento(
+                    entidad="Activo",
+                    objeto_id=self.object.pk,
+                    accion=RegistroAuditoria.Accion.CAMBIAR_TIPO,
+                    resumen=f"Cambio controlado de tipo del activo {self.object.codigo}",
+                    usuario=self.request.user,
+                    detalle={
+                        "tipo_anterior_id": tipo_anterior_id,
+                        "tipo_nuevo_id": self.object.tipo_activo_id,
+                        "motivo": form.cleaned_data.get("motivo_cambio_tipo", ""),
+                    },
+                )
             fotos = formset.save(commit=False)
             for foto in fotos:
                 foto.activo = self.object
@@ -537,6 +577,42 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
         return reverse("activos:detalle", args=[self.object.pk])
 
 
+class TipoActivoAtributosJsonView(LoginRequiredMixin, View):
+    def get(self, request, tipo_id, *args, **kwargs):
+        tipo = get_object_or_404(TipoActivo, pk=tipo_id, activo=True)
+        atributos = []
+        for configuracion in configuraciones_para_tipo(tipo.pk):
+            atributo = configuracion.atributo
+            unidad = configuracion.unidad_efectiva
+            ayuda = configuracion.texto_ayuda or atributo.descripcion
+            if unidad and atributo.tipo_dato in {
+                AtributoActivo.TipoDato.ENTERO,
+                AtributoActivo.TipoDato.DECIMAL,
+            }:
+                instruccion = f"Ingresa solo el valor numerico; {unidad} se agrega automaticamente."
+                ayuda = f"{ayuda} {instruccion}".strip()
+            atributos.append(
+                {
+                    "clave": atributo.clave,
+                    "nombre": atributo.nombre,
+                    "tipo": atributo.tipo_dato,
+                    "obligatorio": configuracion.obligatorio,
+                    "ayuda": ayuda,
+                    "unidad": unidad,
+                    "valor_predeterminado": configuracion.valor_predeterminado,
+                    "minimo": str(configuracion.valor_minimo) if configuracion.valor_minimo is not None else None,
+                    "maximo": str(configuracion.valor_maximo) if configuracion.valor_maximo is not None else None,
+                    "longitud_maxima": configuracion.longitud_maxima,
+                    "opciones": [
+                        {"id": opcion.pk, "nombre": opcion.nombre}
+                        for opcion in atributo.opciones.all()
+                        if opcion.activo
+                    ],
+                }
+            )
+        return JsonResponse({"tipo": tipo.nombre, "atributos": atributos})
+
+
 class ActivoDetailView(LoginRequiredMixin, DetailView):
     model = Activo
     template_name = "activos/detalle.html"
@@ -546,6 +622,12 @@ class ActivoDetailView(LoginRequiredMixin, DetailView):
         return (
             Activo.objects.select_related("tipo_activo", "estado_activo", "empresa", "proveedor", "factura_compra", "factura_compra__proveedor", "factura_compra__empresa")
             .prefetch_related(
+                Prefetch(
+                    "valores_atributos",
+                    queryset=ValorAtributoActivo.objects.select_related(
+                        "atributo", "valor_opcion", "tipo_activo_origen"
+                    ).order_by("atributo__nombre"),
+                ),
                 Prefetch(
                     "fotos",
                     queryset=FotoActivo.objects.order_by("orden", "id"),
@@ -590,6 +672,11 @@ class ActivoDetailView(LoginRequiredMixin, DetailView):
         context["historial_asignaciones_completo"] = historial_completo
         context["total_historial_asignaciones"] = len(detalles_asignacion)
         context["historial_eventos"] = list(activo.eventos.all())
+        from .attribute_services import atributos_para_detalle
+        context["atributos_configurables"] = atributos_para_detalle(activo)
+        context["valores_atributos_historicos"] = [
+            valor for valor in activo.valores_atributos.all() if not valor.vigente
+        ]
         configuracion_depreciacion = DepreciationService.configuracion()
         context["calculo_depreciacion"] = DepreciationService.calcular(activo)
         context["mostrar_valor_residual"] = (

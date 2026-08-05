@@ -15,6 +15,7 @@ from django.views.generic import FormView, TemplateView
 from apps.activos.models import Activo, EventoActivo
 from apps.asignaciones.models import Asignacion, AsignacionDetalle
 from apps.catalogos.models import (
+    AtributoActivo,
     Area,
     Cargo,
     CentroCosto,
@@ -22,9 +23,11 @@ from apps.catalogos.models import (
     Empresa,
     EstadoActivo,
     TipoActivo,
+    TipoActivoAtributo,
     TipoEventoActivo,
     Ubicacion,
 )
+from apps.auditoria.models import RegistroAuditoria
 from apps.colaboradores.models import Colaborador
 from apps.notificaciones.models import Notificacion
 
@@ -596,6 +599,8 @@ class Admin2ModuleView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
             "module_actions": [
                 {"label": "Abrir catálogos", "url": reverse("admin2-catalogo-lista", args=["areas"]), "kind": "primary"},
                 {"label": "Catalogos en Django Admin", "url": reverse("admin:catalogos_area_changelist"), "kind": "secondary"},
+                {"label": "Atributos de activos", "url": reverse("admin:catalogos_atributoactivo_changelist"), "kind": "secondary"},
+                {"label": "Configurar por tipo", "url": reverse("admin:catalogos_tipoactivoatributo_changelist"), "kind": "secondary"},
             ],
             "table_title": "Catalogos disponibles",
             "table_columns": ["Catalogo", "Total", "Activos", "Accion"],
@@ -812,22 +817,35 @@ class Admin2ModuleView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
 
         ultimas_asignaciones = Asignacion.objects.select_related("colaborador").order_by("-updated_at", "-id")[:5]
 
+        registros_atributos = RegistroAuditoria.objects.select_related("usuario").order_by("-created_at", "-id")[:8]
         return {
             "stats": [
                 {"label": "Eventos de activo", "value": EventoActivo.objects.count()},
                 {"label": "Notificaciones", "value": Notificacion.objects.count()},
                 {"label": "Asignaciones activas", "value": Asignacion.objects.filter(estado_asignacion__in=ASIGNACIONES_ABIERTAS).count()},
                 {"label": "Pendientes", "value": Notificacion.objects.filter(read_at__isnull=True).count()},
+                {"label": "Cambios de atributos", "value": RegistroAuditoria.objects.count()},
             ],
             "module_actions": [
                 {"label": "Ver activos", "url": reverse("activos:lista"), "kind": "primary"},
                 {"label": "Administrar notificaciones", "url": get_admin_changelist_url(Notificacion), "kind": "secondary"},
+                {"label": "Auditoria de atributos", "url": reverse("admin:auditoria_registroauditoria_changelist"), "kind": "secondary"},
             ],
             "table_title": "Eventos recientes de activos",
             "table_columns": ["Activo", "Detalle", "Usuario", "Fecha"],
             "table_rows": rows,
             "table_empty_message": "No hay eventos registrados todavia.",
             "info_panels": [
+                {
+                    "title": "Ultimos cambios de atributos",
+                    "items": [
+                        {
+                            "label": registro.resumen,
+                            "value": registro.created_at.strftime("%d/%m/%Y %H:%M"),
+                        }
+                        for registro in registros_atributos
+                    ] or [{"label": "Sin cambios registrados", "value": "-"}],
+                },
                 {
                     "title": "Ultimas asignaciones tocadas",
                     "items": [
@@ -846,6 +864,13 @@ class Admin2CatalogsContextMixin(Admin2AccessMixin, Admin2BaseContextMixin):
     def dispatch(self, request, *args, **kwargs):
         self.catalog_slug = kwargs["catalog_slug"]
         return super().dispatch(request, *args, **kwargs)
+
+    def test_func(self):
+        if self.catalog_slug == "tipos-activo":
+            return self.request.user.is_superuser or self.request.user.has_perm(
+                "catalogos.manage_asset_attribute_schema"
+            )
+        return super().test_func()
 
     def get_catalog_config(self):
         try:

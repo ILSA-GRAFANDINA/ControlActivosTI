@@ -53,11 +53,31 @@ def _activo_to_row(activo):
 
 
 def build_activos_export_workbook(activos):
+    from apps.catalogos.models import TipoActivoAtributo
+    from .attribute_services import valores_visibles
+
+    tipo_ids = {activo.tipo_activo_id for activo in activos}
+    configuraciones_reporte = list(
+        TipoActivoAtributo.objects.filter(
+            tipo_activo_id__in=tipo_ids,
+            activo=True,
+            atributo__activo=True,
+            mostrar_reportes=True,
+        ).select_related("atributo").order_by("atributo__nombre", "tipo_activo__nombre")
+    )
+    atributos_reporte = []
+    vistos = set()
+    for configuracion in configuraciones_reporte:
+        if configuracion.atributo_id not in vistos:
+            vistos.add(configuracion.atributo_id)
+            atributos_reporte.append(configuracion.atributo)
+
     workbook = Workbook()
     worksheet = workbook.active
     worksheet.title = "Activos"
     worksheet.freeze_panes = "A2"
-    worksheet.append(EXPORT_HEADERS)
+    encabezados = [*EXPORT_HEADERS, *[atributo.nombre for atributo in atributos_reporte]]
+    worksheet.append(encabezados)
 
     header_fill = PatternFill(fill_type="solid", fgColor="0F766E")
     header_font = Font(color="FFFFFF", bold=True)
@@ -68,7 +88,14 @@ def build_activos_export_workbook(activos):
         cell.alignment = Alignment(horizontal="center", vertical="center")
 
     for activo in activos:
-        worksheet.append(_activo_to_row(activo))
+        valores = {
+            config.atributo_id: valor.valor_formateado
+            for config, valor in valores_visibles(activo, destino="reportes")
+        }
+        worksheet.append([
+            *_activo_to_row(activo),
+            *[valores.get(atributo.pk, "") for atributo in atributos_reporte],
+        ])
 
     for row in worksheet.iter_rows(min_row=2, max_row=worksheet.max_row):
         row[11].number_format = "dd/mm/yyyy"
@@ -76,7 +103,7 @@ def build_activos_export_workbook(activos):
         row[16].number_format = "dd/mm/yyyy hh:mm"
         row[17].number_format = "dd/mm/yyyy hh:mm"
 
-    for index, header in enumerate(EXPORT_HEADERS, start=1):
+    for index, header in enumerate(encabezados, start=1):
         max_length = len(header)
         for cell in worksheet.iter_cols(min_col=index, max_col=index, min_row=2, max_row=worksheet.max_row):
             for inner_cell in cell:

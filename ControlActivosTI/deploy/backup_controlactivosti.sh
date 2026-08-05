@@ -28,7 +28,12 @@ install -d -m 0750 "${DEST}"
 PGPASSWORD="${DB_PASSWORD:-}" pg_dump \
   --host="${DB_HOST}" --port="${DB_PORT}" --username="${DB_USER}" \
   --format=custom --file="${DEST}/database.dump" "${DB_NAME}"
+pg_restore --list "${DEST}/database.dump" > "${DEST}/database.list"
+if [[ ! -s "${DEST}/database.list" ]]; then
+  echo "ERROR: el respaldo PostgreSQL no contiene un listado legible." >&2
+  exit 1
+fi
 tar --create --gzip --file="${DEST}/media.tar.gz" -C /var/www/controlactivosti media private
 install -m 0600 "${ENV_FILE}" "${DEST}/controlactivosti.env"
-sha256sum "${DEST}/database.dump" "${DEST}/media.tar.gz" "${DEST}/controlactivosti.env" > "${DEST}/SHA256SUMS"
+sha256sum "${DEST}/database.dump" "${DEST}/database.list" "${DEST}/media.tar.gz" "${DEST}/controlactivosti.env" > "${DEST}/SHA256SUMS"
 echo "Respaldo creado en ${DEST}. Cópielo al NAS mediante el mecanismo autorizado."

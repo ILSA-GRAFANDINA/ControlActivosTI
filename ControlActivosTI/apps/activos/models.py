@@ -1,6 +1,7 @@
 import posixpath
 import re
 import unicodedata
+from decimal import Decimal
 from io import BytesIO
 from pathlib import Path
 
@@ -13,7 +14,15 @@ from django.db.models import Max
 from django.utils import timezone
 from PIL import Image, ImageOps
 
-from apps.catalogos.models import Empresa, EstadoActivo, TipoActivo, TipoEventoActivo
+from apps.catalogos.models import (
+    AtributoActivo,
+    Empresa,
+    EstadoActivo,
+    OpcionAtributoActivo,
+    TipoActivo,
+    TipoActivoAtributo,
+    TipoEventoActivo,
+)
 
 
 TIPOS_ACTIVO_CON_ESPECIFICACIONES = (
@@ -149,9 +158,36 @@ class Activo(models.Model):
         verbose_name = "Activo"
         verbose_name_plural = "Activos"
         ordering = ["codigo"]
+        permissions = [
+            ("change_asset_type_controlled", "Puede cambiar el tipo de un activo con historial"),
+        ]
 
     def __str__(self):
         return f"{self.codigo} - {self.marca} {self.modelo}"
+
+    @property
+    def caracteristicas_resumen(self):
+        if hasattr(self, "_caracteristicas_resumen_cache"):
+            return self._caracteristicas_resumen_cache
+        from .attribute_services import valores_visibles
+        dinamicas = [
+            f"{config.atributo.nombre}: {valor.valor_formateado}"
+            for config, valor in valores_visibles(self)
+        ]
+        if dinamicas:
+            self._caracteristicas_resumen_cache = " | ".join(dinamicas)
+            return self._caracteristicas_resumen_cache
+        partes = []
+        if self.cpu:
+            partes.append(f"CPU: {self.cpu}")
+        if self.ram:
+            partes.append(f"RAM: {self.ram}")
+        if self.disco:
+            partes.append(f"Disco: {self.disco}")
+        if self.sistema_operativo:
+            partes.append(f"SO: {self.sistema_operativo}")
+        self._caracteristicas_resumen_cache = " | ".join(partes)
+        return self._caracteristicas_resumen_cache
 
     def requiere_codigo_sap(self):
         nombre_tipo = self.tipo_activo.nombre if self.tipo_activo_id else ""
@@ -198,6 +234,11 @@ class Activo(models.Model):
         return any(clave in nombre_tipo for clave in TIPOS_ACTIVO_CON_ESPECIFICACIONES)
 
     def limpiar_especificaciones_no_aplicables(self):
+        # En edicion se preservan las columnas heredadas hasta completar la
+        # migracion progresiva. Los valores incompatibles se marcan como
+        # historicos en la nueva estructura, nunca se borran silenciosamente.
+        if self.pk:
+            return
         if self.requiere_especificaciones_tecnicas():
             return
 
@@ -273,6 +314,181 @@ class Activo(models.Model):
             self.codigo = self._generar_codigo()
         self.full_clean()
         super().save(*args, **kwargs)
+
+
+class ValorAtributoActivo(models.Model):
+    activo = models.ForeignKey(
+        Activo,
+        on_delete=models.CASCADE,
+        related_name="valores_atributos",
+    )
+    atributo = models.ForeignKey(
+        AtributoActivo,
+        on_delete=models.PROTECT,
+        related_name="valores",
+    )
+    tipo_activo_origen = models.ForeignKey(
+        TipoActivo,
+        on_delete=models.PROTECT,
+        related_name="valores_atributos_originados",
+    )
+    valor_texto = models.TextField(blank=True, default="")
+    valor_entero = models.BigIntegerField(null=True, blank=True)
+    valor_decimal = models.DecimalField(max_digits=20, decimal_places=6, null=True, blank=True)
+    valor_fecha = models.DateField(null=True, blank=True)
+    valor_booleano = models.BooleanField(null=True, blank=True)
+    valor_opcion = models.ForeignKey(
+        OpcionAtributoActivo,
+        on_delete=models.PROTECT,
+        related_name="valores",
+        null=True,
+        blank=True,
+    )
+    vigente = models.BooleanField(default=True, db_index=True)
+    valor_original_migracion = models.TextField(blank=True, default="")
+    requiere_revision = models.BooleanField(default=False, db_index=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="valores_atributos_creados",
+        null=True,
+        blank=True,
+        editable=False,
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="valores_atributos_modificados",
+        null=True,
+        blank=True,
+        editable=False,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    CAMPOS_VALOR = (
+        "valor_texto",
+        "valor_entero",
+        "valor_decimal",
+        "valor_fecha",
+        "valor_booleano",
+        "valor_opcion",
+    )
+
+    class Meta:
+        verbose_name = "Valor de atributo de activo"
+        verbose_name_plural = "Valores de atributos de activos"
+        ordering = ["activo", "atributo__nombre"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["activo", "atributo"],
+                name="unique_valor_atributo_por_activo",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["atributo", "valor_entero"]),
+            models.Index(fields=["atributo", "valor_decimal"]),
+            models.Index(fields=["atributo", "valor_fecha"]),
+            models.Index(fields=["atributo", "valor_booleano"]),
+        ]
+
+    def __str__(self):
+        return f"{self.activo.codigo} - {self.atributo.nombre}: {self.valor_formateado}"
+
+    @property
+    def valor(self):
+        tipo = self.atributo.tipo_dato
+        if tipo in {AtributoActivo.TipoDato.TEXTO_CORTO, AtributoActivo.TipoDato.TEXTO_LARGO}:
+            return self.valor_texto
+        if tipo == AtributoActivo.TipoDato.ENTERO:
+            return self.valor_entero
+        if tipo == AtributoActivo.TipoDato.DECIMAL:
+            return self.valor_decimal
+        if tipo == AtributoActivo.TipoDato.FECHA:
+            return self.valor_fecha
+        if tipo == AtributoActivo.TipoDato.BOOLEANO:
+            return self.valor_booleano
+        if tipo == AtributoActivo.TipoDato.LISTA:
+            return self.valor_opcion
+        return None
+
+    @property
+    def valor_formateado(self):
+        valor = self.valor
+        if self.requiere_revision and valor in (None, ""):
+            valor = self.valor_original_migracion
+        if isinstance(valor, bool):
+            texto = "Si" if valor else "No"
+        elif isinstance(valor, Decimal):
+            texto = format(valor.normalize(), "f")
+        elif hasattr(valor, "strftime"):
+            texto = valor.strftime("%d/%m/%Y")
+        else:
+            texto = str(valor) if valor not in (None, "") else ""
+        configuracion = getattr(self, "_configuracion_actual", None)
+        if configuracion is None:
+            configuracion = TipoActivoAtributo.objects.filter(
+                tipo_activo_id=self.activo.tipo_activo_id,
+                atributo_id=self.atributo_id,
+            ).select_related("atributo").first()
+        unidad = configuracion.unidad_efectiva if configuracion else self.atributo.unidad
+        if (
+            unidad
+            and self.valor_texto
+            and self.valor_original_migracion
+            and not re.fullmatch(r"\s*[\d.,]+\s*", self.valor_original_migracion)
+        ):
+            # Los textos heredados descriptivos pueden traer su propia unidad
+            # (p. ej. "1 TB" o "500GB SSD"); se preservan sin agregar otra.
+            unidad = ""
+        return f"{texto} {unidad}".strip() if texto else ""
+
+    def clean(self):
+        super().clean()
+        errores = {}
+        if self.activo_id and self.tipo_activo_origen_id != self.activo.tipo_activo_id and self.vigente:
+            errores["vigente"] = "Un valor de un tipo anterior debe conservarse como historico, no como vigente."
+        if self.vigente and self.activo_id and self.atributo_id:
+            configurado = TipoActivoAtributo.objects.filter(
+                tipo_activo_id=self.activo.tipo_activo_id,
+                atributo_id=self.atributo_id,
+            ).exists()
+            if not configurado:
+                errores["atributo"] = "El atributo no esta asociado al tipo actual del activo."
+
+        presentes = []
+        for campo in self.CAMPOS_VALOR:
+            valor = getattr(self, campo)
+            if campo == "valor_texto":
+                presente = bool(valor)
+            else:
+                presente = valor is not None
+            if presente:
+                presentes.append(campo)
+        if not self.requiere_revision and len(presentes) != 1:
+            errores["valor_texto"] = "Debe existir exactamente un valor tipado."
+        if len(presentes) > 1:
+            errores["valor_texto"] = "No se pueden guardar varios tipos de valor simultaneamente."
+
+        esperado = {
+            AtributoActivo.TipoDato.TEXTO_CORTO: "valor_texto",
+            AtributoActivo.TipoDato.TEXTO_LARGO: "valor_texto",
+            AtributoActivo.TipoDato.ENTERO: "valor_entero",
+            AtributoActivo.TipoDato.DECIMAL: "valor_decimal",
+            AtributoActivo.TipoDato.FECHA: "valor_fecha",
+            AtributoActivo.TipoDato.BOOLEANO: "valor_booleano",
+            AtributoActivo.TipoDato.LISTA: "valor_opcion",
+        }.get(self.atributo.tipo_dato if self.atributo_id else None)
+        if presentes and esperado not in presentes:
+            errores[esperado or "valor_texto"] = "El valor no corresponde al tipo de dato del atributo."
+        if self.valor_opcion_id and self.valor_opcion.atributo_id != self.atributo_id:
+            errores["valor_opcion"] = "La opcion seleccionada pertenece a otro atributo."
+        if errores:
+            raise ValidationError(errores)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
 
 class FotoActivo(models.Model):

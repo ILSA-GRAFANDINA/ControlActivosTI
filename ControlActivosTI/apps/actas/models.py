@@ -36,6 +36,9 @@ class ActaEntrega(models.Model):
     archivo = models.FileField(upload_to=ruta_acta_entrega, blank=True, null=True)
     nombre_archivo = models.CharField(max_length=255, blank=True)
     version_plantilla = models.CharField(max_length=20, default="2.0")
+    instantanea_datos = models.JSONField(default=dict, blank=True)
+    checksum_sha256 = models.CharField(max_length=64, blank=True, db_index=True)
+    emitida = models.BooleanField(default=False, db_index=True)
     usuario_generador = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,

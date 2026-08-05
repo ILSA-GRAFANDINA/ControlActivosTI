@@ -6,7 +6,10 @@ from django.db.models import Q
 
 from apps.proveedores.models import Proveedor
 from apps.facturas.models import FacturaCompra
-from apps.catalogos.models import EstadoActivo
+from apps.catalogos.models import EstadoActivo, TipoActivo
+from apps.catalogos.models import AtributoActivo, OpcionAtributoActivo
+
+from .attribute_services import configuraciones_para_tipo, validar_valor
 
 from .models import (
     Activo,
@@ -48,6 +51,20 @@ class CommaDecimalField(forms.DecimalField):
 
 class ActivoAdminForm(forms.ModelForm):
     campos_tecnicos = ("cpu", "ram", "disco", "sistema_operativo")
+    confirmar_cambio_tipo = forms.BooleanField(
+        required=False,
+        label="Confirmo el cambio de tipo y la conservacion de valores historicos",
+    )
+    motivo_cambio_tipo = forms.CharField(
+        required=False,
+        label="Motivo del cambio de tipo",
+        widget=forms.Textarea(
+            attrs={
+                "rows": 3,
+                "placeholder": "Ejemplo: El activo fue registrado como Monitor, pero corresponde al tipo Laptop.",
+            }
+        ),
+    )
 
     class Meta:
         model = Activo
@@ -55,7 +72,10 @@ class ActivoAdminForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         permitir_cambio_vigencia = kwargs.pop("permitir_cambio_vigencia", True)
+        self.usuario = kwargs.pop("usuario", None)
         super().__init__(*args, **kwargs)
+        self.configuraciones_dinamicas = []
+        self.nombres_campos_dinamicos = []
         for nombre_campo in self.campos_tecnicos:
             self.fields[nombre_campo].required = False
 
@@ -107,6 +127,9 @@ class ActivoAdminForm(forms.ModelForm):
                     "class": BASE_INPUT_CLASS,
                 }
             )
+            self.fields["fecha_compra"].input_formats = ["%Y-%m-%d"]
+            if self.instance and self.instance.pk and self.instance.fecha_compra:
+                self.initial["fecha_compra"] = self.instance.fecha_compra.strftime("%Y-%m-%d")
         if "valor" in self.fields:
             valor_field = self.fields["valor"]
             self.fields["valor"] = CommaDecimalField(
@@ -151,6 +174,13 @@ class ActivoAdminForm(forms.ModelForm):
                 "“Dado de baja” mantiene el activo visible, pero impide nuevas asignaciones."
             )
 
+        if "tipo_activo" in self.fields:
+            tipo_actual_id = self.instance.tipo_activo_id if self.instance and self.instance.pk else None
+            filtro_tipo = Q(activo=True)
+            if tipo_actual_id:
+                filtro_tipo |= Q(pk=tipo_actual_id)
+            self.fields["tipo_activo"].queryset = TipoActivo.objects.filter(filtro_tipo).order_by("nombre")
+
         if "proveedor" in self.fields:
             proveedor_actual_id = self.instance.proveedor_id if self.instance and self.instance.pk else None
             filtro = Q(activo=True)
@@ -179,6 +209,117 @@ class ActivoAdminForm(forms.ModelForm):
         if not permitir_cambio_vigencia:
             self.fields.pop("activo", None)
 
+        tipo_id = self.data.get("tipo_activo") if self.is_bound else None
+        if not str(tipo_id or "").isdigit() and self.instance and self.instance.tipo_activo_id:
+            tipo_id = self.instance.tipo_activo_id
+        if str(tipo_id or "").isdigit():
+            self._agregar_campos_dinamicos(int(tipo_id))
+
+    @staticmethod
+    def nombre_campo_atributo(clave):
+        return f"atributo__{clave}"
+
+    def clean_fecha_compra(self):
+        fecha = self.cleaned_data.get("fecha_compra")
+        if fecha is None and self.instance and self.instance.pk:
+            fecha_existente = (
+                Activo.objects.filter(pk=self.instance.pk)
+                .values_list("fecha_compra", flat=True)
+                .first()
+            )
+            if fecha_existente is not None:
+                return fecha_existente
+        return fecha
+
+    def _valor_inicial(self, atributo):
+        if not self.instance or not self.instance.pk:
+            return None
+        valor = self.instance.valores_atributos.filter(atributo=atributo, vigente=True).first()
+        if not valor:
+            return None
+        return valor.valor_opcion_id if atributo.tipo_dato == AtributoActivo.TipoDato.LISTA else valor.valor
+
+    def _agregar_campos_dinamicos(self, tipo_id):
+        self.configuraciones_dinamicas = list(configuraciones_para_tipo(tipo_id))
+        if not self.configuraciones_dinamicas:
+            return
+        for nombre in self.campos_tecnicos:
+            self.fields.pop(nombre, None)
+
+        for configuracion in self.configuraciones_dinamicas:
+            atributo = configuracion.atributo
+            nombre = self.nombre_campo_atributo(atributo.clave)
+            required = configuracion.obligatorio
+            initial = self._valor_inicial(atributo)
+            unidad = configuracion.unidad_efectiva
+            ayuda = configuracion.texto_ayuda or atributo.descripcion
+            if unidad and atributo.tipo_dato in {
+                AtributoActivo.TipoDato.ENTERO,
+                AtributoActivo.TipoDato.DECIMAL,
+            }:
+                instruccion = f"Ingresa solo el valor numerico; {unidad} se agrega automaticamente."
+                ayuda = f"{ayuda} {instruccion}".strip()
+            if initial in (None, "") and configuracion.valor_predeterminado is not None:
+                initial = configuracion.valor_predeterminado
+            comunes = {
+                "label": atributo.nombre,
+                "required": required,
+                "help_text": ayuda,
+                "initial": initial,
+            }
+            if atributo.tipo_dato == AtributoActivo.TipoDato.TEXTO_LARGO:
+                campo = forms.CharField(widget=forms.Textarea(attrs={"rows": 4}), **comunes)
+            elif atributo.tipo_dato == AtributoActivo.TipoDato.TEXTO_CORTO:
+                campo = forms.CharField(max_length=configuracion.longitud_maxima or 255, **comunes)
+            elif atributo.tipo_dato == AtributoActivo.TipoDato.ENTERO:
+                campo = forms.IntegerField(
+                    min_value=configuracion.valor_minimo,
+                    max_value=configuracion.valor_maximo,
+                    **comunes,
+                )
+            elif atributo.tipo_dato == AtributoActivo.TipoDato.DECIMAL:
+                campo = forms.DecimalField(
+                    max_digits=20,
+                    decimal_places=6,
+                    min_value=configuracion.valor_minimo,
+                    max_value=configuracion.valor_maximo,
+                    **comunes,
+                )
+            elif atributo.tipo_dato == AtributoActivo.TipoDato.FECHA:
+                campo = forms.DateField(
+                    widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+                    **comunes,
+                )
+            elif atributo.tipo_dato == AtributoActivo.TipoDato.BOOLEANO:
+                choices = [("", "---------"), ("si", "Si"), ("no", "No")]
+                campo = forms.TypedChoiceField(
+                    choices=choices,
+                    coerce=lambda value: {"si": True, "no": False}.get(value),
+                    empty_value=None,
+                    **comunes,
+                )
+            else:
+                opciones = OpcionAtributoActivo.objects.filter(atributo=atributo, activo=True)
+                if initial:
+                    opciones = OpcionAtributoActivo.objects.filter(atributo=atributo).filter(
+                        Q(activo=True) | Q(pk=initial)
+                    )
+                campo = forms.ModelChoiceField(queryset=opciones.order_by("orden", "nombre"), **comunes)
+
+            widget = campo.widget
+            if isinstance(widget, forms.Textarea):
+                widget.attrs["class"] = TEXTAREA_CLASS
+            else:
+                widget.attrs["class"] = BASE_INPUT_CLASS
+            if unidad:
+                widget.attrs["data-unidad"] = unidad
+            if atributo.tipo_dato == AtributoActivo.TipoDato.ENTERO:
+                widget.attrs.update({"inputmode": "numeric", "placeholder": f"Solo valor (sin {unidad})" if unidad else "Solo valor"})
+            elif atributo.tipo_dato == AtributoActivo.TipoDato.DECIMAL:
+                widget.attrs.update({"inputmode": "decimal", "placeholder": f"Solo valor (sin {unidad})" if unidad else "Solo valor"})
+            self.fields[nombre] = campo
+            self.nombres_campos_dinamicos.append(nombre)
+
     def clean(self):
         cleaned_data = super().clean()
         tipo_activo = cleaned_data.get("tipo_activo")
@@ -188,9 +329,42 @@ class ActivoAdminForm(forms.ModelForm):
             for clave in TIPOS_ACTIVO_CON_ESPECIFICACIONES
         )
 
-        if not requiere_especificaciones:
+        if not requiere_especificaciones and not self.instance.pk:
             for nombre_campo in self.campos_tecnicos:
-                cleaned_data[nombre_campo] = ""
+                if nombre_campo in self.fields:
+                    cleaned_data[nombre_campo] = ""
+
+        for configuracion in self.configuraciones_dinamicas:
+            nombre = self.nombre_campo_atributo(configuracion.atributo.clave)
+            try:
+                cleaned_data[nombre] = validar_valor(configuracion, cleaned_data.get(nombre))
+            except ValidationError as exc:
+                self.add_error(nombre, exc)
+
+        if self.instance and self.instance.pk and tipo_activo:
+            tipo_anterior_id = type(self.instance).objects.filter(pk=self.instance.pk).values_list(
+                "tipo_activo_id", flat=True
+            ).first()
+            if tipo_anterior_id and tipo_anterior_id != tipo_activo.pk:
+                if not cleaned_data.get("confirmar_cambio_tipo"):
+                    self.add_error("confirmar_cambio_tipo", "Debes confirmar expresamente el cambio de tipo.")
+                tiene_historial = (
+                    self.instance.eventos.exists()
+                    or self.instance.detalles_asignacion.exists()
+                    or self.instance.detalles_asignacion.filter(asignacion__actas__isnull=False).exists()
+                )
+                if tiene_historial:
+                    if not self.usuario or not self.usuario.has_perm("activos.change_asset_type_controlled"):
+                        self.add_error(
+                            "tipo_activo",
+                            "El activo tiene historial. Se requiere el permiso especial para cambiar su tipo.",
+                        )
+                    motivo = (cleaned_data.get("motivo_cambio_tipo") or "").strip()
+                    if len(motivo) < 10:
+                        self.add_error(
+                            "motivo_cambio_tipo",
+                            "Explica el motivo administrativo del cambio con al menos 10 caracteres.",
+                        )
 
         codigo_sap = (cleaned_data.get("codigo_sap") or "").strip()
         if codigo_sap:
@@ -219,6 +393,24 @@ class ActivoAdminForm(forms.ModelForm):
                 cleaned_data["empresa"] = factura.empresa
 
         return cleaned_data
+
+    def valores_atributos_limpios(self):
+        return {
+            configuracion.atributo.clave: self.cleaned_data.get(
+                self.nombre_campo_atributo(configuracion.atributo.clave)
+            )
+            for configuracion in self.configuraciones_dinamicas
+        }
+
+    @property
+    def campos_atributos(self):
+        return [
+            {
+                "configuracion": configuracion,
+                "campo": self[self.nombre_campo_atributo(configuracion.atributo.clave)],
+            }
+            for configuracion in self.configuraciones_dinamicas
+        ]
 
 
 class FotoActivoInlineForm(forms.ModelForm):

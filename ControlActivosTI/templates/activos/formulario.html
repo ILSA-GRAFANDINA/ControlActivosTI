@@ -116,16 +116,31 @@
         </div>
     </div>
 
-    <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm" data-dynamic-attributes data-endpoint-template="{% url 'activos:atributos-tipo-json' 0 %}">
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Especificaciones tecnicas</p>
-                <h3 class="mt-1 text-lg font-semibold text-slate-900">Campos para equipos tecnicos</h3>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Caracteristicas especificas</p>
+                <h3 class="mt-1 text-lg font-semibold text-slate-900">Atributos del tipo de activo</h3>
             </div>
-            <p class="text-sm text-slate-500">Se ocultan segun el tipo seleccionado.</p>
+            <p class="text-sm text-slate-500">Se cargan segun la configuracion administrativa.</p>
         </div>
 
-        <div class="mt-6 grid gap-5 md:grid-cols-2">
+        <div class="mt-6 grid gap-5 md:grid-cols-2" data-dynamic-attribute-fields>
+            {% if form.campos_atributos %}
+                {% for item in form.campos_atributos %}
+                    <div data-dynamic-field="{{ item.configuracion.atributo.clave }}">
+                        <label class="mb-2 block text-sm font-semibold text-slate-700">
+                            {{ item.campo.label }}{% if item.configuracion.obligatorio %} <span class="text-red-600">*</span>{% endif %}
+                        </label>
+                        <div class="flex items-center gap-2">
+                            <div class="min-w-0 flex-1">{{ item.campo }}</div>
+                            {% if item.configuracion.unidad_efectiva %}<span class="text-sm font-semibold text-slate-500">{{ item.configuracion.unidad_efectiva }}</span>{% endif %}
+                        </div>
+                        {% if item.campo.help_text %}<p class="mt-2 text-xs text-slate-500">{{ item.campo.help_text }}</p>{% endif %}
+                        {% if item.campo.errors %}<p class="mt-2 text-sm text-red-600">{{ item.campo.errors|join:", " }}</p>{% endif %}
+                    </div>
+                {% endfor %}
+            {% else %}
             <div data-activo-tech-field="cpu">
                 <label class="mb-2 block text-sm font-semibold text-slate-700">CPU</label>
                 {{ form.cpu }}
@@ -150,7 +165,11 @@
                 {% if form.sistema_operativo.help_text %}<p class="mt-2 text-xs text-slate-500">{{ form.sistema_operativo.help_text }}</p>{% endif %}
                 {% if form.sistema_operativo.errors %}<p class="mt-2 text-sm text-red-600">{{ form.sistema_operativo.errors|join:", " }}</p>{% endif %}
             </div>
+            {% endif %}
         </div>
+        <p class="mt-4 hidden rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500" data-no-dynamic-attributes>
+            Este tipo no tiene atributos configurables activos.
+        </p>
     </div>
 
     <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -242,6 +261,41 @@
         </div>
     </div>
 
+    {% if es_edicion %}
+    <div class="rounded-2xl border border-amber-300 bg-amber-50 p-6 shadow-sm">
+        <div class="flex items-start gap-3">
+            <span class="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 font-bold text-amber-800" aria-hidden="true">!</span>
+            <div>
+                <h3 class="text-lg font-semibold text-amber-950">Cambio del tipo de activo</h3>
+                <p class="mt-1 text-sm font-medium text-amber-900">Completa esta sección solamente si seleccionaste un tipo diferente al que tenía el activo.</p>
+            </div>
+        </div>
+
+        <div class="mt-4 rounded-xl border border-amber-200 bg-white/70 p-4 text-sm text-amber-950">
+            <p class="font-semibold">Al guardar un cambio de tipo, el sistema hará lo siguiente:</p>
+            <ul class="mt-2 list-disc space-y-1 pl-5">
+                <li>Conservará los datos generales, proveedor, factura, fotos y fecha de compra.</li>
+                <li>No borrará las características anteriores; las conservará como valores históricos.</li>
+                <li>Aplicará los atributos configurados para el nuevo tipo y validará los que sean obligatorios.</li>
+                <li>Mantendrá asignaciones, eventos y actas existentes. Si existen estos antecedentes, puede requerirse un permiso administrativo especial.</li>
+            </ul>
+        </div>
+
+        <label for="{{ form.confirmar_cambio_tipo.id_for_label }}" class="mt-5 flex cursor-pointer items-start gap-3 rounded-xl border border-amber-200 bg-white p-4">
+            {{ form.confirmar_cambio_tipo }}
+            <span class="text-sm font-semibold text-amber-950">{{ form.confirmar_cambio_tipo.label }}</span>
+        </label>
+        {% if form.confirmar_cambio_tipo.errors %}<p class="mt-2 text-sm text-red-600">{{ form.confirmar_cambio_tipo.errors|join:", " }}</p>{% endif %}
+
+        <div class="mt-4">
+            <label for="{{ form.motivo_cambio_tipo.id_for_label }}" class="mb-2 block text-sm font-semibold text-amber-950">Motivo del cambio de tipo</label>
+            {{ form.motivo_cambio_tipo }}
+            <p class="mt-2 text-xs text-amber-800">Describe por qué el tipo actual es incorrecto o por qué debe reclasificarse.</p>
+            {% if form.motivo_cambio_tipo.errors %}<p class="mt-2 text-sm text-red-600">{{ form.motivo_cambio_tipo.errors|join:", " }}</p>{% endif %}
+        </div>
+    </div>
+    {% endif %}
+
     <div class="flex flex-wrap items-center gap-3">
         <button type="submit" class="rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700">
             {{ texto_submit }}
@@ -262,6 +316,9 @@
         const maxForms = 5;
         const selectTipo = form.querySelector("#id_tipo_activo");
         const techFields = Array.from(form.querySelectorAll("[data-activo-tech-field]"));
+        const dynamicSection = form.querySelector("[data-dynamic-attributes]");
+        const dynamicFields = form.querySelector("[data-dynamic-attribute-fields]");
+        const noDynamicMessage = form.querySelector("[data-no-dynamic-attributes]");
         const photoFormsContainer = form.querySelector("[data-photo-forms]");
         const addPhotoButton = form.querySelector("[data-add-photo-form]");
         const photoTemplate = document.getElementById("photo-empty-form-template");
@@ -289,6 +346,33 @@
                     }
                 }
             });
+        };
+
+        const escapeHtml = (value) => String(value ?? "").replace(/[&<>'"]/g, (char) => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[char]));
+        const inputForAttribute = (attribute) => {
+            const name = `atributo__${attribute.clave}`;
+            const common = `name="${escapeHtml(name)}" id="id_${escapeHtml(name)}" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm" ${attribute.obligatorio ? "required" : ""}`;
+            if (attribute.tipo === "texto_largo") return `<textarea ${common} rows="4">${escapeHtml(attribute.valor_predeterminado || "")}</textarea>`;
+            if (attribute.tipo === "fecha") return `<input ${common} type="date" value="${escapeHtml(attribute.valor_predeterminado || "")}">`;
+            if (attribute.tipo === "entero" || attribute.tipo === "decimal") {
+                const step = attribute.tipo === "entero" ? "1" : "any";
+                const placeholder = attribute.unidad ? `Solo valor (sin ${attribute.unidad})` : "Solo valor";
+                const inputmode = attribute.tipo === "entero" ? "numeric" : "decimal";
+                return `<input ${common} type="number" inputmode="${inputmode}" placeholder="${escapeHtml(placeholder)}" step="${step}" ${attribute.minimo !== null ? `min="${escapeHtml(attribute.minimo)}"` : ""} ${attribute.maximo !== null ? `max="${escapeHtml(attribute.maximo)}"` : ""} value="${escapeHtml(attribute.valor_predeterminado || "")}">`;
+            }
+            if (attribute.tipo === "booleano") return `<select ${common}><option value="">---------</option><option value="si">Si</option><option value="no">No</option></select>`;
+            if (attribute.tipo === "lista") return `<select ${common}><option value="">---------</option>${attribute.opciones.map((option) => `<option value="${option.id}">${escapeHtml(option.nombre)}</option>`).join("")}</select>`;
+            return `<input ${common} type="text" ${attribute.longitud_maxima ? `maxlength="${attribute.longitud_maxima}"` : ""} value="${escapeHtml(attribute.valor_predeterminado || "")}">`;
+        };
+        const loadDynamicAttributes = async () => {
+            if (!dynamicSection || !dynamicFields || !selectTipo || !selectTipo.value) return;
+            const template = dynamicSection.dataset.endpointTemplate;
+            const response = await fetch(template.replace("/0/", `/${selectTipo.value}/`), {headers: {"X-Requested-With": "XMLHttpRequest"}});
+            if (!response.ok) return;
+            const payload = await response.json();
+            techFields.forEach((field) => field.remove());
+            dynamicFields.innerHTML = payload.atributos.map((attribute) => `<div><label class="mb-2 block text-sm font-semibold text-slate-700">${escapeHtml(attribute.nombre)}${attribute.obligatorio ? ' <span class="text-red-600">*</span>' : ""}</label><div class="flex items-center gap-2"><div class="min-w-0 flex-1">${inputForAttribute(attribute)}</div>${attribute.unidad ? `<span class="text-sm font-semibold text-slate-500">${escapeHtml(attribute.unidad)}</span>` : ""}</div>${attribute.ayuda ? `<p class="mt-2 text-xs text-slate-500">${escapeHtml(attribute.ayuda)}</p>` : ""}</div>`).join("");
+            if (noDynamicMessage) noDynamicMessage.classList.toggle("hidden", payload.atributos.length > 0);
         };
 
         const paintPhotoStatus = (card, state, message) => {
@@ -418,7 +502,10 @@
 
         toggleTechFields();
         if (selectTipo) {
-            selectTipo.addEventListener("change", toggleTechFields);
+            selectTipo.addEventListener("change", () => {
+                toggleTechFields();
+                loadDynamicAttributes();
+            });
         }
 
         refreshPhotoCards();

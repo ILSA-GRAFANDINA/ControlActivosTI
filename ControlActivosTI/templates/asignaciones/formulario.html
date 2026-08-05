@@ -104,12 +104,12 @@
                             {% for activo in activos_disponibles %}
                                 <tr
                                     class="activo-row transition hover:bg-cyan-50 {% if not activo.estado_activo.es_asignable_para_nueva_asignacion %}opacity-60{% endif %}"
-                                    data-search="{{ activo.codigo|lower }} {{ activo.codigo_sap|default:''|lower }} {{ activo.tipo_activo.nombre|lower }} {{ activo.marca|lower }} {{ activo.modelo|lower }} {{ activo.serie|lower }} {{ activo.cpu|lower }} {{ activo.ram|lower }} {{ activo.disco|lower }} {{ activo.sistema_operativo|lower }} {{ activo.estado_activo.nombre|lower }} {{ activo.observaciones|lower }}"
+                                    data-search="{{ activo.codigo|lower }} {{ activo.codigo_sap|default:''|lower }} {{ activo.tipo_activo.nombre|lower }} {{ activo.marca|lower }} {{ activo.modelo|lower }} {{ activo.serie|lower }} {{ activo.caracteristicas_resumen|lower }} {{ activo.estado_activo.nombre|lower }} {{ activo.observaciones|lower }}"
                                     data-codigo="{{ activo.codigo }}"
                                     data-tipo="{{ activo.tipo_activo.nombre }}"
                                     data-marca-modelo="{{ activo.marca }} {{ activo.modelo }}"
                                     data-serie="{{ activo.serie|default:'S/N' }}"
-                                    data-especificaciones="{% if activo.cpu %}CPU: {{ activo.cpu }}{% endif %}{% if activo.ram %}{% if activo.cpu %} | {% endif %}RAM: {{ activo.ram }}{% endif %}{% if activo.disco %}{% if activo.cpu or activo.ram %} | {% endif %}Disco: {{ activo.disco }}{% endif %}{% if activo.sistema_operativo %}{% if activo.cpu or activo.ram or activo.disco %} | {% endif %}SO: {{ activo.sistema_operativo }}{% endif %}"
+                                    data-especificaciones="{{ activo.caracteristicas_resumen }}"
                                     data-estado="{{ activo.estado_activo.nombre }}"
                                     data-puede-asignarse="{{ activo.estado_activo.es_asignable_para_nueva_asignacion|yesno:'true,false' }}"
                                 >
@@ -130,11 +130,7 @@
                                     <td class="px-4 py-3 text-slate-700">{{ activo.codigo_sap|default:"—" }}</td>
                                     <td class="px-4 py-3 text-slate-600">
                                         <div class="space-y-1">
-                                            {% if activo.cpu %}<div>CPU: {{ activo.cpu }}</div>{% endif %}
-                                            {% if activo.ram %}<div>RAM: {{ activo.ram }}</div>{% endif %}
-                                            {% if activo.disco %}<div>Disco: {{ activo.disco }}</div>{% endif %}
-                                            {% if activo.sistema_operativo %}<div>SO: {{ activo.sistema_operativo }}</div>{% endif %}
-                                            {% if not activo.cpu and not activo.ram and not activo.disco and not activo.sistema_operativo %}
+                                            {% if activo.caracteristicas_resumen %}<div>{{ activo.caracteristicas_resumen }}</div>{% else %}
                                                 <div>Sin especificaciones registradas</div>
                                             {% endif %}
                                         </div>

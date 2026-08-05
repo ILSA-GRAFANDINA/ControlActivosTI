@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 
 from .forms import ActivoAdminForm, EventoActivoAdminForm, FotoActivoInlineForm
-from .models import Activo, EventoActivo, FotoActivo
+from .models import Activo, EventoActivo, FotoActivo, ValorAtributoActivo
 
 
 class FotoActivoInline(admin.TabularInline):
@@ -22,6 +22,22 @@ class FotoActivoInline(admin.TabularInline):
         return "Sin imagen"
 
     vista_previa.short_description = "Vista previa"
+
+
+class ValorAtributoActivoInline(admin.TabularInline):
+    model = ValorAtributoActivo
+    extra = 0
+    can_delete = False
+    fields = ("atributo", "valor_mostrado", "tipo_activo_origen", "vigente", "requiere_revision")
+    readonly_fields = fields
+
+    def valor_mostrado(self, obj):
+        return obj.valor_formateado
+
+    valor_mostrado.short_description = "Valor"
+
+    def has_add_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(Activo)
@@ -71,7 +87,7 @@ class ActivoAdmin(admin.ModelAdmin):
         "fecha_compra",
     )
     list_select_related = ("tipo_activo", "empresa", "proveedor", "factura_compra", "estado_activo")
-    inlines = [FotoActivoInline]
+    inlines = [FotoActivoInline, ValorAtributoActivoInline]
 
     class Media:
         js = ("admin/activos/activo_admin.js",)

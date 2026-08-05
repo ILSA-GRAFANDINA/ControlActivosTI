@@ -1,7 +1,23 @@
-from django.test import TestCase
+from unittest.mock import Mock
 
-from apps.catalogos.admin import CentroCostoAdminForm
-from apps.catalogos.models import CentroCosto, DepartamentoEmpresa, Empresa
+from django.contrib import admin
+from django.contrib.auth import get_user_model
+from django.test import RequestFactory, TestCase
+from django.urls import reverse
+
+from apps.auditoria.models import RegistroAuditoria
+from apps.catalogos.admin import (
+    CentroCostoAdminForm,
+    TipoActivoAtributoAdmin,
+)
+from apps.catalogos.models import (
+    AtributoActivo,
+    CentroCosto,
+    DepartamentoEmpresa,
+    Empresa,
+    TipoActivo,
+    TipoActivoAtributo,
+)
 
 
 class DepartamentoEmpresaTests(TestCase):
@@ -97,3 +113,92 @@ class CentroCostoAdminFormTests(TestCase):
         )
 
         self.assertTrue(form.is_valid())
+
+
+class TipoActivoAtributoAdminTests(TestCase):
+    def test_nueva_asociacion_calcula_el_orden_siguiente(self):
+        usuario = get_user_model().objects.create_superuser(
+            username="admin-orden-automatico",
+            email="orden@example.com",
+            password="prueba",
+        )
+        tipo = TipoActivo.objects.create(nombre="Licencia con orden automatico")
+        primero = AtributoActivo.objects.create(
+            nombre="Fabricante orden automatico",
+            clave="fabricante_orden_automatico",
+            tipo_dato=AtributoActivo.TipoDato.TEXTO_CORTO,
+        )
+        segundo = AtributoActivo.objects.create(
+            nombre="Titular orden automatico",
+            clave="titular_orden_automatico",
+            tipo_dato=AtributoActivo.TipoDato.TEXTO_CORTO,
+        )
+        TipoActivoAtributo.objects.create(
+            tipo_activo=tipo,
+            atributo=primero,
+            orden=1,
+        )
+
+        request = RequestFactory().get("/admin/catalogos/tipoactivoatributo/add/")
+        request.user = usuario
+        model_admin = TipoActivoAtributoAdmin(TipoActivoAtributo, admin.site)
+        form_class = model_admin.get_form(request)
+        form = form_class(
+            data={
+                "tipo_activo": tipo.pk,
+                "atributo": segundo.pk,
+                "mostrar_detalle": "on",
+                "activo": "on",
+                "validaciones": "{}",
+            }
+        )
+
+        self.assertNotIn("orden", form.fields)
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.instance.orden, 2)
+
+        self.client.force_login(usuario)
+        respuesta = self.client.get(
+            reverse("admin:catalogos_tipoactivoatributo_add")
+        )
+        self.assertEqual(respuesta.status_code, 200)
+
+    def test_quitar_del_tipo_desactiva_y_conserva_la_asociacion(self):
+        usuario = get_user_model().objects.create_superuser(
+            username="admin-atributos",
+            email="admin@example.com",
+            password="prueba",
+        )
+        tipo = TipoActivo.objects.create(nombre="Monitor para desasociar")
+        atributo = AtributoActivo.objects.create(
+            nombre="Frecuencia para desasociar",
+            clave="frecuencia_desasociar",
+            tipo_dato=AtributoActivo.TipoDato.ENTERO,
+            unidad="Hz",
+        )
+        configuracion = TipoActivoAtributo.objects.create(
+            tipo_activo=tipo,
+            atributo=atributo,
+            orden=1,
+        )
+        request = RequestFactory().post("/admin/catalogos/tipoactivoatributo/")
+        request.user = usuario
+        model_admin = TipoActivoAtributoAdmin(TipoActivoAtributo, admin.site)
+        model_admin.message_user = Mock()
+
+        model_admin.quitar_del_tipo(
+            request,
+            TipoActivoAtributo.objects.filter(pk=configuracion.pk),
+        )
+
+        configuracion.refresh_from_db()
+        self.assertFalse(configuracion.activo)
+        self.assertTrue(AtributoActivo.objects.filter(pk=atributo.pk).exists())
+        self.assertTrue(TipoActivoAtributo.objects.filter(pk=configuracion.pk).exists())
+        self.assertTrue(
+            RegistroAuditoria.objects.filter(
+                entidad="TipoActivoAtributo",
+                objeto_id=str(configuracion.pk),
+                accion=RegistroAuditoria.Accion.DESACTIVAR,
+            ).exists()
+        )

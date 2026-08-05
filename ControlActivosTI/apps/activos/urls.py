@@ -6,6 +6,7 @@ from .views import (
     ActivoExportView,
     ActivoListView,
     ActivoVigenciaView,
+    TipoActivoAtributosJsonView,
 )
 
 app_name = "activos"
@@ -14,6 +15,11 @@ urlpatterns = [
     path("", ActivoListView.as_view(), name="lista"),
     path("exportar/", ActivoExportView.as_view(), name="exportar"),
     path("nuevo/", ActivoCreateView.as_view(), name="nuevo"),
+    path(
+        "atributos/tipo/<int:tipo_id>/",
+        TipoActivoAtributosJsonView.as_view(),
+        name="atributos-tipo-json",
+    ),
     path(
         "<int:pk>/<str:accion>/",
         ActivoVigenciaView.as_view(),

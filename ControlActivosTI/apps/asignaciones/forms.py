@@ -26,6 +26,7 @@ def get_activos_asignables_queryset():
     queryset = (
         Activo.objects.select_related("tipo_activo", "estado_activo")
         .filter(activo=True, estado_activo__activo=True)
+        .prefetch_related("valores_atributos__atributo", "valores_atributos__valor_opcion")
         .order_by("codigo")
     )
     return queryset
@@ -68,6 +69,8 @@ class ActivoSelectMultiple(forms.SelectMultiple):
         return option
 
     def _build_search_value(self, activo):
+        from apps.activos.attribute_services import valores_visibles
+        valores_dinamicos = [valor.valor_formateado for _config, valor in valores_visibles(activo)]
         valores = [
             activo.codigo,
             activo.codigo_sap,
@@ -81,10 +84,18 @@ class ActivoSelectMultiple(forms.SelectMultiple):
             activo.sistema_operativo,
             activo.estado_activo.nombre,
             activo.observaciones,
+            *valores_dinamicos,
         ]
         return " ".join(valor.strip() for valor in valores if valor).lower()
 
     def _build_specs_value(self, activo):
+        from apps.activos.attribute_services import valores_visibles
+        dinamicos = [
+            f"{config.atributo.nombre}: {valor.valor_formateado}"
+            for config, valor in valores_visibles(activo)
+        ]
+        if dinamicos:
+            return " | ".join(dinamicos)
         specs = []
         if activo.cpu:
             specs.append(f"CPU: {activo.cpu}")
@@ -106,12 +117,16 @@ class ActivoMultipleChoiceField(forms.ModelMultipleChoiceField):
             f"Serie: {obj.serie or 'S/N'}",
         ]
 
-        specs = []
-        if obj.cpu:
+        from apps.activos.attribute_services import valores_visibles
+        specs = [
+            f"{config.atributo.nombre}: {valor.valor_formateado}"
+            for config, valor in valores_visibles(obj)
+        ]
+        if not specs and obj.cpu:
             specs.append(f"CPU: {obj.cpu}")
-        if obj.ram:
+        if not specs and obj.ram:
             specs.append(f"RAM: {obj.ram}")
-        if obj.disco:
+        if not specs and obj.disco:
             specs.append(f"Disco: {obj.disco}")
         if specs:
             partes.append(" | ".join(specs))

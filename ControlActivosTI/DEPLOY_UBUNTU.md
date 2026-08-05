@@ -1,5 +1,7 @@
 # Despliegue de ControlActivosTI en Ubuntu Server 24.04 LTS
 
+Para desplegar la estructura de atributos configurables, revise primero `docs/ATRIBUTOS_CONFIGURABLES_DESPLIEGUE.md`.
+
 La arquitectura de producción es Apache2 → Gunicorn en `127.0.0.1:8000` → Django → PostgreSQL. El puerto 8000 y PostgreSQL no deben publicarse en la red. Las facturas permanecen en almacenamiento privado y solo Django las entrega después de validar permisos. Apache sirve los estáticos; `/media/` se reenvía a Django deliberadamente porque la aplicación protege fotografías por sesión y no debe publicar actas ni documentos mediante un Alias.
 
 ## 1. Paquetes, usuario y directorios

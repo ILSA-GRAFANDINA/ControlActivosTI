@@ -1030,6 +1030,11 @@ class ActivoCreateViewTests(TestCase):
         self.assertContains(response, "SAP-EDIT-001")
         self.assertContains(response, 'value="2025-05-07"')
         self.assertContains(response, "Foto 1")
+        self.assertContains(response, "Al guardar un cambio de tipo, el sistema hará lo siguiente:")
+        self.assertContains(response, "Motivo del cambio de tipo")
+        contenido = response.content.decode()
+        self.assertLess(contenido.index("Fotos del activo"), contenido.index("Cambio del tipo de activo"))
+        self.assertLess(contenido.index("Cambio del tipo de activo"), contenido.index("Guardar cambios"))
 
         data = self._datos_base()
         data.update(
@@ -1044,7 +1049,9 @@ class ActivoCreateViewTests(TestCase):
                 "ram": "16 GB",
                 "disco": "512 GB SSD",
                 "sistema_operativo": "Windows 11",
-                "fecha_compra": "2025-05-08",
+                # Simula un navegador que envia vacio el control date durante
+                # una edicion de otros datos. La fecha existente se conserva.
+                "fecha_compra": "",
                 "valor": "1250.00",
                 "estado_activo": self.estado.pk,
                 "activo": "on",
@@ -1074,6 +1081,7 @@ class ActivoCreateViewTests(TestCase):
         self.assertEqual(activo.ram, "16 GB")
         self.assertEqual(activo.disco, "512 GB SSD")
         self.assertEqual(activo.sistema_operativo, "Windows 11")
+        self.assertEqual(activo.fecha_compra, date(2025, 5, 7))
         self.assertEqual(activo.fotos.count(), 2)
         self.assertTrue(response.url.endswith(reverse("activos:detalle", args=[activo.pk])))
 

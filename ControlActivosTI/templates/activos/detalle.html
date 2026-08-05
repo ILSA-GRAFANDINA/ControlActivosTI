@@ -153,6 +153,8 @@
         </div>
     </div>
 
+    {% include "activos/_caracteristicas_especificas.html" %}
+
     <div class="grid gap-6 lg:grid-cols-3">
         <div class="rounded-2xl border border-slate-200 bg-white shadow-sm lg:col-span-2">
             <div class="border-b border-slate-200 px-6 py-4">
@@ -275,40 +277,12 @@
                 {% endif %}
             </div>
 
-            {% if activo.requiere_especificaciones_tecnicas %}
-                <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <h3 class="text-lg font-semibold text-slate-900">Especificaciones</h3>
-                    <div class="mt-5 space-y-3 text-sm">
-                        <div>
-                            <p class="text-slate-500">CPU</p>
-                            <p class="font-medium text-slate-900">{{ activo.cpu|default:"-" }}</p>
-                        </div>
-                        <div>
-                            <p class="text-slate-500">RAM</p>
-                            <p class="font-medium text-slate-900">{{ activo.ram|default:"-" }}</p>
-                        </div>
-                        <div>
-                            <p class="text-slate-500">Disco</p>
-                            <p class="font-medium text-slate-900">{{ activo.disco|default:"-" }}</p>
-                        </div>
-                        <div>
-                            <p class="text-slate-500">Sistema operativo</p>
-                            <p class="font-medium text-slate-900">{{ activo.sistema_operativo|default:"-" }}</p>
-                        </div>
-                        {% if activo.requiere_codigo_sap or activo.codigo_sap %}
-                            <div>
-                                <p class="text-slate-500">Codigo SAP</p>
-                                <p class="font-medium text-slate-900">{{ activo.codigo_sap|default:"-" }}</p>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-            {% endif %}
         </div>
     </div>
 
     <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm" aria-labelledby="depreciacion-titulo">
         <h3 id="depreciacion-titulo" class="mt-1 text-xl font-bold text-slate-900">Depreciación</h3>
+        <p class="mt-1 text-sm text-slate-500">Cálculo automático por línea recta</p>
 
         {% if calculo_depreciacion.configurado %}
             <div class="mt-5 flex flex-wrap items-center justify-between gap-3">

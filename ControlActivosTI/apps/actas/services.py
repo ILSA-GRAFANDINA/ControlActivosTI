@@ -2,6 +2,7 @@ from decimal import Decimal
 from io import BytesIO
 from copy import copy, deepcopy
 from math import ceil
+import hashlib
 import unicodedata
 import xml.etree.ElementTree as ET
 from zipfile import ZIP_DEFLATED, ZipFile
@@ -19,6 +20,7 @@ from openpyxl.styles import Alignment
 from openpyxl.utils import get_column_letter, range_boundaries
 
 from .models import ActaEntrega
+from apps.activos.attribute_services import instantanea_activo
 
 
 TIPO_ENTREGA = ActaEntrega.TipoActa.ENTREGA
@@ -448,6 +450,9 @@ def construir_hoja_acta_entrega(asignacion):
         asignacion.detalles.select_related(
             "activo__tipo_activo",
             "activo__estado_activo",
+        ).prefetch_related(
+            "activo__valores_atributos__atributo",
+            "activo__valores_atributos__valor_opcion",
         ).order_by("orden", "id")
     )
     _fila_encabezado, fila_inicio, filas_plantilla = _localizar_tabla_activos(ws)
@@ -518,6 +523,9 @@ def construir_filas_recepcion(devolucion):
         "detalle_asignacion__activo__tipo_activo",
         "detalle_asignacion__activo__estado_activo",
         "devolucion",
+    ).prefetch_related(
+        "detalle_asignacion__activo__valores_atributos__atributo",
+        "detalle_asignacion__activo__valores_atributos__valor_opcion",
     ).order_by("detalle_asignacion__orden", "id")
 
     return [
@@ -597,6 +605,11 @@ def generar_acta_asignacion(asignacion):
 
 
 def generar_o_actualizar_acta(asignacion, usuario, tipo=TIPO_ENTREGA, devolucion=None):
+    filtros = {"asignacion": asignacion, "tipo": tipo, "devolucion": devolucion}
+    existente = ActaEntrega.objects.filter(**filtros).first()
+    if existente and existente.emitida and existente.archivo:
+        return existente
+
     if tipo == TIPO_ENTREGA and devolucion is None:
         contenido = generar_acta_asignacion(asignacion)
     elif tipo == TIPO_RECEPCION and devolucion is not None:
@@ -605,13 +618,41 @@ def generar_o_actualizar_acta(asignacion, usuario, tipo=TIPO_ENTREGA, devolucion
         raise ValueError("La recepcion requiere una devolucion y la entrega no debe asociarla.")
     nombre_archivo = _nombre_archivo(asignacion, tipo, devolucion=devolucion)
 
-    filtros = {"asignacion": asignacion, "tipo": tipo, "devolucion": devolucion}
     acta, _ = ActaEntrega.objects.get_or_create(
         **filtros,
         defaults={"usuario_generador": usuario},
     )
     acta.usuario_generador = usuario
     acta.nombre_archivo = nombre_archivo
+    if tipo == TIPO_RECEPCION and devolucion is not None:
+        activos_instantanea = [
+            instantanea_activo(detalle.detalle_asignacion.activo)
+            for detalle in devolucion.detalles.select_related(
+                "detalle_asignacion__activo__tipo_activo"
+            ).prefetch_related(
+                "detalle_asignacion__activo__valores_atributos__atributo",
+                "detalle_asignacion__activo__valores_atributos__valor_opcion",
+            )
+        ]
+    else:
+        activos_instantanea = [
+            instantanea_activo(detalle.activo)
+            for detalle in asignacion.detalles.select_related(
+                "activo__tipo_activo"
+            ).prefetch_related(
+                "activo__valores_atributos__atributo",
+                "activo__valores_atributos__valor_opcion",
+            ).order_by("orden", "id")
+        ]
+    acta.instantanea_datos = {
+        "tipo": tipo,
+        "asignacion": asignacion.codigo_asignacion,
+        "devolucion": devolucion.codigo_devolucion if devolucion else None,
+        "colaborador": asignacion.nombre_colaborador_completo,
+        "activos": activos_instantanea,
+    }
+    acta.checksum_sha256 = hashlib.sha256(contenido).hexdigest()
+    acta.emitida = True
     acta.archivo.save(nombre_archivo, ContentFile(contenido), save=False)
     acta.save()
     return acta
