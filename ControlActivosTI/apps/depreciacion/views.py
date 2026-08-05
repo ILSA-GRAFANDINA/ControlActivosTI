@@ -4,7 +4,7 @@ from decimal import Decimal
 from dateutil.relativedelta import relativedelta
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.shortcuts import redirect
 from django.utils import timezone
 from django.views.generic import FormView, ListView
@@ -44,6 +44,7 @@ class DepreciacionReporteView(LoginRequiredMixin, ListView):
     template_name = "depreciacion/reporte.html"
     context_object_name = "activos"
     paginate_by = 30
+    TAB_PARAM = "tab_tipo"
 
     COLUMNAS_DISPONIBLES = [
         ("categoria", "Categoría"),
@@ -164,10 +165,54 @@ class DepreciacionReporteView(LoginRequiredMixin, ListView):
             )
         if self.request.GET.get("solo_vigentes", "1") == "1":
             qs = qs.filter(activo=True)
-        return self.filtrar_por_estado(
+        qs = self.filtrar_por_estado(
             qs,
             self.request.GET.get("estado", ""),
         )
+
+        self.resumen_tipos = list(
+            qs.values("tipo_activo_id", "tipo_activo__nombre")
+            .annotate(total=Count("id"))
+            .order_by("tipo_activo__nombre")
+        )
+        tipos_disponibles = {
+            str(item["tipo_activo_id"]) for item in self.resumen_tipos
+        }
+        tab_tipo = (self.request.GET.get(self.TAB_PARAM, "") or "").strip()
+        self.tab_tipo_activa = tab_tipo if tab_tipo in tipos_disponibles else ""
+        if self.tab_tipo_activa:
+            qs = qs.filter(tipo_activo_id=self.tab_tipo_activa)
+        return qs
+
+    def construir_tabs_tipo(self):
+        parametros_base = self.request.GET.copy()
+        parametros_base.pop("page", None)
+        parametros_base.pop(self.TAB_PARAM, None)
+
+        def url_tab(tipo_id=""):
+            parametros = parametros_base.copy()
+            if tipo_id:
+                parametros[self.TAB_PARAM] = str(tipo_id)
+            query_string = parametros.urlencode()
+            return f"{self.request.path}?{query_string}" if query_string else self.request.path
+
+        return [
+            {
+                "nombre": "Todos",
+                "total": sum(item["total"] for item in self.resumen_tipos),
+                "activa": not self.tab_tipo_activa,
+                "url": url_tab(),
+            },
+            *[
+                {
+                    "nombre": item["tipo_activo__nombre"],
+                    "total": item["total"],
+                    "activa": self.tab_tipo_activa == str(item["tipo_activo_id"]),
+                    "url": url_tab(item["tipo_activo_id"]),
+                }
+                for item in self.resumen_tipos
+            ],
+        ]
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -196,6 +241,8 @@ class DepreciacionReporteView(LoginRequiredMixin, ListView):
                 "busqueda": busqueda,
                 "estado_seleccionado": estado_filtro,
                 "solo_vigentes": solo_vigentes,
+                "tab_tipo_activa": self.tab_tipo_activa,
+                "tabs_tipo": self.construir_tabs_tipo(),
                 "columnas_disponibles": self.COLUMNAS_DISPONIBLES,
                 "columnas_seleccionadas": columnas_seleccionadas,
                 "total_columnas_tabla": len(columnas_seleccionadas) + 1,

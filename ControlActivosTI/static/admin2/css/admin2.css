@@ -890,6 +890,53 @@ body.admin2-body {
     align-items: end;
 }
 
+.admin2-filterform--wide {
+    grid-template-columns: minmax(220px, 1fr) 220px 180px auto;
+}
+
+.admin2-subpanel,
+.admin2-warning {
+    padding: 18px;
+    border: 1px solid var(--admin2-border);
+    border-radius: var(--admin2-radius-md);
+    background: var(--admin2-surface-soft);
+}
+
+.admin2-subpanel h3,
+.admin2-subpanel p,
+.admin2-warning p {
+    margin-top: 0;
+}
+
+.admin2-options-grid {
+    display: grid;
+    gap: 12px;
+}
+
+.admin2-option-row {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr 100px 90px;
+    gap: 12px;
+    align-items: end;
+    padding-top: 12px;
+    border-top: 1px solid var(--admin2-border);
+}
+
+.admin2-inline-form {
+    display: inline;
+    margin-left: 10px;
+}
+
+.admin2-link-button {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #be123c;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
 .admin2-filterform__actions {
     display: flex;
     gap: 10px;
@@ -1343,6 +1390,10 @@ body.admin2-body {
     .admin2-guide,
     .admin2-launch-grid,
     .admin2-support-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .admin2-option-row {
         grid-template-columns: 1fr;
     }
 

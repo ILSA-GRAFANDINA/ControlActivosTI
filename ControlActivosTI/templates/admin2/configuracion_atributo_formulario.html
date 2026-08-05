@@ -1,0 +1,10 @@
+{% extends "admin2/base.html" %}
+{% block admin2_content %}
+<section class="admin2-panel admin2-panel--hero"><div class="admin2-hero admin2-hero--module"><div><p class="admin2-hero__label">Configuración por tipo</p><h2>{% if object %}Editar vínculo{% else %}Vincular atributo{% endif %}</h2><p class="admin2-hero__copy">Al crear, el orden se asigna automáticamente al final. Luego puede ajustarlo desde esta edición.</p></div><div class="admin2-module-stats"><article class="admin2-module-stats__card"><span>Máximo activo</span><strong>{{ limite_atributos }}</strong></article>{% if object %}<article class="admin2-module-stats__card"><span>Orden actual</span><strong>{{ object.orden }}</strong></article>{% endif %}</div></div></section>
+<section class="admin2-panel"><div class="admin2-formwrap"><form method="post" class="admin2-form">{% csrf_token %}
+  {% if form.non_field_errors %}<div class="admin2-errorbox">{{ form.non_field_errors }}</div>{% endif %}
+  {% for field in form %}<div class="admin2-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{% for error in field.errors %}<p class="admin2-error">{{ error }}</p>{% endfor %}</div>{% endfor %}
+  {% if object and object.activo %}<div class="admin2-warning"><strong>Para quitarlo del tipo</strong><p>Desmarque “Activo” o use “Quitar del tipo” en el listado. La configuración y los valores ya registrados no se eliminan.</p></div>{% endif %}
+  <div class="admin2-actionrow"><button class="admin2-button is-primary" type="submit">Guardar configuración</button><a class="admin2-button is-secondary" href="{% url 'admin2-configuraciones-atributos-lista' %}">Cancelar</a></div>
+</form></div></section>
+{% endblock %}

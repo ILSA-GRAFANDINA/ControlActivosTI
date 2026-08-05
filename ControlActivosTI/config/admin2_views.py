@@ -1,15 +1,18 @@
 from django import forms
+from django.conf import settings
 from django.contrib import admin
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.models import Group
-from django.db.models import Count, Sum
+from django.db import transaction
+from django.db.models import Count, Max, Q, Sum
 from django.db.models.functions import TruncMonth
 from django.forms import modelform_factory
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
+from django.views import View
 from django.views.generic import FormView, TemplateView
 
 from apps.activos.models import Activo, EventoActivo
@@ -27,7 +30,13 @@ from apps.catalogos.models import (
     TipoEventoActivo,
     Ubicacion,
 )
+from apps.catalogos.forms import (
+    AtributoActivoAdmin2Form,
+    OpcionAtributoActivoAdmin2FormSet,
+    TipoActivoAtributoAdmin2Form,
+)
 from apps.auditoria.models import RegistroAuditoria
+from apps.auditoria.services import registrar_evento
 from apps.colaboradores.models import Colaborador
 from apps.notificaciones.models import Notificacion
 
@@ -599,8 +608,8 @@ class Admin2ModuleView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
             "module_actions": [
                 {"label": "Abrir catálogos", "url": reverse("admin2-catalogo-lista", args=["areas"]), "kind": "primary"},
                 {"label": "Catalogos en Django Admin", "url": reverse("admin:catalogos_area_changelist"), "kind": "secondary"},
-                {"label": "Atributos de activos", "url": reverse("admin:catalogos_atributoactivo_changelist"), "kind": "secondary"},
-                {"label": "Configurar por tipo", "url": reverse("admin:catalogos_tipoactivoatributo_changelist"), "kind": "secondary"},
+                {"label": "Atributos de activos", "url": reverse("admin2-atributos-lista"), "kind": "secondary"},
+                {"label": "Configurar por tipo", "url": reverse("admin2-configuraciones-atributos-lista"), "kind": "secondary"},
             ],
             "table_title": "Catalogos disponibles",
             "table_columns": ["Catalogo", "Total", "Activos", "Accion"],
@@ -927,6 +936,7 @@ class Admin2CatalogListView(Admin2CatalogsContextMixin, TemplateView):
         context["catalog_active_total"] = sum(1 for item in objects if getattr(item, "activo", False))
         context["create_url"] = reverse("admin2-catalogo-crear", args=[self.catalog_slug])
         context["admin_catalog_url"] = reverse(config["admin_changelist"])
+        context["is_asset_type_catalog"] = self.catalog_slug == "tipos-activo"
         return context
 
 
@@ -999,6 +1009,223 @@ class Admin2CatalogUpdateView(Admin2CatalogFormView):
             pk=kwargs["pk"],
         )
         return super().dispatch(request, *args, **kwargs)
+
+
+class Admin2AttributeSchemaAccessMixin(Admin2AccessMixin, Admin2BaseContextMixin):
+    """Acceso separado: crear activos no concede acceso al esquema dinamico."""
+
+    def test_func(self):
+        user = self.request.user
+        return user.is_superuser or user.has_perm("catalogos.manage_asset_attribute_schema")
+
+    def get_schema_context(self):
+        return {
+            "admin2_page_subtitle": "Atributos configurables por tipo de activo",
+            "attribute_count": AtributoActivo.objects.count(),
+            "configuration_count": TipoActivoAtributo.objects.filter(activo=True).count(),
+        }
+
+
+class Admin2AtributoListView(Admin2AttributeSchemaAccessMixin, TemplateView):
+    template_name = "admin2/atributos_lista.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        query = self.request.GET.get("q", "").strip()
+        tipo_dato = self.request.GET.get("tipo_dato", "").strip()
+        estado = self.request.GET.get("estado", "").strip()
+        queryset = AtributoActivo.objects.prefetch_related("configuraciones_tipo__tipo_activo")
+        if query:
+            queryset = queryset.filter(
+                Q(nombre__icontains=query) | Q(clave__icontains=query) | Q(descripcion__icontains=query)
+            )
+        if tipo_dato:
+            queryset = queryset.filter(tipo_dato=tipo_dato)
+        if estado == "activos":
+            queryset = queryset.filter(activo=True)
+        elif estado == "inactivos":
+            queryset = queryset.filter(activo=False)
+        context.update(self.get_schema_context())
+        context.update({
+            "admin2_page_title": "Atributos de activos",
+            "atributos": queryset.order_by("nombre", "clave"),
+            "query": query,
+            "tipo_dato": tipo_dato,
+            "estado": estado,
+            "tipos_dato": AtributoActivo.TipoDato.choices,
+        })
+        return context
+
+
+class Admin2AtributoFormView(Admin2AttributeSchemaAccessMixin, FormView):
+    template_name = "admin2/atributo_formulario.html"
+    form_class = AtributoActivoAdmin2Form
+    object = None
+
+    def dispatch(self, request, *args, **kwargs):
+        if kwargs.get("pk"):
+            self.object = get_object_or_404(AtributoActivo, pk=kwargs["pk"])
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["instance"] = self.object
+        return kwargs
+
+    def get_formset(self):
+        kwargs = {"instance": self.object, "prefix": "opciones"}
+        if self.request.method == "POST":
+            kwargs["data"] = self.request.POST
+        return OpcionAtributoActivoAdmin2FormSet(**kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(self.get_schema_context())
+        context.update({
+            "admin2_page_title": "Editar atributo" if self.object else "Nuevo atributo",
+            "formset": kwargs.get("formset") or self.get_formset(),
+            "object": self.object,
+        })
+        return context
+
+    def form_valid(self, form):
+        formset = self.get_formset()
+        if not formset.is_valid():
+            return self.render_to_response(self.get_context_data(form=form, formset=formset))
+        change = bool(self.object and self.object.pk)
+        anterior_activo = self.object.activo if change else None
+        with transaction.atomic():
+            self.object = form.save(commit=False)
+            if not self.object.created_by_id:
+                self.object.created_by = self.request.user
+            self.object.updated_by = self.request.user
+            self.object.save()
+            formset.instance = self.object
+            formset.save()
+            accion = RegistroAuditoria.Accion.MODIFICAR if change else RegistroAuditoria.Accion.CREAR
+            if change and anterior_activo != self.object.activo:
+                accion = RegistroAuditoria.Accion.ACTIVAR if self.object.activo else RegistroAuditoria.Accion.DESACTIVAR
+            registrar_evento(
+                entidad="AtributoActivo", objeto_id=self.object.pk, accion=accion,
+                resumen=f"{self.object.nombre} ({self.object.clave})", usuario=self.request.user,
+                detalle={"campos": form.changed_data, "opciones_actualizadas": formset.has_changed()},
+            )
+        messages.success(self.request, "Atributo guardado correctamente.")
+        return redirect("admin2-atributos-lista")
+
+
+class Admin2ConfiguracionAtributoListView(Admin2AttributeSchemaAccessMixin, TemplateView):
+    template_name = "admin2/configuraciones_atributos_lista.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        query = self.request.GET.get("q", "").strip()
+        tipo_id = self.request.GET.get("tipo", "").strip()
+        estado = self.request.GET.get("estado", "").strip()
+        queryset = TipoActivoAtributo.objects.select_related("tipo_activo", "atributo")
+        if query:
+            queryset = queryset.filter(
+                Q(tipo_activo__nombre__icontains=query)
+                | Q(atributo__nombre__icontains=query)
+                | Q(atributo__clave__icontains=query)
+            )
+        if tipo_id.isdigit():
+            queryset = queryset.filter(tipo_activo_id=tipo_id)
+        if estado == "activos":
+            queryset = queryset.filter(activo=True)
+        elif estado == "inactivos":
+            queryset = queryset.filter(activo=False)
+        context.update(self.get_schema_context())
+        context.update({
+            "admin2_page_title": "Atributos por tipo de activo",
+            "configuraciones": queryset.order_by("tipo_activo__nombre", "orden", "atributo__nombre"),
+            "tipos_activo": TipoActivo.objects.annotate(
+                atributos_activos=Count(
+                    "configuraciones_atributos",
+                    filter=Q(configuraciones_atributos__activo=True),
+                )
+            ).order_by("nombre"),
+            "query": query, "tipo_id": tipo_id, "estado": estado,
+            "limite_atributos": int(getattr(settings, "MAX_ATRIBUTOS_ACTIVOS_POR_TIPO", 10)),
+        })
+        return context
+
+
+class Admin2ConfiguracionAtributoFormView(Admin2AttributeSchemaAccessMixin, FormView):
+    template_name = "admin2/configuracion_atributo_formulario.html"
+    form_class = TipoActivoAtributoAdmin2Form
+    object = None
+
+    def dispatch(self, request, *args, **kwargs):
+        if kwargs.get("pk"):
+            self.object = get_object_or_404(TipoActivoAtributo, pk=kwargs["pk"])
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs.update({"instance": self.object, "creando": self.object is None})
+        if self.object is None and self.request.method == "GET" and self.request.GET.get("tipo", "").isdigit():
+            kwargs["initial"] = {"tipo_activo": self.request.GET["tipo"]}
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(self.get_schema_context())
+        limite = int(getattr(settings, "MAX_ATRIBUTOS_ACTIVOS_POR_TIPO", 10))
+        context.update({
+            "admin2_page_title": "Editar configuracion" if self.object else "Vincular atributo a un tipo",
+            "object": self.object,
+            "limite_atributos": limite,
+        })
+        return context
+
+    def form_valid(self, form):
+        change = bool(self.object and self.object.pk)
+        anterior_activo = self.object.activo if change else None
+        with transaction.atomic():
+            self.object = form.save(commit=False)
+            TipoActivo.objects.select_for_update().get(pk=self.object.tipo_activo_id)
+            if not change:
+                ultimo = (
+                    TipoActivoAtributo.objects.filter(tipo_activo_id=self.object.tipo_activo_id, activo=True)
+                    .aggregate(maximo=Max("orden"))["maximo"] or 0
+                )
+                self.object.orden = ultimo + 1
+            if not self.object.created_by_id:
+                self.object.created_by = self.request.user
+            self.object.updated_by = self.request.user
+            self.object.save()
+            accion = RegistroAuditoria.Accion.MODIFICAR if change else RegistroAuditoria.Accion.ASOCIAR
+            if change and anterior_activo != self.object.activo:
+                accion = RegistroAuditoria.Accion.ACTIVAR if self.object.activo else RegistroAuditoria.Accion.DESACTIVAR
+            registrar_evento(
+                entidad="TipoActivoAtributo", objeto_id=self.object.pk, accion=accion,
+                resumen=f"{self.object.atributo.nombre} en {self.object.tipo_activo.nombre}",
+                usuario=self.request.user,
+                detalle={"campos": form.changed_data, "orden": self.object.orden},
+            )
+        messages.success(self.request, "Configuracion guardada correctamente.")
+        return redirect("admin2-configuraciones-atributos-lista")
+
+
+class Admin2ConfiguracionAtributoDesactivarView(Admin2AttributeSchemaAccessMixin, View):
+    def post(self, request, pk):
+        configuracion = get_object_or_404(
+            TipoActivoAtributo.objects.select_related("tipo_activo", "atributo"), pk=pk
+        )
+        if configuracion.activo:
+            configuracion.activo = False
+            configuracion.updated_by = request.user
+            configuracion.save(update_fields=("activo", "updated_by", "updated_at"))
+            registrar_evento(
+                entidad="TipoActivoAtributo", objeto_id=configuracion.pk,
+                accion=RegistroAuditoria.Accion.DESACTIVAR,
+                resumen=f"{configuracion.atributo.nombre} fue quitado de {configuracion.tipo_activo.nombre}",
+                usuario=request.user,
+                detalle={"historial_conservado": True},
+            )
+            messages.success(request, "El atributo fue quitado del tipo; sus valores historicos se conservaron.")
+        return redirect("admin2-configuraciones-atributos-lista")
 
 
 class Admin2UsuariosView(Admin2ModuleView):

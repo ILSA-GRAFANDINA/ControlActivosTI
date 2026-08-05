@@ -1,0 +1,12 @@
+{% extends "admin2/base.html" %}
+{% block admin2_content %}
+<section class="admin2-panel admin2-panel--hero"><div class="admin2-hero admin2-hero--module"><div><p class="admin2-hero__label">Catálogo de características</p><h2>{% if object %}Editar {{ object.nombre }}{% else %}Crear atributo{% endif %}</h2><p class="admin2-hero__copy">La clave es estable. Si el atributo ya tiene valores, su clave y tipo de dato quedan protegidos.</p></div></div></section>
+<section class="admin2-panel"><div class="admin2-formwrap"><form method="post" class="admin2-form">{% csrf_token %}
+  {% if form.non_field_errors %}<div class="admin2-errorbox">{{ form.non_field_errors }}</div>{% endif %}
+  {% for field in form %}<div class="admin2-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{% for error in field.errors %}<p class="admin2-error">{{ error }}</p>{% endfor %}</div>{% endfor %}
+  <div class="admin2-subpanel"><h3>Opciones para atributos de tipo lista</h3><p>Solo se usan con “Lista de opciones”. Si una opción ya fue utilizada, desactívela en vez de eliminarla.</p>{{ formset.management_form }}{% if formset.non_form_errors %}<div class="admin2-errorbox">{{ formset.non_form_errors }}</div>{% endif %}
+    <div class="admin2-options-grid">{% for option_form in formset %}<div class="admin2-option-row">{{ option_form.id }}{% for field in option_form.visible_fields %}<div class="admin2-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<p class="admin2-error">{{ error }}</p>{% endfor %}</div>{% endfor %}{% if option_form.non_field_errors %}<div class="admin2-errorbox">{{ option_form.non_field_errors }}</div>{% endif %}</div>{% endfor %}</div>
+  </div>
+  <div class="admin2-actionrow"><button class="admin2-button is-primary" type="submit">Guardar atributo</button><a class="admin2-button is-secondary" href="{% url 'admin2-atributos-lista' %}">Cancelar</a></div>
+</form></div></section>
+{% endblock %}

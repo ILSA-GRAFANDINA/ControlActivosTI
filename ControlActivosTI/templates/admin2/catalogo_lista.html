@@ -99,6 +99,9 @@
                                 <a href="{% url 'admin2-catalogo-editar' catalog_slug obj.pk %}" class="admin2-inline-action">
                                     Editar
                                 </a>
+                                {% if is_asset_type_catalog %}
+                                    <small><a href="{% url 'admin2-configuraciones-atributos-lista' %}?tipo={{ obj.pk }}" class="admin2-inline-action">Configurar atributos</a></small>
+                                {% endif %}
                             </td>
                         </tr>
                     {% empty %}

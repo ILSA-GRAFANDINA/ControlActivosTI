@@ -207,3 +207,55 @@ class DepreciacionAutomaticaTests(TestCase):
         self.assertEqual(response.context["paginator"].count, 1)
         self.assertEqual(response.context["paginator"].num_pages, 1)
         self.assertContains(response, proximo.codigo)
+
+    def test_reporte_muestra_pestanas_por_tipo_y_filtra_antes_de_paginar(self):
+        tipo_monitor = TipoActivo.objects.create(nombre="Monitor")
+        for numero in range(31):
+            self.activo(serie=f"LAP-TAB-{numero}")
+        monitor = self.activo(tipo_activo=tipo_monitor, serie="MON-TAB-1")
+
+        self.client.force_login(self.admin)
+        response = self.client.get(
+            reverse("depreciacion:reporte"),
+            {"tab_tipo": str(self.tipo.pk)},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["paginator"].count, 31)
+        self.assertEqual(response.context["paginator"].num_pages, 2)
+        self.assertEqual(response.context["tab_tipo_activa"], str(self.tipo.pk))
+        self.assertNotContains(response, monitor.codigo)
+        tabs = {tab["nombre"]: tab for tab in response.context["tabs_tipo"]}
+        self.assertEqual(tabs["Todos"]["total"], 32)
+        self.assertEqual(tabs["Laptop"]["total"], 31)
+        self.assertEqual(tabs["Monitor"]["total"], 1)
+        self.assertContains(response, f"tab_tipo={self.tipo.pk}&page=2")
+
+        segunda_pagina = self.client.get(
+            reverse("depreciacion:reporte"),
+            {"tab_tipo": str(self.tipo.pk), "page": 2},
+        )
+        self.assertEqual(segunda_pagina.context["page_obj"].number, 2)
+        self.assertEqual(len(segunda_pagina.context["filas_depreciacion"]), 1)
+
+    def test_pestanas_conservan_los_filtros_del_reporte(self):
+        tipo_monitor = TipoActivo.objects.create(nombre="Monitor")
+        self.activo(tipo_activo=tipo_monitor, serie="MON-FILTRO")
+        self.client.force_login(self.admin)
+
+        response = self.client.get(
+            reverse("depreciacion:reporte"),
+            {
+                "q": "MON-FILTRO",
+                "fecha": "2026-08-05",
+                "solo_vigentes": "0",
+            },
+        )
+
+        tab_monitor = next(
+            tab for tab in response.context["tabs_tipo"] if tab["nombre"] == "Monitor"
+        )
+        self.assertIn("q=MON-FILTRO", tab_monitor["url"])
+        self.assertIn("fecha=2026-08-05", tab_monitor["url"])
+        self.assertIn("solo_vigentes=0", tab_monitor["url"])
+        self.assertIn(f"tab_tipo={tipo_monitor.pk}", tab_monitor["url"])

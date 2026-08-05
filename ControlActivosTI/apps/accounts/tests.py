@@ -5,6 +5,7 @@ import uuid
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import PBKDF2PasswordHasher, identify_hasher
+from django.contrib.auth.models import Permission
 from django.test import TestCase
 from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -13,7 +14,17 @@ from django.test.utils import override_settings
 from apps.activos.models import Activo
 from apps.asignaciones.models import Asignacion, AsignacionDetalle
 from apps.accounts.models import PerfilUsuario
-from apps.catalogos.models import Area, Cargo, CentroCosto, EstadoActivo, TipoActivo, Ubicacion
+from apps.catalogos.models import (
+    AtributoActivo,
+    Area,
+    Cargo,
+    CentroCosto,
+    EstadoActivo,
+    TipoActivo,
+    TipoActivoAtributo,
+    Ubicacion,
+)
+from apps.auditoria.models import RegistroAuditoria
 from apps.colaboradores.models import Colaborador
 
 
@@ -194,6 +205,159 @@ class Admin2ViewsTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertTrue(Area.objects.filter(nombre="Finanzas", activo=True).exists())
+
+    def grant_attribute_schema_permission(self):
+        permission = Permission.objects.get(
+            codename="manage_asset_attribute_schema",
+            content_type__app_label="catalogos",
+        )
+        self.user.user_permissions.add(permission)
+
+    def test_admin2_attribute_schema_requires_specific_permission(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("admin2-atributos-lista"))
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_admin2_catalog_module_links_to_native_attribute_views(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("admin2-catalogos"))
+
+        self.assertContains(response, reverse("admin2-atributos-lista"))
+        self.assertContains(response, reverse("admin2-configuraciones-atributos-lista"))
+
+    def test_admin2_can_create_attribute_and_records_audit(self):
+        self.grant_attribute_schema_permission()
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse("admin2-atributo-crear"),
+            {
+                "nombre": "Memoria de video de prueba",
+                "clave": "Memoria Video Prueba",
+                "descripcion": "Capacidad instalada",
+                "tipo_dato": AtributoActivo.TipoDato.ENTERO,
+                "unidad": "GB",
+                "activo": "on",
+                "opciones-TOTAL_FORMS": "2",
+                "opciones-INITIAL_FORMS": "0",
+                "opciones-MIN_NUM_FORMS": "0",
+                "opciones-MAX_NUM_FORMS": "1000",
+                "opciones-0-activo": "on",
+                "opciones-1-activo": "on",
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            302,
+            (response.context["form"].errors, response.context["formset"].errors)
+            if response.status_code == 200 else None,
+        )
+        self.assertEqual(response.url, reverse("admin2-atributos-lista"))
+        atributo = AtributoActivo.objects.get(clave="memoria_video_prueba")
+        self.assertEqual(atributo.created_by, self.user)
+        self.assertTrue(
+            RegistroAuditoria.objects.filter(
+                entidad="AtributoActivo", objeto_id=str(atributo.pk),
+                accion=RegistroAuditoria.Accion.CREAR, usuario=self.user,
+            ).exists()
+        )
+
+    def test_admin2_configuration_assigns_next_order_automatically(self):
+        self.grant_attribute_schema_permission()
+        primero = AtributoActivo.objects.create(
+            nombre="Chip de prueba admin2", clave="chip_prueba_admin2", tipo_dato=AtributoActivo.TipoDato.TEXTO_CORTO
+        )
+        segundo = AtributoActivo.objects.create(
+            nombre="Capacidad de prueba admin2", clave="capacidad_prueba_admin2", tipo_dato=AtributoActivo.TipoDato.ENTERO
+        )
+        TipoActivoAtributo.objects.create(
+            tipo_activo=self.tipo_activo, atributo=primero, orden=1
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse("admin2-configuracion-atributo-crear"),
+            {
+                "tipo_activo": self.tipo_activo.pk,
+                "atributo": segundo.pk,
+                "texto_ayuda": "Ingrese solo el numero",
+                "unidad": "GB",
+                "mostrar_detalle": "on",
+                "activo": "on",
+                "validaciones": "{}",
+            },
+        )
+
+        self.assertRedirects(response, reverse("admin2-configuraciones-atributos-lista"))
+        configuracion = TipoActivoAtributo.objects.get(tipo_activo=self.tipo_activo, atributo=segundo)
+        self.assertEqual(configuracion.orden, 2)
+        self.assertEqual(configuracion.created_by, self.user)
+        self.assertTrue(
+            RegistroAuditoria.objects.filter(
+                entidad="TipoActivoAtributo", objeto_id=str(configuracion.pk),
+                accion=RegistroAuditoria.Accion.ASOCIAR,
+            ).exists()
+        )
+
+    def test_admin2_can_create_list_attribute_with_options(self):
+        self.grant_attribute_schema_permission()
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse("admin2-atributo-crear"),
+            {
+                "nombre": "Panel de prueba admin2",
+                "clave": "panel_prueba_admin2",
+                "tipo_dato": AtributoActivo.TipoDato.LISTA,
+                "activo": "on",
+                "opciones-TOTAL_FORMS": "2",
+                "opciones-INITIAL_FORMS": "0",
+                "opciones-MIN_NUM_FORMS": "0",
+                "opciones-MAX_NUM_FORMS": "1000",
+                "opciones-0-clave": "ips",
+                "opciones-0-nombre": "IPS",
+                "opciones-0-orden": "1",
+                "opciones-0-activo": "on",
+                "opciones-1-activo": "on",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        atributo = AtributoActivo.objects.get(clave="panel_prueba_admin2")
+        opcion = atributo.opciones.get()
+        self.assertEqual(opcion.clave, "ips")
+        self.assertEqual(opcion.nombre, "IPS")
+        self.assertTrue(opcion.activo)
+
+    def test_admin2_remove_attribute_from_type_preserves_configuration(self):
+        self.grant_attribute_schema_permission()
+        atributo = AtributoActivo.objects.create(
+            nombre="Resolucion", clave="resolucion", tipo_dato=AtributoActivo.TipoDato.TEXTO_CORTO
+        )
+        configuracion = TipoActivoAtributo.objects.create(
+            tipo_activo=self.tipo_activo, atributo=atributo, orden=1
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse("admin2-configuracion-atributo-desactivar", args=[configuracion.pk])
+        )
+
+        self.assertRedirects(response, reverse("admin2-configuraciones-atributos-lista"))
+        configuracion.refresh_from_db()
+        self.assertFalse(configuracion.activo)
+        self.assertEqual(configuracion.updated_by, self.user)
+        self.assertTrue(TipoActivoAtributo.objects.filter(pk=configuracion.pk).exists())
+        self.assertTrue(
+            RegistroAuditoria.objects.filter(
+                entidad="TipoActivoAtributo", objeto_id=str(configuracion.pk),
+                accion=RegistroAuditoria.Accion.DESACTIVAR,
+            ).exists()
+        )
 
     def test_admin2_topbar_uses_profile_photo_when_available(self):
         media_root = make_test_media_root()

@@ -1,0 +1,19 @@
+{% extends "admin2/base.html" %}
+{% block admin2_content %}
+<section class="admin2-panel admin2-panel--hero"><div class="admin2-hero admin2-hero--module">
+  <div><p class="admin2-hero__label">Esquema configurable</p><h2>Atributos de activos</h2><p class="admin2-hero__copy">Administra características reutilizables y sus opciones sin modificar los activos históricos.</p><div class="admin2-actionrow"><a class="admin2-button is-primary" href="{% url 'admin2-atributo-crear' %}">Nuevo atributo</a><a class="admin2-button is-secondary" href="{% url 'admin2-configuraciones-atributos-lista' %}">Configurar por tipo</a><a class="admin2-button is-secondary" href="{% url 'admin2-catalogos' %}">Volver</a></div></div>
+  <div class="admin2-module-stats"><article class="admin2-module-stats__card"><span>Atributos</span><strong>{{ attribute_count }}</strong></article><article class="admin2-module-stats__card"><span>Vínculos activos</span><strong>{{ configuration_count }}</strong></article></div>
+</div></section>
+<section class="admin2-panel">
+  <div class="admin2-filterwrap"><form method="get" class="admin2-filterform admin2-filterform--wide">
+    <div class="admin2-field"><label for="q">Búsqueda</label><input class="admin2-input" id="q" name="q" value="{{ query }}" placeholder="Nombre, clave o descripción"></div>
+    <div class="admin2-field"><label for="tipo_dato">Tipo de dato</label><select id="tipo_dato" name="tipo_dato"><option value="">Todos</option>{% for value,label in tipos_dato %}<option value="{{ value }}" {% if tipo_dato == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+    <div class="admin2-field"><label for="estado">Estado</label><select id="estado" name="estado"><option value="">Todos</option><option value="activos" {% if estado == 'activos' %}selected{% endif %}>Activos</option><option value="inactivos" {% if estado == 'inactivos' %}selected{% endif %}>Inactivos</option></select></div>
+    <div class="admin2-filterform__actions"><button class="admin2-button is-primary">Aplicar</button><a class="admin2-button is-secondary" href="{% url 'admin2-atributos-lista' %}">Limpiar</a></div>
+  </form></div>
+  <div class="admin2-tablewrap"><table class="admin2-table"><thead><tr><th>Atributo</th><th>Tipo</th><th>Unidad</th><th>Tipos que lo usan</th><th>Estado</th><th>Acción</th></tr></thead><tbody>
+  {% for atributo in atributos %}<tr><td><strong>{{ atributo.nombre }}</strong><small>{{ atributo.clave }}</small></td><td>{{ atributo.get_tipo_dato_display }}</td><td>{{ atributo.unidad|default:"—" }}</td><td>{% for config in atributo.configuraciones_tipo.all %}{% if config.activo %}<span class="admin2-badge tone-cyan">{{ config.tipo_activo.nombre }}</span> {% endif %}{% empty %}Sin tipos{% endfor %}</td><td><span class="admin2-badge tone-{% if atributo.activo %}emerald{% else %}rose{% endif %}">{% if atributo.activo %}Activo{% else %}Inactivo{% endif %}</span></td><td><a class="admin2-inline-action" href="{% url 'admin2-atributo-editar' atributo.pk %}">Editar</a></td></tr>
+  {% empty %}<tr><td colspan="6" class="is-empty">No hay atributos para mostrar.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+{% endblock %}
