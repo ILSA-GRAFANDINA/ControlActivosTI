@@ -306,7 +306,7 @@ class Admin2HomeView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
                     {
                         "eyebrow": "Auth",
                         "title": "Usuarios",
-                        "description": "Crea cuentas, activa o desactiva accesos y corrige datos de ingreso.",
+                        "description": "Crea cuentas, activa o desactiva accesos.",
                         "url": reverse("admin:auth_user_changelist"),
                         "meta_label": "Registros",
                         "meta_value": User.objects.count(),
@@ -314,7 +314,7 @@ class Admin2HomeView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
                     {
                         "eyebrow": "Auth",
                         "title": "Grupos",
-                        "description": "Administra perfiles de permisos para no asignar privilegios uno por uno.",
+                        "description": "Administra perfiles de permisos.",
                         "url": reverse("admin:auth_group_changelist"),
                         "meta_label": "Grupos",
                         "meta_value": Group.objects.count(),
@@ -324,13 +324,13 @@ class Admin2HomeView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
             {
                 "section_id": "inventario-ti",
                 "title": "Activos",
-                "subtitle": "Revisar equipos, estados y trazabilidad técnica del inventario.",
+                "subtitle": "Revisar equipos, estados e inventario en general.",
                 "tone": "slate",
                 "items": [
                     {
                         "eyebrow": "Activos",
                         "title": "Activos",
-                        "description": "Consulta, edita o depura la ficha completa de cada equipo registrado.",
+                        "description": "Consulta o edita la ficha completa de cada equipo registrado.",
                         "url": get_admin_changelist_url(Activo),
                         "meta_label": "Total",
                         "meta_value": Activo.objects.filter(activo=True).count(),
@@ -348,13 +348,13 @@ class Admin2HomeView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
             {
                 "section_id": "colaboradores-entregas",
                 "title": "Colaboradores",
-                "subtitle": "Relacionar personas con equipos y mantener el control de entregas.",
+                "subtitle": "Relacionar personas con equipos. Control de entregas.",
                 "tone": "emerald",
                 "items": [
                     {
                         "eyebrow": "Personas",
                         "title": "Colaboradores",
-                        "description": "Actualiza información del personal y su contexto organizacional.",
+                        "description": "Actualiza información del personal.",
                         "url": get_admin_changelist_url(Colaborador),
                         "meta_label": "Colaboradores",
                         "meta_value": Colaborador.objects.count(),
@@ -370,7 +370,7 @@ class Admin2HomeView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
                     {
                         "eyebrow": "Detalle",
                         "title": "Detalle de asignaciones",
-                        "description": "Entra directo a las líneas internas de cada entrega cuando requieras soporte fino.",
+                        "description": "Líneas internas de cada entrega.",
                         "url": get_admin_changelist_url(AsignacionDetalle),
                         "meta_label": "Lineas",
                         "meta_value": AsignacionDetalle.objects.count(),
@@ -380,51 +380,51 @@ class Admin2HomeView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
             {
                 "section_id": "catalogos-estructura",
                 "title": "Tablas maestras",
-                "subtitle": "Mantener tablas maestras y configuraciones que alimentan toda la operación.",
+                "subtitle": "Mantener tablas maestras y configuraciones de atributos.",
                 "tone": "slate",
                 "items": [
                     {
-                        "eyebrow": "Catalogos",
-                        "title": "Areas",
+                        "eyebrow": "Catálogos",
+                        "title": "Áreas",
                         "description": "Clasifica las áreas internas para organizar colaboradores y reportes.",
                         "url": get_admin_changelist_url(Area),
                         "meta_label": "Registros",
                         "meta_value": Area.objects.count(),
                     },
                     {
-                        "eyebrow": "Catalogos",
+                        "eyebrow": "Catálogos",
                         "title": "Cargos",
-                        "description": "Mantiene los puestos o roles disponibles dentro de la organización.",
+                        "description": "Mantiene los puestos o roles disponibles.",
                         "url": get_admin_changelist_url(Cargo),
                         "meta_label": "Registros",
                         "meta_value": Cargo.objects.count(),
                     },
                     {
-                        "eyebrow": "Catalogos",
+                        "eyebrow": "Catálogos",
                         "title": "Empresas",
-                        "description": "Administra la estructura empresarial usada en el sistema.",
+                        "description": "Agrega, edita o elimina empresas.",
                         "url": get_admin_changelist_url(Empresa),
                         "meta_label": "Registros",
                         "meta_value": Empresa.objects.count(),
                     },
                     {
-                        "eyebrow": "Catalogos",
+                        "eyebrow": "Catálogos",
                         "title": "Ubicaciones",
-                        "description": "Gestiona sedes, oficinas o puntos físicos asociados al inventario.",
+                        "description": "Gestiona sedes, oficinas o puntos físicos.",
                         "url": get_admin_changelist_url(Ubicacion),
                         "meta_label": "Registros",
                         "meta_value": Ubicacion.objects.count(),
                     },
                     {
-                        "eyebrow": "Catalogos",
+                        "eyebrow": "Catálogos",
                         "title": "Centros de costo",
-                        "description": "Controla la estructura CECO para asignaciones y trazabilidad financiera.",
+                        "description": "Controla la estructura CECO para asignaciones y contabilidad.",
                         "url": get_admin_changelist_url(CentroCosto),
                         "meta_label": "Registros",
                         "meta_value": CentroCosto.objects.count(),
                     },
                     {
-                        "eyebrow": "Catalogos",
+                        "eyebrow": "Catálogos",
                         "title": "Tipos de activo",
                         "description": "Define las categorías generales disponibles para registrar equipos.",
                         "url": get_admin_changelist_url(TipoActivo),
@@ -432,15 +432,15 @@ class Admin2HomeView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
                         "meta_value": TipoActivo.objects.count(),
                     },
                     {
-                        "eyebrow": "Catalogos",
+                        "eyebrow": "Catálogos",
                         "title": "Estados de activo",
-                        "description": "Configura el estado operativo que determina disponibilidad y flujo.",
+                        "description": "Configura el estado operativo que determina disponibilidad.",
                         "url": get_admin_changelist_url(EstadoActivo),
                         "meta_label": "Registros",
                         "meta_value": EstadoActivo.objects.count(),
                     },
                     {
-                        "eyebrow": "Catalogos",
+                        "eyebrow": "Catálogos",
                         "title": "Tipos de evento",
                         "description": "Mantiene las clases de eventos usadas para el seguimiento histórico.",
                         "url": get_admin_changelist_url(TipoEventoActivo),
@@ -460,23 +460,23 @@ class Admin2HomeView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
         ]
         context["admin_support_links"] = [
             {
-                "label": "Inicio completo del admin",
+                "label": "Inicio Completo",
                 "description": "Vista general con todas las apps registradas en Django Admin.",
                 "url": reverse("admin:index"),
             },
             {
                 "label": "App de catálogos",
-                "description": "Entrada agrupada para Areas, Cargos, Empresas, Departamentos, Ubicaciones y CECO.",
+                "description": "Entrada agrupada para áreas, cargos, empresas, departamentos, ubicaciones y CECO.",
                 "url": reverse("admin:app_list", kwargs={"app_label": "catalogos"}),
             },
             {
                 "label": "App de activos",
-                "description": "Entrada agrupada para Activos y Eventos de activos.",
+                "description": "Activos y Eventos de activos.",
                 "url": reverse("admin:app_list", kwargs={"app_label": "activos"}),
             },
             {
                 "label": "App de asignaciones",
-                "description": "Entrada agrupada para asignaciones y sus líneas internas.",
+                "description": "Asignaciones y sus líneas internas.",
                 "url": reverse("admin:app_list", kwargs={"app_label": "asignaciones"}),
             },
         ]
