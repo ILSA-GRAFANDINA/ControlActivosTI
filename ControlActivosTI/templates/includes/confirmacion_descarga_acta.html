@@ -1,0 +1,55 @@
+<div id="confirmacion-descarga-acta" class="fixed inset-0 z-50 hidden items-center justify-center px-4" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="confirmacion-descarga-acta-titulo">
+    <div class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" data-cerrar-confirmacion-descarga-acta></div>
+    <div class="relative w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+        <div class="flex items-start justify-between gap-4">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-600">Confirmación</p>
+                <h2 id="confirmacion-descarga-acta-titulo" class="mt-2 text-2xl font-bold text-slate-900">Generar acta</h2>
+            </div>
+            <button type="button" class="rounded-full border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-700" aria-label="Cerrar" data-cerrar-confirmacion-descarga-acta>✕</button>
+        </div>
+        <p id="confirmacion-descarga-acta-mensaje" class="mt-4 text-sm leading-6 text-slate-700"></p>
+        <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <button type="button" class="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" data-cerrar-confirmacion-descarga-acta>Cancelar</button>
+            <a id="confirmar-descarga-acta" href="#" class="rounded-xl bg-cyan-600 px-5 py-3 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700">Generar</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const modal = document.getElementById("confirmacion-descarga-acta");
+        const titulo = document.getElementById("confirmacion-descarga-acta-titulo");
+        const mensaje = document.getElementById("confirmacion-descarga-acta-mensaje");
+        const confirmar = document.getElementById("confirmar-descarga-acta");
+        const botonesCerrar = Array.from(document.querySelectorAll("[data-cerrar-confirmacion-descarga-acta]"));
+        const botonesActa = Array.from(document.querySelectorAll("[data-confirmar-acta]"));
+        if (!modal || !titulo || !mensaje || !confirmar || !botonesActa.length) return;
+
+        const cerrarModal = () => {
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+            modal.setAttribute("aria-hidden", "true");
+            confirmar.href = "#";
+        };
+
+        botonesActa.forEach((boton) => {
+            boton.addEventListener("click", (event) => {
+                event.preventDefault();
+                const tipo = boton.dataset.tipoActa === "recepcion" ? "recepción" : "entrega";
+                titulo.textContent = `Generar acta de ${tipo}`;
+                mensaje.textContent = `¿Estás seguro de que quieres generar un acta de ${tipo}?`;
+                confirmar.href = boton.href;
+                modal.classList.remove("hidden");
+                modal.classList.add("flex");
+                modal.setAttribute("aria-hidden", "false");
+                confirmar.focus();
+            });
+        });
+
+        botonesCerrar.forEach((boton) => boton.addEventListener("click", cerrarModal));
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape" && !modal.classList.contains("hidden")) cerrarModal();
+        });
+    })();
+</script>

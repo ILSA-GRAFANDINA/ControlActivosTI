@@ -167,7 +167,7 @@
                         <td class="px-4 py-3">
                             <div class="flex flex-wrap gap-2">
                                 {% if asignacion.acta_entrega %}
-                                    <a href="{% url 'actas:descargar_por_asignacion' asignacion.pk 'ENTREGA' %}" class="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700">
+                                    <a href="{% url 'actas:descargar_por_asignacion' asignacion.pk 'ENTREGA' %}" data-confirmar-acta data-tipo-acta="entrega" class="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700">
                                         Acta entrega
                                     </a>
                                 {% endif %}
@@ -249,4 +249,5 @@
         </div>
     {% endif %}
 </div>
+{% include "includes/confirmacion_descarga_acta.html" %}
 {% endblock %}
