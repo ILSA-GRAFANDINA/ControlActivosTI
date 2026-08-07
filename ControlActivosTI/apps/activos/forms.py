@@ -86,7 +86,7 @@ class ActivoAdminForm(forms.ModelForm):
             "factura_compra": "Factura de compra",
             "marca": "Marca",
             "modelo": "Modelo",
-            "serie": "Serie",
+            "serie": "Serie / identificador unico",
             "codigo_sap": "Codigo SAP",
             "cpu": "CPU",
             "ram": "RAM",
@@ -158,6 +158,10 @@ class ActivoAdminForm(forms.ModelForm):
             )
         if "codigo_sap" in self.fields:
             self.fields["codigo_sap"].help_text = ayuda_codigo_sap
+        if "serie" in self.fields:
+            self.fields["serie"].help_text = (
+                "Puede ser el S/N del fabricante u otro identificador unico del activo."
+            )
 
         if "estado_activo" in self.fields:
             estado_actual_id = (

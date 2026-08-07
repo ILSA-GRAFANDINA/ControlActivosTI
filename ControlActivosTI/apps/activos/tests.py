@@ -92,6 +92,12 @@ class ActivoAdminFormTests(TestCase):
         self.assertEqual(activo.sistema_operativo, "Windows")
         self.assertEqual(activo.codigo_sap, "SAP-001")
 
+    def test_serie_aclara_identificador_unico(self):
+        form = ActivoAdminForm()
+
+        self.assertEqual(form.fields["serie"].label, "Serie / identificador unico")
+        self.assertIn("identificador unico", form.fields["serie"].help_text)
+
     def test_codigo_sap_es_opcional_para_laptops_y_pc(self):
         data_laptop = self._data_base(self.tipo_laptop)
         data_laptop["codigo_sap"] = ""

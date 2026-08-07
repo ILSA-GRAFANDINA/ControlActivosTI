@@ -28,7 +28,7 @@
 
     <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div class="flex flex-wrap items-center justify-between gap-3">
-            <div>
+            <div class="min-w-0">
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Informacion base</p>
                 <h3 class="mt-1 text-lg font-semibold text-slate-900">Datos generales del activo</h3>
             </div>
@@ -38,12 +38,12 @@
         </div>
 
         <div class="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            <div>
+            <div class="min-w-0">
                 <label class="mb-2 block text-sm font-semibold text-slate-700">Tipo de activo</label>
                 {{ form.tipo_activo }}
                 {% if form.tipo_activo.errors %}<p class="mt-2 text-sm text-red-600">{{ form.tipo_activo.errors|join:", " }}</p>{% endif %}
             </div>
-            <div>
+            <div class="min-w-0">
                 <label class="mb-2 block text-sm font-semibold text-slate-700">Estado del activo</label>
                 {{ form.estado_activo }}
                 {% if form.estado_activo.errors %}<p class="mt-2 text-sm text-red-600">{{ form.estado_activo.errors|join:", " }}</p>{% endif %}
@@ -86,8 +86,9 @@
                 {% if form.modelo.errors %}<p class="mt-2 text-sm text-red-600">{{ form.modelo.errors|join:", " }}</p>{% endif %}
             </div>
             <div>
-                <label class="mb-2 block text-sm font-semibold text-slate-700">Serie</label>
+                <label class="mb-2 block text-sm font-semibold text-slate-700">Serie / identificador unico</label>
                 {{ form.serie }}
+                {% if form.serie.help_text %}<p class="mt-2 text-xs text-slate-500">{{ form.serie.help_text }}</p>{% endif %}
                 {% if form.serie.errors %}<p class="mt-2 text-sm text-red-600">{{ form.serie.errors|join:", " }}</p>{% endif %}
             </div>
             <div>
@@ -272,38 +273,40 @@
     </div>
 
     {% if es_edicion %}
-    <div class="rounded-2xl border border-amber-300 bg-amber-50 p-6 shadow-sm">
+    <details class="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm" {% if form.confirmar_cambio_tipo.errors or form.motivo_cambio_tipo.errors %}open{% endif %}>
+        <summary class="cursor-pointer list-none">
         <div class="flex items-start gap-3">
             <span class="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 font-bold text-amber-800" aria-hidden="true">!</span>
             <div>
-                <h3 class="text-lg font-semibold text-amber-950">Cambio del tipo de activo</h3>
-                <p class="mt-1 text-sm font-medium text-amber-900">Completa esta sección solamente si seleccionaste un tipo diferente al que tenía el activo.</p>
+                <h3 class="text-lg font-semibold text-amber-800">Cambio del tipo de activo</h3>
+                <p class="mt-1 text-sm font-medium text-amber-700">Abrir solo si vas a reclasificar este activo.</p>
             </div>
+            <span class="ml-auto shrink-0 rounded-full border border-amber-200 bg-white/80 px-3 py-1 text-xs font-semibold text-amber-700">Desplegar</span>
         </div>
+        </summary>
 
-        <div class="mt-4 rounded-xl border border-amber-200 bg-white/70 p-4 text-sm text-amber-950">
+        <div class="mt-4 rounded-xl border border-amber-200 bg-white p-4 text-sm text-amber-800">
             <p class="font-semibold">Al guardar un cambio de tipo, el sistema hará lo siguiente:</p>
             <ul class="mt-2 list-disc space-y-1 pl-5">
-                <li>Conservará los datos generales, proveedor, factura, fotos y fecha de compra.</li>
-                <li>No borrará las características anteriores; las conservará como valores históricos.</li>
-                <li>Aplicará los atributos configurados para el nuevo tipo y validará los que sean obligatorios.</li>
-                <li>Mantendrá asignaciones, eventos y actas existentes. Si existen estos antecedentes, puede requerirse un permiso administrativo especial.</li>
+                <li>Conservará los datos generales, fotos, proveedor y factura.</li>
+                <li>Guardará las características anteriores como historial.</li>
+                <li>Aplicará y validará los atributos del nuevo tipo.</li>
             </ul>
         </div>
 
         <label for="{{ form.confirmar_cambio_tipo.id_for_label }}" class="mt-5 flex cursor-pointer items-start gap-3 rounded-xl border border-amber-200 bg-white p-4">
             {{ form.confirmar_cambio_tipo }}
-            <span class="text-sm font-semibold text-amber-950">{{ form.confirmar_cambio_tipo.label }}</span>
+            <span class="text-sm font-semibold text-amber-800">{{ form.confirmar_cambio_tipo.label }}</span>
         </label>
         {% if form.confirmar_cambio_tipo.errors %}<p class="mt-2 text-sm text-red-600">{{ form.confirmar_cambio_tipo.errors|join:", " }}</p>{% endif %}
 
         <div class="mt-4">
-            <label for="{{ form.motivo_cambio_tipo.id_for_label }}" class="mb-2 block text-sm font-semibold text-amber-950">Motivo del cambio de tipo</label>
+            <label for="{{ form.motivo_cambio_tipo.id_for_label }}" class="mb-2 block text-sm font-semibold text-amber-800">Motivo del cambio de tipo</label>
             {{ form.motivo_cambio_tipo }}
             <p class="mt-2 text-xs text-amber-800">Describe por qué el tipo actual es incorrecto o por qué debe reclasificarse.</p>
             {% if form.motivo_cambio_tipo.errors %}<p class="mt-2 text-sm text-red-600">{{ form.motivo_cambio_tipo.errors|join:", " }}</p>{% endif %}
         </div>
-    </div>
+    </details>
     {% endif %}
 
     <div class="flex flex-wrap items-center gap-3">
