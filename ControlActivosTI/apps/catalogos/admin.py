@@ -81,8 +81,9 @@ class AtributoActivoAdminForm(forms.ModelForm):
     def clean(self):
         cleaned = super().clean()
         texto = f"{cleaned.get('nombre', '')} {cleaned.get('clave', '')}".lower()
+        tipo_dato = cleaned.get("tipo_dato")
         palabras_prohibidas = ("password", "contrasena", "contraseña", "token", "clave_privada", "api_key", "secreto")
-        if any(palabra in texto for palabra in palabras_prohibidas):
+        if tipo_dato != AtributoActivo.TipoDato.TEXTO_PROTEGIDO and any(palabra in texto for palabra in palabras_prohibidas):
             raise forms.ValidationError(
                 "Los atributos normales no pueden almacenar contrasenas, tokens, claves privadas ni secretos."
             )

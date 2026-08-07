@@ -8,6 +8,7 @@ from apps.auditoria.models import RegistroAuditoria
 from apps.auditoria.services import registrar_evento
 from apps.catalogos.models import AtributoActivo, TipoActivoAtributo
 
+from .encryption import encrypt_protected_text
 from .models import Activo, ValorAtributoActivo
 
 
@@ -46,7 +47,11 @@ def validar_valor(configuracion, valor):
         return None
 
     tipo = atributo.tipo_dato
-    if tipo in {AtributoActivo.TipoDato.TEXTO_CORTO, AtributoActivo.TipoDato.TEXTO_LARGO}:
+    if tipo in {
+        AtributoActivo.TipoDato.TEXTO_CORTO,
+        AtributoActivo.TipoDato.TEXTO_LARGO,
+        AtributoActivo.TipoDato.TEXTO_PROTEGIDO,
+    }:
         valor = str(valor).strip()
         maximo = configuracion.longitud_maxima
         if maximo and len(valor) > maximo:
@@ -94,12 +99,15 @@ def _asignar_valor_tipado(instancia, valor):
     campo = {
         AtributoActivo.TipoDato.TEXTO_CORTO: "valor_texto",
         AtributoActivo.TipoDato.TEXTO_LARGO: "valor_texto",
+        AtributoActivo.TipoDato.TEXTO_PROTEGIDO: "valor_texto",
         AtributoActivo.TipoDato.ENTERO: "valor_entero",
         AtributoActivo.TipoDato.DECIMAL: "valor_decimal",
         AtributoActivo.TipoDato.FECHA: "valor_fecha",
         AtributoActivo.TipoDato.BOOLEANO: "valor_booleano",
         AtributoActivo.TipoDato.LISTA: "valor_opcion",
     }[tipo]
+    if tipo == AtributoActivo.TipoDato.TEXTO_PROTEGIDO:
+        valor = encrypt_protected_text(valor)
     setattr(instancia, campo, valor)
 
 
@@ -133,11 +141,18 @@ def guardar_valores_atributos(activo, valores_por_clave, *, usuario=None):
     cambios_legacy = {}
     for configuracion in configuraciones:
         clave = configuracion.atributo.clave
-        valor = validar_valor(configuracion, valores_por_clave.get(clave))
         existente = ValorAtributoActivo.objects.filter(
             activo=activo, atributo=configuracion.atributo
         ).first()
         anterior = existente.valor_formateado if existente else ""
+        valor_crudo = valores_por_clave.get(clave)
+        if (
+            configuracion.atributo.tipo_dato == AtributoActivo.TipoDato.TEXTO_PROTEGIDO
+            and existente
+            and _valor_vacio(valor_crudo)
+        ):
+            continue
+        valor = validar_valor(configuracion, valor_crudo)
         if valor is None:
             if existente:
                 detalle = {"atributo": clave, "anterior": anterior, "nuevo": ""}

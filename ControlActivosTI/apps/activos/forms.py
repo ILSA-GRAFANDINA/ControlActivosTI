@@ -238,7 +238,18 @@ class ActivoAdminForm(forms.ModelForm):
         valor = self.instance.valores_atributos.filter(atributo=atributo, vigente=True).first()
         if not valor:
             return None
+        if atributo.tipo_dato == AtributoActivo.TipoDato.TEXTO_PROTEGIDO:
+            return None
         return valor.valor_opcion_id if atributo.tipo_dato == AtributoActivo.TipoDato.LISTA else valor.valor
+
+    def _tiene_valor_protegido(self, atributo):
+        if not self.instance or not self.instance.pk:
+            return False
+        return self.instance.valores_atributos.filter(
+            atributo=atributo,
+            vigente=True,
+            valor_texto__gt="",
+        ).exists()
 
     def _agregar_campos_dinamicos(self, tipo_id):
         self.configuraciones_dinamicas = list(configuraciones_para_tipo(tipo_id))
@@ -251,6 +262,8 @@ class ActivoAdminForm(forms.ModelForm):
             atributo = configuracion.atributo
             nombre = self.nombre_campo_atributo(atributo.clave)
             required = configuracion.obligatorio
+            if atributo.tipo_dato == AtributoActivo.TipoDato.TEXTO_PROTEGIDO and self._tiene_valor_protegido(atributo):
+                required = False
             initial = self._valor_inicial(atributo)
             unidad = configuracion.unidad_efectiva
             ayuda = configuracion.texto_ayuda or atributo.descripcion
@@ -270,6 +283,12 @@ class ActivoAdminForm(forms.ModelForm):
             }
             if atributo.tipo_dato == AtributoActivo.TipoDato.TEXTO_LARGO:
                 campo = forms.CharField(widget=forms.Textarea(attrs={"rows": 4}), **comunes)
+            elif atributo.tipo_dato == AtributoActivo.TipoDato.TEXTO_PROTEGIDO:
+                campo = forms.CharField(
+                    max_length=configuracion.longitud_maxima or 255,
+                    widget=forms.PasswordInput(render_value=False),
+                    **comunes,
+                )
             elif atributo.tipo_dato == AtributoActivo.TipoDato.TEXTO_CORTO:
                 campo = forms.CharField(max_length=configuracion.longitud_maxima or 255, **comunes)
             elif atributo.tipo_dato == AtributoActivo.TipoDato.ENTERO:
@@ -336,7 +355,14 @@ class ActivoAdminForm(forms.ModelForm):
                     cleaned_data[nombre_campo] = ""
 
         for configuracion in self.configuraciones_dinamicas:
-            nombre = self.nombre_campo_atributo(configuracion.atributo.clave)
+            atributo = configuracion.atributo
+            nombre = self.nombre_campo_atributo(atributo.clave)
+            if (
+                atributo.tipo_dato == AtributoActivo.TipoDato.TEXTO_PROTEGIDO
+                and self._tiene_valor_protegido(atributo)
+                and cleaned_data.get(nombre) in (None, "")
+            ):
+                continue
             try:
                 cleaned_data[nombre] = validar_valor(configuracion, cleaned_data.get(nombre))
             except ValidationError as exc:

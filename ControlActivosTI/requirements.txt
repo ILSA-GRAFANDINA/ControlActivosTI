@@ -11,3 +11,4 @@ python-dateutil==2.9.0.post0
 sqlparse==0.5.5
 tzdata==2025.3
 gunicorn==23.0.0
+cryptography==45.0.7

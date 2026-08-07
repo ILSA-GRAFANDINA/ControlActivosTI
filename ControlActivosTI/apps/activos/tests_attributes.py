@@ -1,3 +1,4 @@
+from datetime import date
 from io import StringIO
 
 from django.contrib.auth import get_user_model
@@ -16,6 +17,7 @@ from apps.catalogos.models import (
 )
 
 from .attribute_services import guardar_valores_atributos
+from .encryption import decrypt_protected_text
 from .forms import ActivoAdminForm
 from .models import Activo, ValorAtributoActivo
 
@@ -93,6 +95,50 @@ class AtributosConfigurablesModelTests(TestCase):
             opcion,
         )
 
+    def test_guarda_fecha_como_valor_tipado(self):
+        vencimiento = AtributoActivo.objects.create(
+            nombre="Vencimiento garantia",
+            clave="vencimiento_garantia",
+            tipo_dato=AtributoActivo.TipoDato.FECHA,
+        )
+        TipoActivoAtributo.objects.create(
+            tipo_activo=self.tipo,
+            atributo=vencimiento,
+            orden=2,
+        )
+
+        guardar_valores_atributos(
+            self.activo,
+            {"memoria_ram": 16, "vencimiento_garantia": date(2027, 5, 12)},
+        )
+
+        valor = ValorAtributoActivo.objects.get(activo=self.activo, atributo=vencimiento)
+        self.assertEqual(valor.valor_fecha, date(2027, 5, 12))
+        self.assertEqual(valor.valor_formateado, "12/05/2027")
+
+    def test_texto_protegido_se_cifra_y_se_muestra_enmascarado(self):
+        licencia = AtributoActivo.objects.create(
+            nombre="Codigo de licencia",
+            clave="codigo_licencia",
+            tipo_dato=AtributoActivo.TipoDato.TEXTO_PROTEGIDO,
+        )
+        TipoActivoAtributo.objects.create(
+            tipo_activo=self.tipo,
+            atributo=licencia,
+            orden=2,
+            mostrar_actas=True,
+        )
+
+        guardar_valores_atributos(
+            self.activo,
+            {"memoria_ram": 16, "codigo_licencia": "ABCD-1234-WXYZ-7890"},
+        )
+
+        valor = ValorAtributoActivo.objects.get(activo=self.activo, atributo=licencia)
+        self.assertNotIn("ABCD-1234-WXYZ-7890", valor.valor_texto)
+        self.assertEqual(decrypt_protected_text(valor.valor_texto), "ABCD-1234-WXYZ-7890")
+        self.assertEqual(valor.valor_formateado, "ABCD****7890")
+
     @override_settings(MAX_ATRIBUTOS_ACTIVOS_POR_TIPO=1)
     def test_limite_de_atributos_es_configurable(self):
         segundo = AtributoActivo.objects.create(
@@ -146,6 +192,47 @@ class ActivoDynamicFormTests(TestCase):
         form = ActivoAdminForm(data=self.data("5"), usuario=self.user, permitir_cambio_vigencia=False)
         self.assertFalse(form.is_valid())
         self.assertIn("atributo__tamano_pantalla", form.errors)
+
+    def test_formulario_no_renderiza_ni_borra_texto_protegido_existente(self):
+        licencia = AtributoActivo.objects.create(
+            nombre="Codigo de licencia dinamico",
+            clave="codigo_licencia_dinamico",
+            tipo_dato=AtributoActivo.TipoDato.TEXTO_PROTEGIDO,
+        )
+        TipoActivoAtributo.objects.create(
+            tipo_activo=self.tipo,
+            atributo=licencia,
+            obligatorio=True,
+            orden=2,
+        )
+        activo = Activo.objects.create(
+            tipo_activo=self.tipo,
+            marca="LG",
+            modelo="Ultra",
+            serie="MON-DYN-SECRET",
+            estado_activo=self.estado,
+        )
+        guardar_valores_atributos(
+            activo,
+            {"tamano_pantalla": "24", "codigo_licencia_dinamico": "LIC-1111-2222-XYZ"},
+            usuario=self.user,
+        )
+        valor_original = activo.valores_atributos.get(atributo=licencia).valor_texto
+
+        form = ActivoAdminForm(
+            data={**self.data("24"), "atributo__codigo_licencia_dinamico": ""},
+            instance=activo,
+            usuario=self.user,
+            permitir_cambio_vigencia=False,
+        )
+
+        self.assertFalse(form.fields["atributo__codigo_licencia_dinamico"].required)
+        self.assertTrue(form.is_valid(), form.errors)
+        guardar_valores_atributos(activo, form.valores_atributos_limpios(), usuario=self.user)
+        self.assertEqual(
+            activo.valores_atributos.get(atributo=licencia).valor_texto,
+            valor_original,
+        )
 
     def test_modulo_de_caracteristicas_queda_entre_paneles_y_fotos(self):
         activo = Activo.objects.create(

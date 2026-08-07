@@ -24,6 +24,8 @@ from apps.catalogos.models import (
     TipoEventoActivo,
 )
 
+from .encryption import mask_protected_text
+
 
 TIPOS_ACTIVO_CON_ESPECIFICACIONES = (
     "laptop",
@@ -403,7 +405,11 @@ class ValorAtributoActivo(models.Model):
     @property
     def valor(self):
         tipo = self.atributo.tipo_dato
-        if tipo in {AtributoActivo.TipoDato.TEXTO_CORTO, AtributoActivo.TipoDato.TEXTO_LARGO}:
+        if tipo in {
+            AtributoActivo.TipoDato.TEXTO_CORTO,
+            AtributoActivo.TipoDato.TEXTO_LARGO,
+            AtributoActivo.TipoDato.TEXTO_PROTEGIDO,
+        }:
             return self.valor_texto
         if tipo == AtributoActivo.TipoDato.ENTERO:
             return self.valor_entero
@@ -419,6 +425,9 @@ class ValorAtributoActivo(models.Model):
 
     @property
     def valor_formateado(self):
+        if self.atributo.tipo_dato == AtributoActivo.TipoDato.TEXTO_PROTEGIDO:
+            return mask_protected_text(self.valor_texto)
+
         valor = self.valor
         if self.requiere_revision and valor in (None, ""):
             valor = self.valor_original_migracion
@@ -478,6 +487,7 @@ class ValorAtributoActivo(models.Model):
         esperado = {
             AtributoActivo.TipoDato.TEXTO_CORTO: "valor_texto",
             AtributoActivo.TipoDato.TEXTO_LARGO: "valor_texto",
+            AtributoActivo.TipoDato.TEXTO_PROTEGIDO: "valor_texto",
             AtributoActivo.TipoDato.ENTERO: "valor_entero",
             AtributoActivo.TipoDato.DECIMAL: "valor_decimal",
             AtributoActivo.TipoDato.FECHA: "valor_fecha",

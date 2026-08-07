@@ -275,6 +275,7 @@ class AtributoActivo(models.Model):
     class TipoDato(models.TextChoices):
         TEXTO_CORTO = "texto_corto", "Texto corto"
         TEXTO_LARGO = "texto_largo", "Texto largo"
+        TEXTO_PROTEGIDO = "texto_protegido", "Texto protegido"
         ENTERO = "entero", "Numero entero"
         DECIMAL = "decimal", "Numero decimal"
         FECHA = "fecha", "Fecha"
@@ -338,7 +339,7 @@ class AtributoActivo(models.Model):
                     )
         texto_sensible = f"{self.nombre} {self.clave}".lower()
         prohibidas = ("password", "contrasena", "contraseña", "token", "clave_privada", "api_key", "secreto")
-        if any(palabra in texto_sensible for palabra in prohibidas):
+        if self.tipo_dato != self.TipoDato.TEXTO_PROTEGIDO and any(palabra in texto_sensible for palabra in prohibidas):
             raise ValidationError(
                 {"nombre": "Los atributos normales no pueden almacenar contrasenas, tokens ni secretos."}
             )
@@ -469,7 +470,9 @@ class TipoActivoAtributo(models.Model):
             if Decimal(self.valor_minimo) > Decimal(self.valor_maximo):
                 errores["valor_maximo"] = "El valor maximo no puede ser menor al valor minimo."
         if self.longitud_maxima and self.atributo_id and self.atributo.tipo_dato not in {
-            AtributoActivo.TipoDato.TEXTO_CORTO, AtributoActivo.TipoDato.TEXTO_LARGO,
+            AtributoActivo.TipoDato.TEXTO_CORTO,
+            AtributoActivo.TipoDato.TEXTO_LARGO,
+            AtributoActivo.TipoDato.TEXTO_PROTEGIDO,
         }:
             errores["longitud_maxima"] = "La longitud maxima solo aplica a atributos de texto."
         if not isinstance(self.validaciones, dict):
@@ -478,6 +481,8 @@ class TipoActivoAtributo(models.Model):
         if predeterminado is not None and self.atributo_id:
             tipo = self.atributo.tipo_dato
             try:
+                if tipo == AtributoActivo.TipoDato.TEXTO_PROTEGIDO:
+                    raise ValueError
                 if tipo == AtributoActivo.TipoDato.ENTERO:
                     int(predeterminado)
                 elif tipo == AtributoActivo.TipoDato.DECIMAL:
@@ -490,7 +495,12 @@ class TipoActivoAtributo(models.Model):
                     if not self.atributo.opciones.filter(pk=predeterminado, activo=True).exists():
                         raise ValueError
             except (TypeError, ValueError, ArithmeticError):
-                errores["valor_predeterminado"] = "El valor predeterminado no corresponde al tipo de dato."
+                if tipo == AtributoActivo.TipoDato.TEXTO_PROTEGIDO:
+                    errores["valor_predeterminado"] = (
+                        "Los atributos protegidos no pueden tener valor predeterminado."
+                    )
+                else:
+                    errores["valor_predeterminado"] = "El valor predeterminado no corresponde al tipo de dato."
         if errores:
             raise ValidationError(errores)
 
