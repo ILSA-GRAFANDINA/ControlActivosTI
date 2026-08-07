@@ -5,6 +5,7 @@ from django.db.models import Max
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.http import urlencode
+from urllib.parse import parse_qs
 
 from .models import (
     AtributoActivo,
@@ -347,6 +348,14 @@ class TipoActivoAtributoAdmin(admin.ModelAdmin):
     list_select_related = ("tipo_activo", "atributo")
     readonly_fields = ("created_by", "updated_by", "created_at", "updated_at")
     actions = ("quitar_del_tipo",)
+
+    def get_changeform_initial_data(self, request):
+        initial = super().get_changeform_initial_data(request)
+        changelist_filters = request.GET.get("_changelist_filters", "")
+        tipo_activo_id = parse_qs(changelist_filters).get("tipo_activo__id__exact", [None])[0]
+        if tipo_activo_id and "tipo_activo" not in initial:
+            initial["tipo_activo"] = tipo_activo_id
+        return initial
 
     def get_exclude(self, request, obj=None):
         exclude = list(super().get_exclude(request, obj) or ())

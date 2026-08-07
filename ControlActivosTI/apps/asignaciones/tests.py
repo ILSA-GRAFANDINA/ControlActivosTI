@@ -1,19 +1,43 @@
 from datetime import date
+from pathlib import Path
+import shutil
+import tempfile
+import uuid
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
+from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from django.test.utils import override_settings
 from django.urls import reverse
 from django.utils import timezone
 
 from apps.actas.models import ActaEntrega
+from apps.activos.attribute_services import guardar_valores_atributos
 from apps.activos.models import Activo
-from apps.catalogos.models import Area, Cargo, CentroCosto, Empresa, EstadoActivo, TipoActivo, Ubicacion
+from apps.catalogos.models import (
+    Area,
+    AtributoActivo,
+    Cargo,
+    CentroCosto,
+    Empresa,
+    EstadoActivo,
+    TipoActivo,
+    TipoActivoAtributo,
+    Ubicacion,
+)
 from apps.colaboradores.models import Colaborador
 
 from apps.asignaciones.forms import AsignacionCreateForm
 from apps.asignaciones.models import Asignacion, AsignacionDetalle, Devolucion
+
+
+def make_test_media_root():
+    base_dir = Path.cwd() / "test-media"
+    base_dir.mkdir(exist_ok=True)
+    return Path(tempfile.mkdtemp(prefix=f"{uuid.uuid4().hex}-", dir=base_dir))
 
 
 class AsignacionCreateFormTests(TestCase):
@@ -195,6 +219,61 @@ class AsignacionCreateFormTests(TestCase):
         self.assertContains(response, "Crear asignación")
         self.assertContains(response, "Regresar")
         self.assertContains(response, "Estás asignando 4 o más activos a un mismo usuario")
+
+    def test_create_view_genera_y_permite_descargar_acta_entrega(self):
+        media_root = make_test_media_root()
+        permisos = Permission.objects.filter(
+            codename__in=["view_actaentrega", "view_asignacion"]
+        )
+        self.user.user_permissions.add(*permisos)
+        self.client.force_login(self.user)
+        licencia = AtributoActivo.objects.create(
+            nombre="Codigo de licencia para acta",
+            clave="codigo_licencia_acta",
+            tipo_dato=AtributoActivo.TipoDato.TEXTO_PROTEGIDO,
+        )
+        TipoActivoAtributo.objects.create(
+            tipo_activo=self.tipo_activo,
+            atributo=licencia,
+            orden=1,
+            mostrar_actas=True,
+        )
+        guardar_valores_atributos(
+            self.activo_disponible,
+            {"codigo_licencia_acta": "ABCD-1234-WXYZ-7890"},
+            usuario=self.user,
+        )
+
+        with override_settings(MEDIA_ROOT=media_root):
+            try:
+                response = self.client.post(
+                    reverse("asignaciones:nueva"),
+                    {
+                        "colaborador": self.colaborador.pk,
+                        "fecha_asignacion": "2026-04-20",
+                        "observaciones_entrega": "Entrega inicial",
+                        "activos": [self.activo_disponible.pk],
+                    },
+                    follow=True,
+                )
+
+                self.assertEqual(response.status_code, 200)
+                asignacion = Asignacion.objects.get(colaborador=self.colaborador)
+                acta = asignacion.acta_entrega
+                self.assertIsNotNone(acta)
+                self.assertTrue(acta.emitida)
+                self.assertTrue(acta.archivo)
+                self.assertTrue(default_storage.exists(acta.archivo.name))
+                self.assertContains(response, "Acta entrega")
+
+                descarga = self.client.get(
+                    reverse("actas:descargar_por_asignacion", args=[asignacion.pk, "ENTREGA"])
+                )
+
+                self.assertEqual(descarga.status_code, 200)
+                self.assertIn("spreadsheetml.sheet", descarga["Content-Type"])
+            finally:
+                shutil.rmtree(media_root, ignore_errors=True)
 
     def test_form_rejects_non_assignable_assets_on_post(self):
         form = AsignacionCreateForm(

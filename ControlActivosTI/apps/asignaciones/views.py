@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
@@ -16,6 +18,9 @@ from .forms import (
     DevolucionForm,
 )
 from .models import Asignacion, Devolucion
+
+
+logger = logging.getLogger("controlactivos")
 
 
 class AsignacionListView(LoginRequiredMixin, ListView):
@@ -201,6 +206,11 @@ class AsignacionCreateView(LoginRequiredMixin, CreateView):
                 "La asignación fue creada correctamente y el acta fue generada.",
             )
         except Exception:
+            logger.exception(
+                "No se pudo generar el acta de entrega asignacion_id=%s usuario_id=%s",
+                self.object.pk,
+                self.request.user.pk,
+            )
             messages.warning(
                 self.request,
                 "La asignación fue creada correctamente, pero el acta no pudo generarse todavía.",

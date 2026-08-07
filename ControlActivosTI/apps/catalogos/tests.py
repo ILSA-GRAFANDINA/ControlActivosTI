@@ -4,6 +4,7 @@ from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
+from django.utils.http import urlencode
 
 from apps.auditoria.models import RegistroAuditoria
 from apps.catalogos.admin import (
@@ -116,6 +117,25 @@ class CentroCostoAdminFormTests(TestCase):
 
 
 class TipoActivoAtributoAdminTests(TestCase):
+    def test_al_agregar_desde_filtro_preselecciona_tipo_activo(self):
+        usuario = get_user_model().objects.create_superuser(
+            username="admin-tipo-inicial",
+            email="tipo-inicial@example.com",
+            password="prueba",
+        )
+        tipo = TipoActivo.objects.create(nombre="Licencia con tipo inicial")
+        filtros = urlencode({"tipo_activo__id__exact": tipo.pk})
+        request = RequestFactory().get(
+            "/admin/catalogos/tipoactivoatributo/add/",
+            {"_changelist_filters": filtros},
+        )
+        request.user = usuario
+        model_admin = TipoActivoAtributoAdmin(TipoActivoAtributo, admin.site)
+
+        initial = model_admin.get_changeform_initial_data(request)
+
+        self.assertEqual(initial["tipo_activo"], str(tipo.pk))
+
     def test_nueva_asociacion_calcula_el_orden_siguiente(self):
         usuario = get_user_model().objects.create_superuser(
             username="admin-orden-automatico",
