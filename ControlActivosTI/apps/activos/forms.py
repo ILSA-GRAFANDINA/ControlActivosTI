@@ -94,6 +94,7 @@ class ActivoAdminForm(forms.ModelForm):
             "sistema_operativo": "Sistema operativo",
             "fecha_compra": "Fecha de compra",
             "valor": "Valor de Compra",
+            "incluir_en_depreciacion": "Incluir en depreciación",
             "estado_activo": "Estado del activo",
             "activo": "Activo en inventario",
             "observaciones": "Observaciones",

@@ -953,6 +953,7 @@ class ActivoCreateViewTests(TestCase):
             "sistema_operativo": "Windows 11",
             "fecha_compra": "2026-05-07",
             "valor": "1450.50",
+            "incluir_en_depreciacion": "on",
             "estado_activo": self.estado.pk,
             "observaciones": "Activo creado desde el portal.",
         }
@@ -995,6 +996,28 @@ class ActivoCreateViewTests(TestCase):
         self.assertContains(response, "Nuevo activo")
         self.assertContains(response, "Fotos del activo")
         self.assertContains(response, "Empresa")
+        self.assertContains(response, "Incluir en depreciaci")
+        self.assertContains(response, 'id="id_incluir_en_depreciacion" checked')
+
+    def test_create_view_allows_non_depreciable_asset(self):
+        self.client.force_login(self.user)
+        data = self._datos_base()
+        data.pop("incluir_en_depreciacion")
+        data.update(
+            {
+                "serie": "LAP-NO-DEP",
+                "codigo_sap": "SAP-NO-DEP",
+                "fotos-TOTAL_FORMS": "2",
+                "fotos-INITIAL_FORMS": "0",
+                "fotos-MIN_NUM_FORMS": "0",
+                "fotos-MAX_NUM_FORMS": "5",
+            }
+        )
+
+        response = self.client.post(reverse("activos:nuevo"), data)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(Activo.objects.get(serie="LAP-NO-DEP").incluir_en_depreciacion)
 
     def test_edit_mode_renders_existing_data_and_updates_activo(self):
         activo = Activo.objects.create(

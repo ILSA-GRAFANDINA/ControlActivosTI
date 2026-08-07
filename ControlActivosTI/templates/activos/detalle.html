@@ -284,7 +284,11 @@
         <h3 id="depreciacion-titulo" class="mt-1 text-xl font-bold text-slate-900">Depreciación</h3>
         <p class="mt-1 text-sm text-slate-500">Cálculo automático por línea recta</p>
 
-        {% if calculo_depreciacion.configurado %}
+        {% if not activo.incluir_en_depreciacion %}
+            <div class="mt-5 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-slate-700">
+                <strong>Activo no depreciable.</strong> Este activo fue excluido de los cálculos, reportes y alertas de depreciación.
+            </div>
+        {% elif calculo_depreciacion.configurado %}
             <div class="mt-5 flex flex-wrap items-center justify-between gap-3">
                 <span class="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700">
                     {{ calculo_depreciacion.estado }}

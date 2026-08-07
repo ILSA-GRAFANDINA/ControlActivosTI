@@ -92,6 +92,16 @@ class DepreciacionAutomaticaTests(TestCase):
         resultado = DepreciationService.calcular(self.activo(fecha_compra=None))
         self.assertFalse(resultado.configurado)
 
+    def test_activo_no_depreciable_no_se_calcula(self):
+        activo = self.activo(incluir_en_depreciacion=False)
+
+        resultado = DepreciationService.calcular(activo, date(2025, 1, 31))
+
+        self.assertFalse(resultado.configurado)
+        self.assertEqual(resultado.estado, "No depreciable")
+        self.assertEqual(resultado.depreciacion_acumulada, 0)
+        self.assertIsNone(resultado.proxima_alerta)
+
     def test_detalle_muestra_depreciacion_sin_configuracion_manual(self):
         activo = self.activo()
         self.client.force_login(self.admin)
@@ -180,6 +190,15 @@ class DepreciacionAutomaticaTests(TestCase):
         )
         self.assertFalse(EventoNotificacionDepreciacion.objects.exists())
 
+    def test_activo_no_depreciable_no_notifica(self):
+        self.activo(incluir_en_depreciacion=False)
+        call_command(
+            "check_asset_depreciation",
+            evaluation_date="2028-01-31",
+            stdout=StringIO(),
+        )
+        self.assertFalse(EventoNotificacionDepreciacion.objects.exists())
+
     def test_reporte_incluye_activos_historicos_con_datos(self):
         activo = self.activo(fecha_compra=date(2020, 1, 1))
         self.client.force_login(self.admin)
@@ -188,6 +207,7 @@ class DepreciacionAutomaticaTests(TestCase):
         self.assertContains(response, "Vida útil cumplida")
 
     def test_filtro_estado_se_aplica_antes_de_paginar(self):
+        no_depreciable = self.activo(incluir_en_depreciacion=False)
         proximo = self.activo(fecha_compra=date(2024, 1, 1))
         for numero in range(30):
             self.activo(
@@ -207,6 +227,7 @@ class DepreciacionAutomaticaTests(TestCase):
         self.assertEqual(response.context["paginator"].count, 1)
         self.assertEqual(response.context["paginator"].num_pages, 1)
         self.assertContains(response, proximo.codigo)
+        self.assertNotContains(response, no_depreciable.codigo)
 
     def test_reporte_muestra_pestanas_por_tipo_y_filtra_antes_de_paginar(self):
         tipo_monitor = TipoActivo.objects.create(nombre="Monitor")

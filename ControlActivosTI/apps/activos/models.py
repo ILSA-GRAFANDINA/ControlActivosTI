@@ -141,6 +141,11 @@ class Activo(models.Model):
         verbose_name="Valor de Compra",
         help_text="Ingresa el valor con coma de miles, por ejemplo 10,482.00.",
     )
+    incluir_en_depreciacion = models.BooleanField(
+        default=True,
+        verbose_name="Incluir en depreciación",
+        help_text="Desmarca esta opción si el activo no debe depreciarse ni generar alertas.",
+    )
     estado_activo = models.ForeignKey(
         EstadoActivo,
         on_delete=models.PROTECT,

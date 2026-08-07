@@ -151,8 +151,10 @@ class DepreciacionReporteView(LoginRequiredMixin, ListView):
         return queryset.filter(fecha_compra__gt=limite_alerta)
 
     def get_queryset(self):
-        qs = Activo.objects.select_related("tipo_activo", "estado_activo").order_by(
-            "codigo"
+        qs = (
+            Activo.objects.select_related("tipo_activo", "estado_activo")
+            .filter(incluir_en_depreciacion=True)
+            .order_by("codigo")
         )
         q = self.request.GET.get("q", "").strip()
         if q:
