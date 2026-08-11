@@ -30,7 +30,7 @@ class AsignacionListView(LoginRequiredMixin, ListView):
     paginate_by = 10
     FILTER_SESSION_KEY = "asignaciones_filtros_guardados"
     FILTER_FIELDS = ("q", "fecha_desde", "fecha_hasta", "orden")
-    FILTER_MULTI_FIELDS = ("estado", "acta")
+    FILTER_MULTI_FIELDS = ("estado", "acta", "cols")
     ESTADOS_FILTRO = (
         ("ABIERTAS", "Abiertas (activas y parciales)"),
         (Asignacion.EstadoAsignacion.ACTIVA, "Activa"),
@@ -41,6 +41,14 @@ class AsignacionListView(LoginRequiredMixin, ListView):
         ("con", "Con acta"),
         ("sin", "Sin acta"),
     )
+    COLUMNAS_DISPONIBLES = [
+        ("activos", "Activos"),
+        ("colaborador", "Colaborador"),
+        ("fecha", "Fecha"),
+        ("estado", "Estado"),
+        ("responsable", "Responsable"),
+    ]
+    COLUMNAS_POR_DEFECTO = ["activos", "colaborador", "fecha", "estado", "responsable"]
     ORDENES_FECHA = {
         "recientes": ("-fecha_asignacion", "-id"),
         "actividad": ("-updated_at", "-id"),
@@ -62,6 +70,8 @@ class AsignacionListView(LoginRequiredMixin, ListView):
         acta_validos = {value for value, _ in self.ACTAS_FILTRO}
         filtros["estado"] = list(dict.fromkeys(value for value in source.getlist("estado") if value in estado_validos))
         filtros["acta"] = list(dict.fromkeys(value for value in source.getlist("acta") if value in acta_validos))
+        columnas_validas = {key for key, _ in self.COLUMNAS_DISPONIBLES}
+        filtros["cols"] = list(dict.fromkeys(value for value in source.getlist("cols") if value in columnas_validas)) or self.COLUMNAS_POR_DEFECTO
         return filtros
 
     def _has_filter_params(self):
@@ -73,7 +83,7 @@ class AsignacionListView(LoginRequiredMixin, ListView):
             self.request.session.modified = True
             return {
                 **{field: "recientes" if field == "orden" else "" for field in self.FILTER_FIELDS},
-                **{field: [] for field in self.FILTER_MULTI_FIELDS},
+                **{field: self.COLUMNAS_POR_DEFECTO if field == "cols" else [] for field in self.FILTER_MULTI_FIELDS},
             }
 
         if self._has_filter_params():
@@ -95,11 +105,13 @@ class AsignacionListView(LoginRequiredMixin, ListView):
                 if isinstance(saved_values, str):
                     saved_values = [value for value in saved_values.split(",") if value]
                 filtros[field] = [str(value) for value in saved_values if str(value).strip()]
+            columnas_validas = {key for key, _ in self.COLUMNAS_DISPONIBLES}
+            filtros["cols"] = [col for col in filtros["cols"] if col in columnas_validas] or self.COLUMNAS_POR_DEFECTO
             return filtros
 
         return {
             **{field: "recientes" if field == "orden" else "" for field in self.FILTER_FIELDS},
-            **{field: [] for field in self.FILTER_MULTI_FIELDS},
+            **{field: self.COLUMNAS_POR_DEFECTO if field == "cols" else [] for field in self.FILTER_MULTI_FIELDS},
         }
 
     def build_filter_querystring(self):
@@ -109,6 +121,8 @@ class AsignacionListView(LoginRequiredMixin, ListView):
             params["q"] = filtros["q"]
         params.setlist("estado", filtros["estado"])
         params.setlist("acta", filtros["acta"])
+        if filtros["cols"] != self.COLUMNAS_POR_DEFECTO:
+            params.setlist("cols", filtros["cols"])
         if filtros["fecha_desde"]:
             params["fecha_desde"] = filtros["fecha_desde"]
         if filtros["fecha_hasta"]:
@@ -116,6 +130,10 @@ class AsignacionListView(LoginRequiredMixin, ListView):
         if filtros["orden"] != "recientes":
             params["orden"] = filtros["orden"]
         return params.urlencode()
+
+    def get_selected_columns(self):
+        seleccionadas = self.get_active_filters()["cols"]
+        return seleccionadas or self.COLUMNAS_POR_DEFECTO
 
     def estado_filter_to_values(self, estados):
         valores = set()
@@ -202,6 +220,10 @@ class AsignacionListView(LoginRequiredMixin, ListView):
         context["orden_seleccionado"] = filtros["orden"]
         context["estados_filtro"] = self.ESTADOS_FILTRO
         context["actas_filtro"] = self.ACTAS_FILTRO
+        columnas_seleccionadas = self.get_selected_columns()
+        context["columnas_disponibles"] = self.COLUMNAS_DISPONIBLES
+        context["columnas_seleccionadas"] = columnas_seleccionadas
+        context["total_columnas_tabla"] = len(columnas_seleccionadas) + 2
         context["cantidad_filtros_activos"] = (
             len(filtros["estado"])
             + len(filtros["acta"])

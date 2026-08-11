@@ -49,7 +49,7 @@ class FacturaListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     paginate_by = 12
     FILTER_SESSION_KEY = "facturas_filtros_guardados"
     FILTER_FIELDS = ("q", "fecha_desde", "fecha_hasta", "orden")
-    FILTER_MULTI_FIELDS = ("proveedor", "empresa", "estado", "relaciones")
+    FILTER_MULTI_FIELDS = ("proveedor", "empresa", "estado", "relaciones", "cols")
     ESTADOS_FILTRO = (
         ("activa", "Activas"),
         ("archivada", "Archivadas"),
@@ -70,6 +70,15 @@ class FacturaListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         ("numero_asc", "Factura: A a Z"),
         ("numero_desc", "Factura: Z a A"),
     )
+    COLUMNAS_DISPONIBLES = [
+        ("proveedor", "Proveedor"),
+        ("empresa", "Empresa"),
+        ("emision", "Emisión"),
+        ("documento", "Documento"),
+        ("estado", "Estado"),
+        ("activos", "Activos"),
+    ]
+    COLUMNAS_POR_DEFECTO = ["proveedor", "empresa", "emision", "documento", "estado", "activos"]
 
     def _default_filters(self):
         return {
@@ -90,11 +99,13 @@ class FacturaListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
         estados_validos = {value for value, _ in self.ESTADOS_FILTRO}
         relaciones_validas = {value for value, _ in self.RELACIONES_FILTRO}
+        columnas_validas = {key for key, _ in self.COLUMNAS_DISPONIBLES}
         validadores = {
             "proveedor": str.isdigit,
             "empresa": str.isdigit,
             "estado": lambda value: value in estados_validos,
             "relaciones": lambda value: value in relaciones_validas,
+            "cols": lambda value: value in columnas_validas,
         }
         for field in self.FILTER_MULTI_FIELDS:
             values = filtros.get(field, [])
@@ -107,6 +118,7 @@ class FacturaListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
                     if str(value).strip() and validadores[field](str(value).strip())
                 )
             )
+        filtros["cols"] = filtros["cols"] or self.COLUMNAS_POR_DEFECTO
         return filtros
 
     def _filters_from_request(self):
@@ -154,6 +166,8 @@ class FacturaListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         if filtros["q"]:
             params["q"] = filtros["q"]
         for field in self.FILTER_MULTI_FIELDS:
+            if field == "cols" and filtros[field] == self.COLUMNAS_POR_DEFECTO:
+                continue
             params.setlist(field, filtros[field])
         if filtros["fecha_desde"]:
             params["fecha_desde"] = filtros["fecha_desde"]
@@ -162,6 +176,10 @@ class FacturaListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         if filtros["orden"] != "recientes":
             params["orden"] = filtros["orden"]
         return params
+
+    def get_selected_columns(self):
+        seleccionadas = self.get_active_filters()["cols"]
+        return seleccionadas or self.COLUMNAS_POR_DEFECTO
 
     def get_queryset(self):
         filtros = self.get_active_filters()
@@ -209,6 +227,7 @@ class FacturaListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         filtros = self.get_active_filters()
+        columnas_seleccionadas = self.get_selected_columns()
         context.update({
             "busqueda": filtros["q"],
             "proveedor_seleccionado": filtros["proveedor"][0] if filtros["proveedor"] else "",
@@ -227,9 +246,12 @@ class FacturaListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             "estados_filtro": self.ESTADOS_FILTRO,
             "relaciones_filtro": self.RELACIONES_FILTRO,
             "ordenes_disponibles": self.ORDENES_CHOICES,
+            "columnas_disponibles": self.COLUMNAS_DISPONIBLES,
+            "columnas_seleccionadas": columnas_seleccionadas,
+            "total_columnas_tabla": len(columnas_seleccionadas) + 1,
             "cantidad_filtros_activos": (
                 bool(filtros["q"])
-                + sum(len(filtros[field]) for field in self.FILTER_MULTI_FIELDS)
+                + sum(len(filtros[field]) for field in self.FILTER_MULTI_FIELDS if field != "cols")
                 + bool(filtros["fecha_desde"])
                 + bool(filtros["fecha_hasta"])
                 + (filtros["orden"] != "recientes")

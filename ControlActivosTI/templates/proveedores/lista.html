@@ -91,11 +91,6 @@
               </section>
               <section data-filter-panel="vista" class="hidden space-y-4">
                 <div><label for="proveedor-filter-order" class="mb-2 block text-sm font-semibold text-slate-900">Orden</label><select id="proveedor-filter-order" name="orden" data-filter-select-label="Orden" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">{% for value, label in ordenes_disponibles %}<option value="{{ value }}" {% if orden_seleccionado == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
-                <div>
-                  <h3 class="mb-2 text-sm font-semibold text-slate-900">Columnas visibles</h3>
-                  <p class="mb-3 text-xs text-slate-500">El identificador circular siempre se muestra.</p>
-                  <div class="grid gap-2 sm:grid-cols-2">{% for key, label in columnas_disponibles %}<label class="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"><input type="checkbox" name="cols" value="{{ key }}" class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" {% if key in columnas_seleccionadas %}checked{% endif %}><span>{{ label }}</span></label>{% endfor %}</div>
-                </div>
               </section>
             </div>
           </div>
@@ -114,6 +109,26 @@
       {% if orden_seleccionado != "nombre_asc" %}{% for value, label in ordenes_disponibles %}{% if orden_seleccionado == value %}<button type="button" data-remove-filter="orden" class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700"><span>Orden: {{ label }}</span><span aria-hidden="true">×</span></button>{% endif %}{% endfor %}{% endif %}
     </div>
     {% endif %}
+
+    <details class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+      <summary class="cursor-pointer text-sm font-semibold text-slate-700">
+        Vista de tabla
+      </summary>
+      <p class="mt-2 text-xs text-slate-500">
+        Escoge que columnas quieres ver. El identificador circular del proveedor
+        siempre se muestra.
+      </p>
+      <div class="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
+        {% for key, label in columnas_disponibles %}
+        <label
+          class="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
+        >
+          <input type="checkbox" name="cols" value="{{ key }}" class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" {% if key in columnas_seleccionadas %}checked{% endif %}>
+          <span>{{ label }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </details>
 
     <fieldset disabled class="hidden" aria-hidden="true">
     <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_14rem_auto] lg:items-end">
