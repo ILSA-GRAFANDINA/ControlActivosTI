@@ -113,6 +113,9 @@ class ActivoAdminForm(forms.ModelForm):
             if isinstance(widget, forms.Textarea):
                 widget.attrs.setdefault("rows", 4)
                 widget.attrs["class"] = TEXTAREA_CLASS
+                if nombre_campo == "observaciones":
+                    widget.attrs["rows"] = 2
+                    widget.attrs["class"] = f"{TEXTAREA_CLASS} min-h-0"
             elif isinstance(widget, forms.CheckboxInput):
                 widget.attrs["class"] = CHECKBOX_CLASS
             elif input_type == "file":

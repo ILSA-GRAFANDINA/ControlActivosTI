@@ -1239,6 +1239,8 @@ class ActivoDetailViewTests(TestCase):
             self.assertContains(response, "data-photo-carousel")
             self.assertContains(response, "data-carousel-slide")
             self.assertContains(response, "data-image-modal")
+            self.assertContains(response, "data-image-zoom-controls")
+            self.assertContains(response, "data-image-modal-viewport")
             self.assertContains(response, ".webp")
             self.assertNotContains(response, 'target="_blank"')
         finally:
