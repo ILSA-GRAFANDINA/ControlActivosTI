@@ -12,8 +12,131 @@
 </div>
 
 <div class="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-    <form method="get" class="space-y-4" data-scroll-to-results data-compact-filters>
-        {% if empresa_seleccionada %}<input type="hidden" name="empresa" value="{{ empresa_seleccionada }}">{% endif %}
+    <form method="get" class="space-y-4" data-scroll-to-results data-compact-filters data-collaborator-filters>
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
+            <div class="relative min-w-0 flex-1">
+                <label for="colaborador-filter-search" class="sr-only">Buscar colaboradores</label>
+                <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 3.44 9.79l2.64 2.64a.75.75 0 1 0 1.06-1.06l-2.64-2.64A5.5 5.5 0 0 0 9 3.5ZM5 9a4 4 0 1 1 8 0 4 4 0 0 1-8 0Z" clip-rule="evenodd" /></svg>
+                </span>
+                <input id="colaborador-filter-search" type="text" name="q" value="{{ busqueda }}" placeholder="Nombre, apellido, cédula o correo" class="w-full rounded-xl border border-slate-300 bg-white py-3 pl-11 pr-4 text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
+            </div>
+            <button type="submit" class="rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700">Buscar</button>
+
+            <details class="group relative" data-filter-popover>
+                <summary class="inline-flex w-full cursor-pointer list-none items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-cyan-400 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-cyan-100 lg:w-auto">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M2.75 4.5a.75.75 0 0 1 .75-.75h13a.75.75 0 0 1 0 1.5h-13a.75.75 0 0 1-.75-.75ZM5.75 10a.75.75 0 0 1 .75-.75h7a.75.75 0 0 1 0 1.5h-7a.75.75 0 0 1-.75-.75ZM8.75 15.5a.75.75 0 0 1 .75-.75h1a.75.75 0 0 1 0 1.5h-1a.75.75 0 0 1-.75-.75Z" /></svg>
+                    <span>Filtros</span>
+                    <span data-filter-count class="inline-flex min-w-5 items-center justify-center rounded-full bg-cyan-100 px-1.5 py-0.5 text-[11px] font-bold text-cyan-700 {% if not cantidad_filtros_activos %}hidden{% endif %}">{{ cantidad_filtros_activos }}</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400 transition group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08Z" clip-rule="evenodd" /></svg>
+                </summary>
+
+                <div class="asset-filter-popover absolute right-0 z-30 mt-2 w-[min(92vw,40rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 sm:px-5">
+                        <div><p class="text-sm font-semibold text-slate-900">Filtrar colaboradores</p><p class="mt-0.5 text-xs text-slate-500">Combina uno o varios criterios.</p></div>
+                        <div class="asset-filter-header-actions flex items-center gap-3">
+                            <div class="asset-filter-actions flex items-center gap-2 rounded-2xl bg-slate-50 p-1">
+                                <a href="{% url 'colaboradores:lista' %}?reset=1" class="asset-filter-reset rounded-xl border border-transparent px-3 py-2 text-xs font-semibold text-slate-700 transition">Restablecer</a>
+                                <button type="submit" class="asset-filter-apply rounded-xl bg-cyan-600 px-5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-cyan-700">Aplicar filtros</button>
+                            </div>
+                            <button type="button" data-filter-close class="asset-filter-close inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition" aria-label="Cerrar filtros">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M4.47 4.47a.75.75 0 0 1 1.06 0L10 8.94l4.47-4.47a.75.75 0 1 1 1.06 1.06L11.06 10l4.47 4.47a.75.75 0 0 1-1.06 1.06L10 11.06l-4.47 4.47a.75.75 0 0 1-1.06-1.06L8.94 10 4.47 5.53a.75.75 0 0 1 0-1.06Z" /></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="asset-filter-selection border-b border-slate-200 px-4 py-3 sm:px-5">
+                        <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Selección actual</p>
+                        <div class="flex min-h-7 flex-wrap items-center gap-2" data-live-filter-summary aria-live="polite">
+                            <span class="text-xs text-slate-400" data-filter-empty>Ningún filtro seleccionado</span>
+                        </div>
+                    </div>
+                    <div class="grid h-[18rem] grid-cols-[8.5rem_minmax(0,1fr)] sm:grid-cols-[11rem_minmax(0,1fr)]">
+                        <nav class="asset-filter-nav space-y-1 border-r border-slate-200 p-2 sm:p-3" aria-label="Categorías de filtros">
+                            <button type="button" data-filter-tab="estado" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition">Estado</button>
+                            <button type="button" data-filter-tab="organizacion" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition">Organización</button>
+                            <button type="button" data-filter-tab="activos" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition">Activos</button>
+                            <button type="button" data-filter-tab="ingreso" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition">Ingreso</button>
+                            <button type="button" data-filter-tab="vista" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition">Vista</button>
+                        </nav>
+                        <div class="h-[18rem] overflow-y-auto p-3 sm:p-4">
+                            <section data-filter-panel="estado" class="space-y-3">
+                                <h3 class="text-sm font-semibold text-slate-900">Estado del colaborador</h3>
+                                <p class="text-xs text-slate-500">Puedes seleccionar uno o varios estados.</p>
+                                <div class="space-y-1">
+                                    {% for value, label in estados_colaborador %}
+                                        <label class="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" name="estado" value="{{ value }}" data-filter-prefix="Estado" class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" {% if value in estados_seleccionados %}checked{% endif %}><span>{{ label }}</span></label>
+                                    {% endfor %}
+                                </div>
+                            </section>
+                            <section data-filter-panel="organizacion" class="hidden space-y-5">
+                                <div>
+                                    <h3 class="text-sm font-semibold text-slate-900">Empresa</h3>
+                                    <input type="search" data-filter-option-search="empresa" placeholder="Buscar empresa" class="my-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
+                                    <div class="max-h-36 overflow-y-auto rounded-xl border border-slate-200 p-2">
+                                        <label class="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" name="empresa" value="sin_empresa" data-filter-prefix="Empresa" class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" {% if "sin_empresa" in empresas_seleccionadas %}checked{% endif %}><span>Sin empresa</span></label>
+                                        {% for empresa in empresas %}<label class="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" name="empresa" value="{{ empresa.pk }}" data-filter-prefix="Empresa" class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" {% if empresa.pk|stringformat:"s" in empresas_seleccionadas %}checked{% endif %}><span>{{ empresa.nombre }}</span></label>{% endfor %}
+                                    </div>
+                                </div>
+                                <div>
+                                    <h3 class="text-sm font-semibold text-slate-900">Área</h3>
+                                    <input type="search" data-filter-option-search="area" placeholder="Buscar área" class="my-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
+                                    <div class="max-h-36 overflow-y-auto rounded-xl border border-slate-200 p-2">{% for area in areas %}<label class="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" name="area" value="{{ area.pk }}" data-filter-prefix="Área" class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" {% if area.pk|stringformat:"s" in areas_seleccionadas %}checked{% endif %}><span>{{ area.nombre }}</span></label>{% endfor %}</div>
+                                </div>
+                                <div>
+                                    <h3 class="text-sm font-semibold text-slate-900">Cargo</h3>
+                                    <input type="search" data-filter-option-search="cargo" placeholder="Buscar cargo" class="my-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
+                                    <div class="max-h-36 overflow-y-auto rounded-xl border border-slate-200 p-2">{% for cargo in cargos %}<label class="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" name="cargo" value="{{ cargo.pk }}" data-filter-prefix="Cargo" class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" {% if cargo.pk|stringformat:"s" in cargos_seleccionados %}checked{% endif %}><span>{{ cargo.nombre }}</span></label>{% endfor %}</div>
+                                </div>
+                                <div>
+                                    <h3 class="text-sm font-semibold text-slate-900">Ubicación</h3>
+                                    <input type="search" data-filter-option-search="ubicacion" placeholder="Buscar ubicación" class="my-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
+                                    <div class="max-h-36 overflow-y-auto rounded-xl border border-slate-200 p-2">{% for ubicacion in ubicaciones %}<label class="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" name="ubicacion" value="{{ ubicacion.pk }}" data-filter-prefix="Ubicación" class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" {% if ubicacion.pk|stringformat:"s" in ubicaciones_seleccionadas %}checked{% endif %}><span>{{ ubicacion.nombre }}</span></label>{% endfor %}</div>
+                                </div>
+                            </section>
+                            <section data-filter-panel="activos" class="hidden space-y-3">
+                                <h3 class="text-sm font-semibold text-slate-900">Activos asignados</h3>
+                                <p class="text-xs text-slate-500">Filtra colaboradores según tengan activos vigentes.</p>
+                                <div class="space-y-1">
+                                    {% for value, label in activos_filtro %}
+                                        <label class="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" name="activos" value="{{ value }}" data-filter-prefix="Activos" class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" {% if value in activos_seleccionados %}checked{% endif %}><span>{{ label }}</span></label>
+                                    {% endfor %}
+                                </div>
+                            </section>
+                            <section data-filter-panel="ingreso" class="hidden space-y-4">
+                                <div><label for="filtro-fecha-desde" class="mb-2 block text-sm font-semibold text-slate-900">Ingreso desde</label><input id="filtro-fecha-desde" type="date" name="fecha_desde" value="{{ fecha_desde }}" data-filter-label-prefix="Ingreso desde" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"></div>
+                                <div><label for="filtro-fecha-hasta" class="mb-2 block text-sm font-semibold text-slate-900">Ingreso hasta</label><input id="filtro-fecha-hasta" type="date" name="fecha_hasta" value="{{ fecha_hasta }}" data-filter-label-prefix="Ingreso hasta" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"></div>
+                            </section>
+                            <section data-filter-panel="vista" class="hidden space-y-4">
+                                <div><label for="filtro-orden" class="mb-2 block text-sm font-semibold text-slate-900">Orden</label><select id="filtro-orden" name="orden" data-filter-select-label="Orden" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">{% for value, label in ordenes_disponibles %}<option value="{{ value }}" {% if orden_seleccionado == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+                                <div>
+                                    <h3 class="mb-2 text-sm font-semibold text-slate-900">Columnas visibles</h3>
+                                    <p class="mb-3 text-xs text-slate-500">El identificador visual siempre se muestra.</p>
+                                    <div class="grid gap-2 sm:grid-cols-2">{% for key, label in columnas_disponibles %}<label class="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"><input type="checkbox" name="cols" value="{{ key }}" class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" {% if key in columnas_seleccionadas %}checked{% endif %}><span>{{ label }}</span></label>{% endfor %}</div>
+                                </div>
+                            </section>
+                        </div>
+                    </div>
+                </div>
+            </details>
+        </div>
+
+        {% if busqueda or estados_seleccionados or empresas_seleccionadas or areas_seleccionadas or cargos_seleccionados or ubicaciones_seleccionadas or activos_seleccionados or fecha_desde or fecha_hasta or orden_seleccionado != "nombre_asc" %}
+            <div class="flex flex-wrap items-center gap-2" aria-label="Filtros activos">
+                {% if busqueda %}<button type="button" data-remove-filter="q" class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-slate-300"><span>Búsqueda: {{ busqueda }}</span><span aria-hidden="true">×</span></button>{% endif %}
+                {% for value, label in estados_colaborador %}{% if value in estados_seleccionados %}<button type="button" data-remove-filter="estado" data-remove-value="{{ value }}" class="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-xs font-medium text-cyan-700"><span>Estado: {{ label }}</span><span aria-hidden="true">×</span></button>{% endif %}{% endfor %}
+                {% if "sin_empresa" in empresas_seleccionadas %}<button type="button" data-remove-filter="empresa" data-remove-value="sin_empresa" class="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700"><span>Empresa: Sin empresa</span><span aria-hidden="true">×</span></button>{% endif %}
+                {% for empresa in empresas %}{% if empresa.pk|stringformat:"s" in empresas_seleccionadas %}<button type="button" data-remove-filter="empresa" data-remove-value="{{ empresa.pk }}" class="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700"><span>Empresa: {{ empresa.nombre }}</span><span aria-hidden="true">×</span></button>{% endif %}{% endfor %}
+                {% for area in areas %}{% if area.pk|stringformat:"s" in areas_seleccionadas %}<button type="button" data-remove-filter="area" data-remove-value="{{ area.pk }}" class="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-medium text-violet-700"><span>Área: {{ area.nombre }}</span><span aria-hidden="true">×</span></button>{% endif %}{% endfor %}
+                {% for cargo in cargos %}{% if cargo.pk|stringformat:"s" in cargos_seleccionados %}<button type="button" data-remove-filter="cargo" data-remove-value="{{ cargo.pk }}" class="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700"><span>Cargo: {{ cargo.nombre }}</span><span aria-hidden="true">×</span></button>{% endif %}{% endfor %}
+                {% for ubicacion in ubicaciones %}{% if ubicacion.pk|stringformat:"s" in ubicaciones_seleccionadas %}<button type="button" data-remove-filter="ubicacion" data-remove-value="{{ ubicacion.pk }}" class="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700"><span>Ubicación: {{ ubicacion.nombre }}</span><span aria-hidden="true">×</span></button>{% endif %}{% endfor %}
+                {% for value, label in activos_filtro %}{% if value in activos_seleccionados %}<button type="button" data-remove-filter="activos" data-remove-value="{{ value }}" class="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-xs font-medium text-cyan-700"><span>{{ label }}</span><span aria-hidden="true">×</span></button>{% endif %}{% endfor %}
+                {% if fecha_desde %}<button type="button" data-remove-filter="fecha_desde" class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700"><span>Ingreso desde: {{ fecha_desde }}</span><span aria-hidden="true">×</span></button>{% endif %}
+                {% if fecha_hasta %}<button type="button" data-remove-filter="fecha_hasta" class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700"><span>Ingreso hasta: {{ fecha_hasta }}</span><span aria-hidden="true">×</span></button>{% endif %}
+                {% if orden_seleccionado != "nombre_asc" %}{% for value, label in ordenes_disponibles %}{% if orden_seleccionado == value %}<button type="button" data-remove-filter="orden" class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700"><span>Orden: {{ label }}</span><span aria-hidden="true">×</span></button>{% endif %}{% endfor %}{% endif %}
+            </div>
+        {% endif %}
+
+        <fieldset disabled class="hidden" aria-hidden="true">
         <div class="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(170px,0.65fr)_minmax(190px,0.75fr)]">
             <div>
                 <label class="mb-2 block text-sm font-semibold text-slate-700">Búsqueda</label>
@@ -164,6 +287,7 @@
                 {% endfor %}
             </div>
         </details>
+        </fieldset>
 
     </form>
 </div>
@@ -324,4 +448,122 @@
         </div>
     {% endif %}
 </div>
+<script>
+    (() => {
+        const form = document.querySelector("[data-collaborator-filters]");
+        if (!form) return;
+
+        const popover = form.querySelector("[data-filter-popover]");
+        const tabs = Array.from(form.querySelectorAll("[data-filter-tab]"));
+        const panels = Array.from(form.querySelectorAll("[data-filter-panel]"));
+        const liveSummary = form.querySelector("[data-live-filter-summary]");
+        const countBadge = form.querySelector("[data-filter-count]");
+
+        function activateTab(name) {
+            tabs.forEach((tab) => {
+                const active = tab.dataset.filterTab === name;
+                tab.classList.toggle("bg-white", active);
+                tab.classList.toggle("text-cyan-700", active);
+                tab.classList.toggle("shadow-sm", active);
+                tab.classList.toggle("text-slate-600", !active);
+                tab.setAttribute("aria-selected", String(active));
+            });
+            panels.forEach((panel) => panel.classList.toggle("hidden", panel.dataset.filterPanel !== name));
+        }
+
+        function selectedFilterControls() {
+            const selected = Array.from(form.querySelectorAll("[data-filter-prefix]"))
+                .filter((control) => control.checked)
+                .map((control) => ({
+                    control,
+                    label: `${control.dataset.filterPrefix}: ${control.closest("label").querySelector("span").textContent.trim()}`,
+                }));
+            const search = form.querySelector("input[name='q']:not([disabled])");
+            if (search?.value.trim()) selected.unshift({ control: search, label: `Búsqueda: ${search.value.trim()}` });
+            form.querySelectorAll("[data-filter-label-prefix]").forEach((input) => {
+                if (input.value) selected.push({ control: input, label: `${input.dataset.filterLabelPrefix}: ${input.value}` });
+            });
+            form.querySelectorAll("[data-filter-select-label]").forEach((select) => {
+                if (select.value && select.value !== "nombre_asc") selected.push({
+                    control: select,
+                    label: `${select.dataset.filterSelectLabel}: ${select.selectedOptions[0].textContent.trim()}`,
+                });
+            });
+            return selected;
+        }
+
+        function refreshLiveSummary() {
+            if (!liveSummary) return;
+            const selected = selectedFilterControls();
+            liveSummary.replaceChildren();
+            if (!selected.length) {
+                const empty = document.createElement("span");
+                empty.className = "text-xs text-slate-400";
+                empty.textContent = "Ningún filtro seleccionado";
+                liveSummary.append(empty);
+            } else {
+                selected.forEach(({ control, label }) => {
+                    const chip = document.createElement("button");
+                    chip.type = "button";
+                    chip.className = "asset-filter-chip inline-flex items-center gap-1.5 rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-xs font-medium text-cyan-700 transition hover:border-cyan-300";
+                    chip.innerHTML = `<span></span><span aria-hidden="true">×</span>`;
+                    chip.firstElementChild.textContent = label;
+                    chip.setAttribute("aria-label", `Quitar ${label}`);
+                    chip.addEventListener("click", () => {
+                        if (control.type === "checkbox") control.checked = false;
+                        else if (control.tagName === "SELECT") control.value = "nombre_asc";
+                        else control.value = "";
+                        refreshLiveSummary();
+                    });
+                    liveSummary.append(chip);
+                });
+            }
+            if (countBadge) {
+                countBadge.textContent = selected.length;
+                countBadge.classList.toggle("hidden", selected.length === 0);
+            }
+        }
+
+        form.querySelectorAll("[data-filter-option-search]").forEach((searchInput) => {
+            searchInput.addEventListener("input", () => {
+                const query = searchInput.value.trim().toLowerCase();
+                const optionsBox = searchInput.nextElementSibling;
+                optionsBox?.querySelectorAll("label").forEach((label) => {
+                    label.classList.toggle("hidden", query && !label.textContent.toLowerCase().includes(query));
+                });
+            });
+        });
+
+        tabs.forEach((tab) => tab.addEventListener("click", () => activateTab(tab.dataset.filterTab)));
+        activateTab("estado");
+        form.addEventListener("input", refreshLiveSummary);
+        form.addEventListener("change", refreshLiveSummary);
+        refreshLiveSummary();
+
+        form.querySelector("[data-filter-close]")?.addEventListener("click", () => {
+            popover?.removeAttribute("open");
+        });
+        document.addEventListener("click", (event) => {
+            if (popover?.open && !popover.contains(event.target)) popover.removeAttribute("open");
+        });
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape" && popover?.open) popover.removeAttribute("open");
+        });
+
+        form.querySelectorAll("[data-remove-filter]").forEach((button) => {
+            button.addEventListener("click", () => {
+                const name = button.dataset.removeFilter;
+                const value = button.dataset.removeValue;
+                const controls = Array.from(form.elements).filter((control) => control.name === name && !control.disabled);
+                controls.forEach((control) => {
+                    if (control.type === "checkbox") {
+                        if (!value || control.value === value) control.checked = false;
+                    } else if (control.tagName === "SELECT") control.value = "nombre_asc";
+                    else control.value = "";
+                });
+                form.requestSubmit();
+            });
+        });
+    })();
+</script>
 {% endblock %}

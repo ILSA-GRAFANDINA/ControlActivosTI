@@ -280,3 +280,65 @@ class DepreciacionAutomaticaTests(TestCase):
         self.assertIn("fecha=2026-08-05", tab_monitor["url"])
         self.assertIn("solo_vigentes=0", tab_monitor["url"])
         self.assertIn(f"tab_tipo={tipo_monitor.pk}", tab_monitor["url"])
+
+
+    def test_reporte_renderiza_nuevo_panel_de_filtros(self):
+        self.activo()
+        self.client.force_login(self.admin)
+
+        response = self.client.get(reverse("depreciacion:reporte"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "asset-filter-popover")
+        self.assertContains(response, "data-depreciation-filters")
+        self.assertContains(response, "Filtrar depreciacion")
+        self.assertContains(response, 'data-filter-prefix="Estado"', html=False)
+        self.assertContains(response, "data-filter-actions")
+
+    def test_reporte_permite_estados_multiples_y_persistencia_hasta_reset(self):
+        pendiente = self.activo(valor=None, serie="DEP-PENDIENTE")
+        proximo = self.activo(fecha_compra=date(2024, 1, 1), serie="DEP-PROXIMO")
+        self.activo(fecha_compra=date(2025, 1, 1), serie="DEP-NORMAL")
+        self.client.force_login(self.admin)
+
+        response = self.client.get(
+            reverse("depreciacion:reporte"),
+            {
+                "estado": [
+                    "Pendiente de configuración",
+                    "Próximo a cumplir vida útil",
+                ],
+                "fecha": "2026-11-01",
+                "solo_vigentes": "0",
+                "orden": "compra_antigua",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["paginator"].count, 2)
+        self.assertIn(pendiente, response.context["activos"])
+        self.assertIn(proximo, response.context["activos"])
+        self.assertCountEqual(
+            response.context["estados_seleccionados"],
+            ["Pendiente de configuración", "Próximo a cumplir vida útil"],
+        )
+        self.assertEqual(response.context["solo_vigentes"], "0")
+        self.assertEqual(response.context["orden_seleccionado"], "compra_antigua")
+        self.assertIn("estado=Pendiente", response.context["query_string"])
+        self.assertIn("solo_vigentes=0", response.context["query_string"])
+
+        persisted_response = self.client.get(reverse("depreciacion:reporte"))
+
+        self.assertEqual(persisted_response.context["paginator"].count, 2)
+        self.assertEqual(persisted_response.context["solo_vigentes"], "0")
+        self.assertEqual(
+            persisted_response.context["orden_seleccionado"],
+            "compra_antigua",
+        )
+
+        reset_response = self.client.get(reverse("depreciacion:reporte"), {"reset": "1"})
+
+        self.assertEqual(reset_response.context["paginator"].count, 3)
+        self.assertEqual(reset_response.context["estados_seleccionados"], [])
+        self.assertEqual(reset_response.context["solo_vigentes"], "1")
+        self.assertEqual(reset_response.context["orden_seleccionado"], "codigo")

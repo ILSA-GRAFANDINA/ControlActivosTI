@@ -5,6 +5,7 @@ from dateutil.relativedelta import relativedelta
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.db.models import Count, Q
+from django.http import QueryDict
 from django.shortcuts import redirect
 from django.utils import timezone
 from django.views.generic import FormView, ListView
@@ -45,9 +46,12 @@ class DepreciacionReporteView(LoginRequiredMixin, ListView):
     context_object_name = "activos"
     paginate_by = 30
     TAB_PARAM = "tab_tipo"
+    FILTER_SESSION_KEY = "depreciacion_filtros_guardados"
+    FILTER_FIELDS = ("q", "fecha", "solo_vigentes", "orden", TAB_PARAM)
+    FILTER_MULTI_FIELDS = ("estado", "cols")
 
     COLUMNAS_DISPONIBLES = [
-        ("categoria", "Categoría"),
+        ("categoria", "Categor?a"),
         ("estado", "Estado"),
         ("compra", "Fecha de compra"),
         ("fin_vida_util", "Fin de vida útil"),
@@ -62,29 +66,139 @@ class DepreciacionReporteView(LoginRequiredMixin, ListView):
         "fin_vida_util",
         "estado",
     ]
-    ESTADOS_DEPRECIACION = {
+    ESTADOS_DEPRECIACION = (
         "Pendiente de configuración",
         "No iniciada",
         "En depreciación",
         "Próximo a cumplir vida útil",
         "Vida útil cumplida",
         "Retirado o dado de baja",
+    )
+    ORDENES = {
+        "codigo": ("codigo",),
+        "compra_reciente": ("-fecha_compra", "-id"),
+        "compra_antigua": ("fecha_compra", "id"),
+        "valor_mayor": ("-valor", "codigo"),
+        "valor_menor": ("valor", "codigo"),
     }
+    ORDENES_CHOICES = (
+        ("codigo", "Código"),
+        ("compra_reciente", "Compra m?s reciente"),
+        ("compra_antigua", "Compra m?s antigua"),
+        ("valor_mayor", "Mayor valor"),
+        ("valor_menor", "Menor valor"),
+    )
+
+    def _default_filters(self):
+        return {
+            "q": "",
+            "fecha": timezone.localdate().isoformat(),
+            "solo_vigentes": "1",
+            "orden": "codigo",
+            self.TAB_PARAM: "",
+            **{field: [] for field in self.FILTER_MULTI_FIELDS},
+        }
+
+    def _sanitize_filters(self, filtros):
+        filtros = {**self._default_filters(), **(filtros or {})}
+        filtros["q"] = (filtros.get("q", "") or "").strip()
+        filtros["fecha"] = (filtros.get("fecha", "") or "").strip()
+        filtros["solo_vigentes"] = (
+            "0" if str(filtros.get("solo_vigentes", "1")).strip() == "0" else "1"
+        )
+        filtros["orden"] = (
+            filtros["orden"] if filtros.get("orden") in self.ORDENES else "codigo"
+        )
+        filtros[self.TAB_PARAM] = (filtros.get(self.TAB_PARAM, "") or "").strip()
+
+        columnas_validas = {key for key, _ in self.COLUMNAS_DISPONIBLES}
+        estados_validos = set(self.ESTADOS_DEPRECIACION)
+        validadores = {
+            "estado": lambda value: value in estados_validos,
+            "cols": lambda value: value in columnas_validas,
+        }
+        for field in self.FILTER_MULTI_FIELDS:
+            values = filtros.get(field, [])
+            if isinstance(values, str):
+                values = [value for value in values.split(",") if value]
+            filtros[field] = list(
+                dict.fromkeys(
+                    str(value).strip()
+                    for value in values
+                    if str(value).strip() and validadores[field](str(value).strip())
+                )
+            )
+        return filtros
+
+    def _filters_from_request(self):
+        source = self.request.GET
+        filtros = {
+            field: (source.get(field, "") or "").strip()
+            for field in self.FILTER_FIELDS
+        }
+        filtros["fecha"] = filtros["fecha"] or timezone.localdate().isoformat()
+        filtros["solo_vigentes"] = filtros["solo_vigentes"] or "1"
+        filtros["orden"] = filtros["orden"] or "codigo"
+        for field in self.FILTER_MULTI_FIELDS:
+            filtros[field] = source.getlist(field)
+        return self._sanitize_filters(filtros)
+
+    def _has_filter_params(self):
+        return any(
+            field in self.request.GET
+            for field in (*self.FILTER_FIELDS, *self.FILTER_MULTI_FIELDS)
+        )
+
+    def get_active_filters(self):
+        if hasattr(self, "_active_filters"):
+            return self._active_filters
+
+        if self.request.GET.get("reset") == "1":
+            self.request.session.pop(self.FILTER_SESSION_KEY, None)
+            self.request.session.modified = True
+            self._active_filters = self._default_filters()
+            return self._active_filters
+
+        if self._has_filter_params():
+            self._active_filters = self._filters_from_request()
+            self.request.session[self.FILTER_SESSION_KEY] = self._active_filters
+            self.request.session.modified = True
+            return self._active_filters
+
+        filtros_guardados = self.request.session.get(self.FILTER_SESSION_KEY, {})
+        self._active_filters = self._sanitize_filters(
+            filtros_guardados if isinstance(filtros_guardados, dict) else {}
+        )
+        return self._active_filters
+
+    def build_filter_querydict(self, filtros=None, exclude=None):
+        filtros = filtros or self.get_active_filters()
+        exclude = exclude or set()
+        params = QueryDict("", mutable=True)
+        if "q" not in exclude and filtros["q"]:
+            params["q"] = filtros["q"]
+        if "estado" not in exclude:
+            params.setlist("estado", filtros["estado"])
+        if "fecha" not in exclude and filtros["fecha"] != timezone.localdate().isoformat():
+            params["fecha"] = filtros["fecha"]
+        if "solo_vigentes" not in exclude and filtros["solo_vigentes"] == "0":
+            params["solo_vigentes"] = "0"
+        if "orden" not in exclude and filtros["orden"] != "codigo":
+            params["orden"] = filtros["orden"]
+        if self.TAB_PARAM not in exclude and filtros[self.TAB_PARAM]:
+            params[self.TAB_PARAM] = filtros[self.TAB_PARAM]
+        if "cols" not in exclude and filtros["cols"] and filtros["cols"] != self.COLUMNAS_POR_DEFECTO:
+            params.setlist("cols", filtros["cols"])
+        return params
 
     def get_selected_columns(self):
-        columnas_validas = {key for key, _ in self.COLUMNAS_DISPONIBLES}
-        seleccionadas = [
-            columna
-            for columna in self.request.GET.getlist("cols")
-            if columna in columnas_validas
-        ]
+        seleccionadas = self.get_active_filters()["cols"]
         return seleccionadas or self.COLUMNAS_POR_DEFECTO
 
     def fecha_consulta(self):
+        filtros = self.get_active_filters()
         try:
-            return datetime.strptime(
-                self.request.GET.get("fecha", ""), "%Y-%m-%d"
-            ).date()
+            return datetime.strptime(filtros["fecha"], "%Y-%m-%d").date()
         except ValueError:
             return timezone.localdate()
 
@@ -117,7 +231,7 @@ class DepreciacionReporteView(LoginRequiredMixin, ListView):
             | Q(estado_activo__nombre__icontains="retir")
             | Q(estado_activo__nombre__icontains="vend")
             | Q(estado_activo__nombre__icontains="perdid")
-            | Q(estado_activo__nombre__icontains="pérdid")
+            | Q(estado_activo__nombre__icontains="p?rdid")
             | Q(estado_activo__nombre__icontains="rob")
         )
 
@@ -150,13 +264,20 @@ class DepreciacionReporteView(LoginRequiredMixin, ListView):
             return queryset.filter(fecha_compra__lte=limite_alerta)
         return queryset.filter(fecha_compra__gt=limite_alerta)
 
+    def filtrar_por_estados(self, queryset, estados):
+        if not estados:
+            return queryset
+        resultado = queryset.none()
+        for estado in estados:
+            resultado = resultado | self.filtrar_por_estado(queryset, estado)
+        return resultado.distinct()
+
     def get_queryset(self):
-        qs = (
-            Activo.objects.select_related("tipo_activo", "estado_activo")
-            .filter(incluir_en_depreciacion=True)
-            .order_by("codigo")
+        filtros = self.get_active_filters()
+        qs = Activo.objects.select_related("tipo_activo", "estado_activo").filter(
+            incluir_en_depreciacion=True
         )
-        q = self.request.GET.get("q", "").strip()
+        q = filtros["q"]
         if q:
             qs = qs.filter(
                 Q(codigo__icontains=q)
@@ -165,12 +286,9 @@ class DepreciacionReporteView(LoginRequiredMixin, ListView):
                 | Q(serie__icontains=q)
                 | Q(tipo_activo__nombre__icontains=q)
             )
-        if self.request.GET.get("solo_vigentes", "1") == "1":
+        if filtros["solo_vigentes"] == "1":
             qs = qs.filter(activo=True)
-        qs = self.filtrar_por_estado(
-            qs,
-            self.request.GET.get("estado", ""),
-        )
+        qs = self.filtrar_por_estados(qs, filtros["estado"])
 
         self.resumen_tipos = list(
             qs.values("tipo_activo_id", "tipo_activo__nombre")
@@ -180,16 +298,14 @@ class DepreciacionReporteView(LoginRequiredMixin, ListView):
         tipos_disponibles = {
             str(item["tipo_activo_id"]) for item in self.resumen_tipos
         }
-        tab_tipo = (self.request.GET.get(self.TAB_PARAM, "") or "").strip()
+        tab_tipo = filtros[self.TAB_PARAM]
         self.tab_tipo_activa = tab_tipo if tab_tipo in tipos_disponibles else ""
         if self.tab_tipo_activa:
             qs = qs.filter(tipo_activo_id=self.tab_tipo_activa)
-        return qs
+        return qs.order_by(*self.ORDENES[filtros["orden"]])
 
     def construir_tabs_tipo(self):
-        parametros_base = self.request.GET.copy()
-        parametros_base.pop("page", None)
-        parametros_base.pop(self.TAB_PARAM, None)
+        parametros_base = self.build_filter_querydict(exclude={self.TAB_PARAM})
 
         def url_tab(tipo_id=""):
             parametros = parametros_base.copy()
@@ -218,10 +334,8 @@ class DepreciacionReporteView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        filtros = self.get_active_filters()
         fecha = self.fecha_consulta()
-        estado_filtro = self.request.GET.get("estado", "")
-        busqueda = self.request.GET.get("q", "").strip()
-        solo_vigentes = self.request.GET.get("solo_vigentes", "1")
         columnas_seleccionadas = self.get_selected_columns()
         filas = []
         for activo in context["activos"]:
@@ -240,14 +354,25 @@ class DepreciacionReporteView(LoginRequiredMixin, ListView):
             {
                 "filas_depreciacion": filas,
                 "fecha_consulta": fecha,
-                "busqueda": busqueda,
-                "estado_seleccionado": estado_filtro,
-                "solo_vigentes": solo_vigentes,
+                "busqueda": filtros["q"],
+                "estado_seleccionado": filtros["estado"][0] if filtros["estado"] else "",
+                "estados_seleccionados": filtros["estado"],
+                "solo_vigentes": filtros["solo_vigentes"],
+                "orden_seleccionado": filtros["orden"],
                 "tab_tipo_activa": self.tab_tipo_activa,
                 "tabs_tipo": self.construir_tabs_tipo(),
                 "columnas_disponibles": self.COLUMNAS_DISPONIBLES,
                 "columnas_seleccionadas": columnas_seleccionadas,
                 "total_columnas_tabla": len(columnas_seleccionadas) + 1,
+                "estados_depreciacion": self.ESTADOS_DEPRECIACION,
+                "ordenes_disponibles": self.ORDENES_CHOICES,
+                "cantidad_filtros_activos": (
+                    bool(filtros["q"])
+                    + len(filtros["estado"])
+                    + (filtros["fecha"] != timezone.localdate().isoformat())
+                    + (filtros["solo_vigentes"] == "0")
+                    + (filtros["orden"] != "codigo")
+                ),
                 "configuracion_alertas": DepreciationService.configuracion(),
                 "totales_reporte": {
                     "costo": costo,
@@ -257,9 +382,7 @@ class DepreciacionReporteView(LoginRequiredMixin, ListView):
             }
         )
         if context.get("page_obj"):
-            query_params = self.request.GET.copy()
-            query_params.pop("page", None)
-            context["query_string"] = query_params.urlencode()
+            context["query_string"] = self.build_filter_querydict(filtros).urlencode()
             context["page_numbers"] = context["paginator"].get_elided_page_range(
                 context["page_obj"].number,
                 on_each_side=2,

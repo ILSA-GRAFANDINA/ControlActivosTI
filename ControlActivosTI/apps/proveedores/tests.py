@@ -87,7 +87,7 @@ class ProveedorViewsTests(TestCase):
         self.assertContains(response, "7 proveedores encontrados")
         self.assertContains(response, "data-compact-filters")
         self.assertContains(response, "data-filter-actions")
-        response = self.client.get(reverse("proveedores:lista"))
+        response = self.client.get(reverse("proveedores:lista"), {"reset": "1"})
         self.assertTrue(response.context["is_paginated"])
         self.assertContains(response, "12 proveedores encontrados")
 
@@ -123,6 +123,113 @@ class ProveedorViewsTests(TestCase):
             ["proveedor", "contacto", "telefono"],
         )
         self.assertContains(response, "Ana Torres")
+
+    def test_listado_renderiza_nuevo_panel_de_filtros(self):
+        Proveedor.objects.create(**datos_proveedor())
+
+        response = self.client.get(reverse("proveedores:lista"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "asset-filter-popover")
+        self.assertContains(response, "data-provider-filters")
+        self.assertContains(response, "Filtrar proveedores")
+        self.assertContains(response, 'data-filter-prefix="Estado"', html=False)
+        self.assertContains(response, 'data-filter-option-search="pais"', html=False)
+
+    def test_listado_permite_filtros_multiples_y_persistencia_hasta_reset(self):
+        empresa = Empresa.objects.create(nombre="ILSA")
+        tipo = TipoActivo.objects.create(nombre="Laptop")
+        estado_activo = EstadoActivo.objects.create(
+            nombre="Disponible",
+            permite_asignacion=True,
+        )
+        con_activos = Proveedor.objects.create(**datos_proveedor())
+        sin_activos = Proveedor.objects.create(
+            **datos_proveedor(
+                identificacion="EXT-001",
+                tipo_identificacion=Proveedor.TipoIdentificacion.EXTRANJERA,
+                razon_social="Proveedor sin activos",
+                nombre_comercial="",
+                pais="Colombia",
+            )
+        )
+        inactivo = Proveedor.objects.create(
+            **datos_proveedor(
+                identificacion="EXT-002",
+                tipo_identificacion=Proveedor.TipoIdentificacion.EXTRANJERA,
+                razon_social="Proveedor inactivo",
+                nombre_comercial="",
+                pais="Colombia",
+                activo=False,
+            )
+        )
+        Activo.objects.create(
+            tipo_activo=tipo,
+            empresa=empresa,
+            proveedor=con_activos,
+            marca="Dell",
+            modelo="Latitude",
+            serie="PROV-1",
+            codigo_sap="PROV-1",
+            estado_activo=estado_activo,
+        )
+
+        response = self.client.get(
+            reverse("proveedores:lista"),
+            {
+                "estado": ["activo"],
+                "tipo_proveedor": [Proveedor.TipoProveedor.EMPRESA],
+                "tipo_identificacion": [
+                    Proveedor.TipoIdentificacion.RUC,
+                    Proveedor.TipoIdentificacion.EXTRANJERA,
+                ],
+                "pais": ["Ecuador", "Colombia"],
+                "relaciones": ["sin_activos"],
+                "orden": "actualizado_reciente",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["paginator"].count, 1)
+        self.assertIn(sin_activos, response.context["proveedores"])
+        self.assertNotIn(con_activos, response.context["proveedores"])
+        self.assertNotIn(inactivo, response.context["proveedores"])
+        self.assertEqual(response.context["estados_seleccionados"], ["activo"])
+        self.assertEqual(
+            response.context["tipos_proveedor_seleccionados"],
+            [Proveedor.TipoProveedor.EMPRESA],
+        )
+        self.assertCountEqual(
+            response.context["tipos_identificacion_seleccionados"],
+            [
+                Proveedor.TipoIdentificacion.RUC,
+                Proveedor.TipoIdentificacion.EXTRANJERA,
+            ],
+        )
+        self.assertCountEqual(response.context["paises_seleccionados"], ["Ecuador", "Colombia"])
+        self.assertEqual(response.context["relaciones_seleccionadas"], ["sin_activos"])
+        self.assertEqual(response.context["orden_seleccionado"], "actualizado_reciente")
+        self.assertIn("estado=activo", response.context["query_string"])
+        self.assertIn("relaciones=sin_activos", response.context["query_string"])
+
+        persisted_response = self.client.get(reverse("proveedores:lista"))
+
+        self.assertEqual(persisted_response.context["paginator"].count, 1)
+        self.assertEqual(
+            persisted_response.context["relaciones_seleccionadas"],
+            ["sin_activos"],
+        )
+        self.assertEqual(
+            persisted_response.context["orden_seleccionado"],
+            "actualizado_reciente",
+        )
+
+        reset_response = self.client.get(reverse("proveedores:lista"), {"reset": "1"})
+
+        self.assertEqual(reset_response.context["paginator"].count, 3)
+        self.assertEqual(reset_response.context["estados_seleccionados"], [])
+        self.assertEqual(reset_response.context["relaciones_seleccionadas"], [])
+        self.assertEqual(reset_response.context["orden_seleccionado"], "nombre_asc")
 
     def test_restringe_usuario_sin_permisos(self):
         otro = get_user_model().objects.create_user("sinpermiso", password="testpass123")

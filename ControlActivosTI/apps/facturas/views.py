@@ -7,9 +7,10 @@ from django.core.files.base import ContentFile
 from django.db import transaction
 from django.db.models import Count, Q
 from django.db.models.deletion import ProtectedError
-from django.http import FileResponse, Http404, HttpResponseRedirect
+from django.http import FileResponse, Http404, HttpResponseRedirect, QueryDict
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
+from django.utils.dateparse import parse_date
 from django.utils.text import get_valid_filename
 from django.views import View
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
@@ -46,12 +47,128 @@ class FacturaListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     template_name = "facturas/lista.html"
     context_object_name = "facturas"
     paginate_by = 12
+    FILTER_SESSION_KEY = "facturas_filtros_guardados"
+    FILTER_FIELDS = ("q", "fecha_desde", "fecha_hasta", "orden")
+    FILTER_MULTI_FIELDS = ("proveedor", "empresa", "estado", "relaciones")
+    ESTADOS_FILTRO = (
+        ("activa", "Activas"),
+        ("archivada", "Archivadas"),
+    )
+    RELACIONES_FILTRO = (
+        ("con_activos", "Con activos"),
+        ("sin_activos", "Sin activos"),
+    )
+    ORDENES = {
+        "recientes": ("-fecha_emision", "-id"),
+        "antiguas": ("fecha_emision", "id"),
+        "numero_asc": ("numero_factura", "id"),
+        "numero_desc": ("-numero_factura", "-id"),
+    }
+    ORDENES_CHOICES = (
+        ("recientes", "Emisión más reciente"),
+        ("antiguas", "Emisión más antigua"),
+        ("numero_asc", "Factura: A a Z"),
+        ("numero_desc", "Factura: Z a A"),
+    )
+
+    def _default_filters(self):
+        return {
+            **{
+                field: "recientes" if field == "orden" else ""
+                for field in self.FILTER_FIELDS
+            },
+            **{field: [] for field in self.FILTER_MULTI_FIELDS},
+        }
+
+    def _sanitize_filters(self, filtros):
+        filtros = {**self._default_filters(), **(filtros or {})}
+        for field in ("q", "fecha_desde", "fecha_hasta"):
+            filtros[field] = (filtros.get(field, "") or "").strip()
+        filtros["orden"] = (
+            filtros["orden"] if filtros.get("orden") in self.ORDENES else "recientes"
+        )
+
+        estados_validos = {value for value, _ in self.ESTADOS_FILTRO}
+        relaciones_validas = {value for value, _ in self.RELACIONES_FILTRO}
+        validadores = {
+            "proveedor": str.isdigit,
+            "empresa": str.isdigit,
+            "estado": lambda value: value in estados_validos,
+            "relaciones": lambda value: value in relaciones_validas,
+        }
+        for field in self.FILTER_MULTI_FIELDS:
+            values = filtros.get(field, [])
+            if isinstance(values, str):
+                values = [value for value in values.split(",") if value]
+            filtros[field] = list(
+                dict.fromkeys(
+                    str(value).strip()
+                    for value in values
+                    if str(value).strip() and validadores[field](str(value).strip())
+                )
+            )
+        return filtros
+
+    def _filters_from_request(self):
+        source = self.request.GET
+        filtros = {
+            field: (source.get(field, "") or "").strip()
+            for field in self.FILTER_FIELDS
+        }
+        filtros["orden"] = filtros["orden"] or "recientes"
+        for field in self.FILTER_MULTI_FIELDS:
+            filtros[field] = source.getlist(field)
+        return self._sanitize_filters(filtros)
+
+    def _has_filter_params(self):
+        return any(
+            field in self.request.GET
+            for field in (*self.FILTER_FIELDS, *self.FILTER_MULTI_FIELDS)
+        )
+
+    def get_active_filters(self):
+        if hasattr(self, "_active_filters"):
+            return self._active_filters
+
+        if self.request.GET.get("reset") == "1":
+            self.request.session.pop(self.FILTER_SESSION_KEY, None)
+            self.request.session.modified = True
+            self._active_filters = self._default_filters()
+            return self._active_filters
+
+        if self._has_filter_params():
+            self._active_filters = self._filters_from_request()
+            self.request.session[self.FILTER_SESSION_KEY] = self._active_filters
+            self.request.session.modified = True
+            return self._active_filters
+
+        filtros_guardados = self.request.session.get(self.FILTER_SESSION_KEY, {})
+        self._active_filters = self._sanitize_filters(
+            filtros_guardados if isinstance(filtros_guardados, dict) else {}
+        )
+        return self._active_filters
+
+    def build_filter_querydict(self, filtros=None):
+        filtros = filtros or self.get_active_filters()
+        params = QueryDict("", mutable=True)
+        if filtros["q"]:
+            params["q"] = filtros["q"]
+        for field in self.FILTER_MULTI_FIELDS:
+            params.setlist(field, filtros[field])
+        if filtros["fecha_desde"]:
+            params["fecha_desde"] = filtros["fecha_desde"]
+        if filtros["fecha_hasta"]:
+            params["fecha_hasta"] = filtros["fecha_hasta"]
+        if filtros["orden"] != "recientes":
+            params["orden"] = filtros["orden"]
+        return params
 
     def get_queryset(self):
+        filtros = self.get_active_filters()
         queryset = FacturaCompra.objects.select_related("proveedor", "empresa", "cargado_por").annotate(
             activos_count=Count("activos", distinct=True)
         )
-        q = self.request.GET.get("q", "").strip()
+        q = filtros["q"]
         if q:
             queryset = queryset.filter(
                 Q(numero_factura__icontains=q)
@@ -63,44 +180,62 @@ class FacturaListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
                 | Q(activos__marca__icontains=q)
                 | Q(activos__modelo__icontains=q)
             ).distinct()
-        proveedor = self.request.GET.get("proveedor", "")
-        empresa = self.request.GET.get("empresa", "")
-        if proveedor.isdigit():
-            queryset = queryset.filter(proveedor_id=proveedor)
-        if empresa.isdigit():
-            queryset = queryset.filter(empresa_id=empresa)
-        estado = self.request.GET.get("estado", "")
-        if estado in {"activa", "archivada"}:
-            queryset = queryset.filter(activa=estado == "activa")
-        relaciones = self.request.GET.get("relaciones", "")
-        if relaciones == "con_activos":
-            queryset = queryset.filter(activos_count__gt=0)
-        elif relaciones == "sin_activos":
-            queryset = queryset.filter(activos_count=0)
-        fecha_desde = self.request.GET.get("fecha_desde", "")
-        fecha_hasta = self.request.GET.get("fecha_hasta", "")
+
+        if filtros["proveedor"]:
+            queryset = queryset.filter(proveedor_id__in=filtros["proveedor"])
+        if filtros["empresa"]:
+            queryset = queryset.filter(empresa_id__in=filtros["empresa"])
+
+        estados = filtros["estado"]
+        if estados and set(estados) != {"activa", "archivada"}:
+            queryset = queryset.filter(activa="activa" in estados)
+
+        relaciones = filtros["relaciones"]
+        if relaciones and set(relaciones) != {"con_activos", "sin_activos"}:
+            if "con_activos" in relaciones:
+                queryset = queryset.filter(activos_count__gt=0)
+            elif "sin_activos" in relaciones:
+                queryset = queryset.filter(activos_count=0)
+
+        fecha_desde = parse_date(filtros["fecha_desde"])
+        fecha_hasta = parse_date(filtros["fecha_hasta"])
         if fecha_desde:
             queryset = queryset.filter(fecha_emision__gte=fecha_desde)
         if fecha_hasta:
             queryset = queryset.filter(fecha_emision__lte=fecha_hasta)
-        return queryset.order_by("-fecha_emision", "-id")
+
+        return queryset.order_by(*self.ORDENES[filtros["orden"]])
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        filtros = self.get_active_filters()
         context.update({
-            "busqueda": self.request.GET.get("q", "").strip(),
-            "proveedor_seleccionado": self.request.GET.get("proveedor", ""),
-            "empresa_seleccionada": self.request.GET.get("empresa", ""),
-            "estado_seleccionado": self.request.GET.get("estado", ""),
-            "relaciones_seleccionadas": self.request.GET.get("relaciones", ""),
-            "fecha_desde": self.request.GET.get("fecha_desde", ""),
-            "fecha_hasta": self.request.GET.get("fecha_hasta", ""),
+            "busqueda": filtros["q"],
+            "proveedor_seleccionado": filtros["proveedor"][0] if filtros["proveedor"] else "",
+            "proveedores_seleccionados": filtros["proveedor"],
+            "empresa_seleccionada": filtros["empresa"][0] if filtros["empresa"] else "",
+            "empresas_seleccionadas": filtros["empresa"],
+            "estado_seleccionado": filtros["estado"][0] if filtros["estado"] else "",
+            "estados_seleccionados": filtros["estado"],
+            "relaciones_seleccionadas": filtros["relaciones"][0] if filtros["relaciones"] else "",
+            "relaciones_lista_seleccionadas": filtros["relaciones"],
+            "fecha_desde": filtros["fecha_desde"],
+            "fecha_hasta": filtros["fecha_hasta"],
+            "orden_seleccionado": filtros["orden"],
             "proveedores": Proveedor.objects.order_by("razon_social"),
             "empresas": Empresa.objects.order_by("nombre"),
+            "estados_filtro": self.ESTADOS_FILTRO,
+            "relaciones_filtro": self.RELACIONES_FILTRO,
+            "ordenes_disponibles": self.ORDENES_CHOICES,
+            "cantidad_filtros_activos": (
+                bool(filtros["q"])
+                + sum(len(filtros[field]) for field in self.FILTER_MULTI_FIELDS)
+                + bool(filtros["fecha_desde"])
+                + bool(filtros["fecha_hasta"])
+                + (filtros["orden"] != "recientes")
+            ),
         })
-        params = self.request.GET.copy()
-        params.pop("page", None)
-        context["query_string"] = params.urlencode()
+        context["query_string"] = self.build_filter_querydict(filtros).urlencode()
         if context.get("is_paginated"):
             context["page_numbers"] = context["paginator"].get_elided_page_range(context["page_obj"].number)
         return context

@@ -274,6 +274,87 @@ class FacturaViewsTests(FacturaBaseTests):
         self.assertContains(response, 'id="factura-sha256"')
         self.assertContains(response, "hidden")
 
+    def test_listado_renderiza_nuevo_panel_de_filtros(self):
+        self.crear_factura()
+
+        response = self.client.get(reverse("facturas:lista"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "asset-filter-popover")
+        self.assertContains(response, "data-invoice-filters")
+        self.assertContains(response, "Filtrar facturas")
+        self.assertContains(response, 'data-filter-prefix="Proveedor"', html=False)
+        self.assertContains(response, 'data-filter-option-search="empresa"', html=False)
+
+    def test_listado_permite_filtros_multiples_y_persistencia_hasta_reset(self):
+        primera = self.crear_factura("FAC-001")
+        segunda = self.crear_factura(
+            "FAC-002",
+            proveedor=self.otro_proveedor,
+            empresa=self.otra_empresa,
+            activa=False,
+        )
+        tercera = self.crear_factura(
+            "FAC-003",
+            proveedor=self.proveedor,
+            empresa=self.otra_empresa,
+        )
+        self.crear_activo(
+            serie="SER-FACT-003",
+            codigo_sap="SAP-003",
+            empresa=self.otra_empresa,
+            proveedor=self.proveedor,
+            factura_compra=tercera,
+        )
+
+        response = self.client.get(
+            reverse("facturas:lista"),
+            {
+                "proveedor": [str(self.proveedor.pk), str(self.otro_proveedor.pk)],
+                "empresa": [str(self.empresa.pk), str(self.otra_empresa.pk)],
+                "estado": ["activa", "archivada"],
+                "relaciones": ["sin_activos"],
+                "orden": "numero_asc",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["paginator"].count, 2)
+        self.assertCountEqual(
+            response.context["proveedores_seleccionados"],
+            [str(self.proveedor.pk), str(self.otro_proveedor.pk)],
+        )
+        self.assertCountEqual(
+            response.context["empresas_seleccionadas"],
+            [str(self.empresa.pk), str(self.otra_empresa.pk)],
+        )
+        self.assertCountEqual(response.context["estados_seleccionados"], ["activa", "archivada"])
+        self.assertEqual(response.context["relaciones_lista_seleccionadas"], ["sin_activos"])
+        self.assertEqual(response.context["orden_seleccionado"], "numero_asc")
+        self.assertIn("proveedor=", response.context["query_string"])
+        self.assertIn("estado=activa", response.context["query_string"])
+        self.assertIn("estado=archivada", response.context["query_string"])
+        self.assertIn("relaciones=sin_activos", response.context["query_string"])
+        self.assertIn(primera, response.context["facturas"])
+        self.assertIn(segunda, response.context["facturas"])
+        self.assertNotIn(tercera, response.context["facturas"])
+
+        persisted_response = self.client.get(reverse("facturas:lista"))
+
+        self.assertEqual(persisted_response.context["paginator"].count, 2)
+        self.assertEqual(
+            persisted_response.context["relaciones_lista_seleccionadas"],
+            ["sin_activos"],
+        )
+        self.assertEqual(persisted_response.context["orden_seleccionado"], "numero_asc")
+
+        reset_response = self.client.get(reverse("facturas:lista"), {"reset": "1"})
+
+        self.assertEqual(reset_response.context["paginator"].count, 3)
+        self.assertEqual(reset_response.context["proveedores_seleccionados"], [])
+        self.assertEqual(reset_response.context["estados_seleccionados"], [])
+        self.assertEqual(reset_response.context["orden_seleccionado"], "recientes")
+
     def test_descarga_protegida_y_autorizada(self):
         factura = self.crear_factura()
         response = self.client.get(reverse("facturas:documento", args=[factura.pk]))

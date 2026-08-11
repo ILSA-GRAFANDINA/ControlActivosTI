@@ -245,6 +245,84 @@ class ColaboradorListViewTests(TestCase):
         self.assertContains(response, "data-compact-filters")
         self.assertContains(response, "data-filter-actions")
 
+    def test_list_view_renders_new_filter_popover(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("colaboradores:lista"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "asset-filter-popover")
+        self.assertContains(response, "data-collaborator-filters")
+        self.assertContains(response, 'data-filter-prefix="Empresa"', html=False)
+        self.assertContains(response, 'data-filter-option-search="cargo"', html=False)
+        self.assertContains(response, "Filtrar colaboradores")
+
+    def test_list_view_allows_multiple_filters_and_persists_until_reset(self):
+        self.client.force_login(self.user)
+        Colaborador.objects.filter(cedula="0203040506").update(
+            estado=Colaborador.EstadoColaborador.INACTIVO
+        )
+
+        response = self.client.get(
+            reverse("colaboradores:lista"),
+            {
+                "estado": [
+                    Colaborador.EstadoColaborador.ACTIVO,
+                    Colaborador.EstadoColaborador.INACTIVO,
+                ],
+                "empresa": [str(self.empresa_a.pk), str(self.empresa_b.pk)],
+                "area": [str(self.area.pk)],
+                "cargo": [str(self.cargo.pk)],
+                "ubicacion": [str(self.ubicacion.pk)],
+                "activos": ["sin"],
+                "orden": "ingreso_reciente",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["paginator"].count, 2)
+        self.assertCountEqual(
+            response.context["estados_seleccionados"],
+            [
+                Colaborador.EstadoColaborador.ACTIVO,
+                Colaborador.EstadoColaborador.INACTIVO,
+            ],
+        )
+        self.assertCountEqual(
+            response.context["empresas_seleccionadas"],
+            [str(self.empresa_a.pk), str(self.empresa_b.pk)],
+        )
+        self.assertEqual(response.context["areas_seleccionadas"], [str(self.area.pk)])
+        self.assertEqual(response.context["cargos_seleccionados"], [str(self.cargo.pk)])
+        self.assertEqual(
+            response.context["ubicaciones_seleccionadas"],
+            [str(self.ubicacion.pk)],
+        )
+        self.assertEqual(response.context["activos_seleccionados"], ["sin"])
+        self.assertEqual(response.context["orden_seleccionado"], "ingreso_reciente")
+        self.assertIn("estado=ACTIVO", response.context["query_string"])
+        self.assertIn("estado=INACTIVO", response.context["query_string"])
+        self.assertIn("activos=sin", response.context["query_string"])
+
+        persisted_response = self.client.get(reverse("colaboradores:lista"))
+
+        self.assertEqual(persisted_response.context["paginator"].count, 2)
+        self.assertCountEqual(
+            persisted_response.context["empresas_seleccionadas"],
+            [str(self.empresa_a.pk), str(self.empresa_b.pk)],
+        )
+        self.assertEqual(
+            persisted_response.context["orden_seleccionado"],
+            "ingreso_reciente",
+        )
+
+        reset_response = self.client.get(reverse("colaboradores:lista"), {"reset": "1"})
+
+        self.assertEqual(reset_response.context["paginator"].count, 2)
+        self.assertEqual(reset_response.context["estados_seleccionados"], [])
+        self.assertEqual(reset_response.context["empresas_seleccionadas"], [])
+        self.assertEqual(reset_response.context["orden_seleccionado"], "nombre_asc")
+
 
 class ColaboradorCreateViewTests(TestCase):
     def setUp(self):
