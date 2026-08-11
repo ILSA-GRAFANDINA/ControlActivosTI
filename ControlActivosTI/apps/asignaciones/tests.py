@@ -642,6 +642,34 @@ class AsignacionListViewTests(TestCase):
         asignaciones = list(response.context["asignaciones"])
         self.assertEqual(asignaciones, [self.asignacion_cerrada])
 
+    def test_list_view_filters_by_multiple_estados(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse("asignaciones:lista"),
+            {
+                "estado": [
+                    Asignacion.EstadoAsignacion.ACTIVA,
+                    Asignacion.EstadoAsignacion.CERRADA,
+                ],
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertCountEqual(
+            response.context["estados_seleccionados"],
+            [
+                Asignacion.EstadoAsignacion.ACTIVA,
+                Asignacion.EstadoAsignacion.CERRADA,
+            ],
+        )
+        self.assertEqual(
+            list(response.context["asignaciones"]),
+            [self.asignacion_activa, self.asignacion_cerrada],
+        )
+        self.assertContains(response, "Estado: Activa")
+        self.assertContains(response, "Estado: Cerrada")
+
     def test_list_view_filters_open_assignments_from_dashboard(self):
         asignacion_parcial = self._crear_asignacion_adicional(1, date(2026, 4, 18))
         Asignacion.objects.filter(pk=asignacion_parcial.pk).update(
@@ -719,6 +747,24 @@ class AsignacionListViewTests(TestCase):
         self.assertEqual(asignaciones[0], self.asignacion_activa)
         self.assertEqual(response.context["orden_seleccionado"], "actividad")
         self.assertContains(response, "Actividad mas reciente")
+
+    def test_list_view_persists_filters_until_reset(self):
+        self.client.force_login(self.user)
+        self.client.get(
+            reverse("asignaciones:lista"),
+            {"estado": [Asignacion.EstadoAsignacion.CERRADA], "acta": ["con"]},
+        )
+
+        remembered = self.client.get(reverse("asignaciones:lista"))
+
+        self.assertEqual(remembered.context["estados_seleccionados"], [Asignacion.EstadoAsignacion.CERRADA])
+        self.assertEqual(remembered.context["actas_seleccionadas"], ["con"])
+
+        self.client.get(reverse("asignaciones:lista"), {"reset": "1"})
+        cleared = self.client.get(reverse("asignaciones:lista"))
+
+        self.assertEqual(cleared.context["estados_seleccionados"], [])
+        self.assertEqual(cleared.context["actas_seleccionadas"], [])
 
     def test_list_view_paginates_at_ten_items_and_preserves_filters(self):
         self.client.force_login(self.user)

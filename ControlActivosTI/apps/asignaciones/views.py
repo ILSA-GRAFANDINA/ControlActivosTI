@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 from django.db.models import Q
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, QueryDict
 from django.urls import reverse, reverse_lazy
 from django.utils.dateparse import parse_date
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
@@ -28,13 +28,115 @@ class AsignacionListView(LoginRequiredMixin, ListView):
     template_name = "asignaciones/lista.html"
     context_object_name = "asignaciones"
     paginate_by = 10
+    FILTER_SESSION_KEY = "asignaciones_filtros_guardados"
+    FILTER_FIELDS = ("q", "fecha_desde", "fecha_hasta", "orden")
+    FILTER_MULTI_FIELDS = ("estado", "acta")
+    ESTADOS_FILTRO = (
+        ("ABIERTAS", "Abiertas (activas y parciales)"),
+        (Asignacion.EstadoAsignacion.ACTIVA, "Activa"),
+        (Asignacion.EstadoAsignacion.PARCIAL, "Parcial"),
+        (Asignacion.EstadoAsignacion.CERRADA, "Cerrada"),
+    )
+    ACTAS_FILTRO = (
+        ("con", "Con acta"),
+        ("sin", "Sin acta"),
+    )
     ORDENES_FECHA = {
         "recientes": ("-fecha_asignacion", "-id"),
         "actividad": ("-updated_at", "-id"),
         "antiguas": ("fecha_asignacion", "id"),
     }
 
+    def _filters_from_request(self):
+        source = self.request.GET
+        filtros = {}
+        for field in self.FILTER_FIELDS:
+            value = (source.get(field, "") or "").strip()
+            if field == "orden" and value not in self.ORDENES_FECHA:
+                value = "recientes"
+            filtros[field] = value
+        if not filtros["orden"]:
+            filtros["orden"] = "recientes"
+
+        estado_validos = {value for value, _ in self.ESTADOS_FILTRO}
+        acta_validos = {value for value, _ in self.ACTAS_FILTRO}
+        filtros["estado"] = list(dict.fromkeys(value for value in source.getlist("estado") if value in estado_validos))
+        filtros["acta"] = list(dict.fromkeys(value for value in source.getlist("acta") if value in acta_validos))
+        return filtros
+
+    def _has_filter_params(self):
+        return any(field in self.request.GET for field in (*self.FILTER_FIELDS, *self.FILTER_MULTI_FIELDS))
+
+    def get_active_filters(self):
+        if self.request.GET.get("reset") == "1":
+            self.request.session.pop(self.FILTER_SESSION_KEY, None)
+            self.request.session.modified = True
+            return {
+                **{field: "recientes" if field == "orden" else "" for field in self.FILTER_FIELDS},
+                **{field: [] for field in self.FILTER_MULTI_FIELDS},
+            }
+
+        if self._has_filter_params():
+            filtros = self._filters_from_request()
+            self.request.session[self.FILTER_SESSION_KEY] = filtros
+            self.request.session.modified = True
+            return filtros
+
+        filtros_guardados = self.request.session.get(self.FILTER_SESSION_KEY, {})
+        if isinstance(filtros_guardados, dict):
+            filtros = {
+                field: (filtros_guardados.get(field, "") or "")
+                for field in self.FILTER_FIELDS
+            }
+            if filtros.get("orden") not in self.ORDENES_FECHA:
+                filtros["orden"] = "recientes"
+            for field in self.FILTER_MULTI_FIELDS:
+                saved_values = filtros_guardados.get(field, [])
+                if isinstance(saved_values, str):
+                    saved_values = [value for value in saved_values.split(",") if value]
+                filtros[field] = [str(value) for value in saved_values if str(value).strip()]
+            return filtros
+
+        return {
+            **{field: "recientes" if field == "orden" else "" for field in self.FILTER_FIELDS},
+            **{field: [] for field in self.FILTER_MULTI_FIELDS},
+        }
+
+    def build_filter_querystring(self):
+        filtros = self.get_active_filters()
+        params = QueryDict("", mutable=True)
+        if filtros["q"]:
+            params["q"] = filtros["q"]
+        params.setlist("estado", filtros["estado"])
+        params.setlist("acta", filtros["acta"])
+        if filtros["fecha_desde"]:
+            params["fecha_desde"] = filtros["fecha_desde"]
+        if filtros["fecha_hasta"]:
+            params["fecha_hasta"] = filtros["fecha_hasta"]
+        if filtros["orden"] != "recientes":
+            params["orden"] = filtros["orden"]
+        return params.urlencode()
+
+    def estado_filter_to_values(self, estados):
+        valores = set()
+        if "ABIERTAS" in estados:
+            valores.update(
+                [
+                    Asignacion.EstadoAsignacion.ACTIVA,
+                    Asignacion.EstadoAsignacion.PARCIAL,
+                ]
+            )
+        for estado in estados:
+            if estado in {
+                Asignacion.EstadoAsignacion.ACTIVA,
+                Asignacion.EstadoAsignacion.PARCIAL,
+                Asignacion.EstadoAsignacion.CERRADA,
+            }:
+                valores.add(estado)
+        return valores
+
     def get_queryset(self):
+        filtros = self.get_active_filters()
         queryset = (
             Asignacion.objects.select_related(
                 "colaborador",
@@ -53,7 +155,7 @@ class AsignacionListView(LoginRequiredMixin, ListView):
             )
         )
 
-        busqueda = self.request.GET.get("q", "").strip()
+        busqueda = filtros["q"]
         if busqueda:
             queryset = queryset.filter(
                 Q(codigo_asignacion__icontains=busqueda)
@@ -63,51 +165,52 @@ class AsignacionListView(LoginRequiredMixin, ListView):
                 | Q(detalles__activo__codigo__icontains=busqueda)
             )
 
-        estado = self.request.GET.get("estado", "").strip()
-        if estado == "ABIERTAS":
-            queryset = queryset.filter(
-                estado_asignacion__in=[
-                    Asignacion.EstadoAsignacion.ACTIVA,
-                    Asignacion.EstadoAsignacion.PARCIAL,
-                ]
-            )
-        elif estado in {
-            Asignacion.EstadoAsignacion.ACTIVA,
-            Asignacion.EstadoAsignacion.PARCIAL,
-            Asignacion.EstadoAsignacion.CERRADA,
-        }:
-            queryset = queryset.filter(estado_asignacion=estado)
+        estados = self.estado_filter_to_values(filtros["estado"])
+        if estados:
+            queryset = queryset.filter(estado_asignacion__in=estados)
 
-        acta = self.request.GET.get("acta", "").strip()
-        if acta == "con":
-            queryset = queryset.filter(actas__isnull=False)
-        elif acta == "sin":
-            queryset = queryset.filter(actas__isnull=True)
+        actas = filtros["acta"]
+        if actas and set(actas) != {"con", "sin"}:
+            if "con" in actas:
+                queryset = queryset.filter(actas__isnull=False)
+            elif "sin" in actas:
+                queryset = queryset.filter(actas__isnull=True)
 
-        fecha_desde = parse_date(self.request.GET.get("fecha_desde", "").strip())
+        fecha_desde = parse_date(filtros["fecha_desde"])
         if fecha_desde:
             queryset = queryset.filter(fecha_asignacion__gte=fecha_desde)
 
-        fecha_hasta = parse_date(self.request.GET.get("fecha_hasta", "").strip())
+        fecha_hasta = parse_date(filtros["fecha_hasta"])
         if fecha_hasta:
             queryset = queryset.filter(fecha_asignacion__lte=fecha_hasta)
 
-        orden = self.request.GET.get("orden", "recientes").strip()
+        orden = filtros["orden"]
         campos_orden = self.ORDENES_FECHA.get(orden, self.ORDENES_FECHA["recientes"])
 
         return queryset.distinct().order_by(*campos_orden)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["busqueda"] = self.request.GET.get("q", "").strip()
-        context["estado_seleccionado"] = self.request.GET.get("estado", "").strip()
-        context["acta_seleccionada"] = self.request.GET.get("acta", "").strip()
-        context["fecha_desde"] = self.request.GET.get("fecha_desde", "").strip()
-        context["fecha_hasta"] = self.request.GET.get("fecha_hasta", "").strip()
-        context["orden_seleccionado"] = self.request.GET.get("orden", "recientes").strip()
-        query_params = self.request.GET.copy()
-        query_params.pop("page", None)
-        context["query_string"] = query_params.urlencode()
+        filtros = self.get_active_filters()
+        context["busqueda"] = filtros["q"]
+        context["estado_seleccionado"] = filtros["estado"][0] if filtros["estado"] else ""
+        context["estados_seleccionados"] = filtros["estado"]
+        context["acta_seleccionada"] = filtros["acta"][0] if filtros["acta"] else ""
+        context["actas_seleccionadas"] = filtros["acta"]
+        context["fecha_desde"] = filtros["fecha_desde"]
+        context["fecha_hasta"] = filtros["fecha_hasta"]
+        context["orden_seleccionado"] = filtros["orden"]
+        context["estados_filtro"] = self.ESTADOS_FILTRO
+        context["actas_filtro"] = self.ACTAS_FILTRO
+        context["cantidad_filtros_activos"] = (
+            len(filtros["estado"])
+            + len(filtros["acta"])
+            + bool(filtros["q"])
+            + bool(filtros["fecha_desde"])
+            + bool(filtros["fecha_hasta"])
+            + (filtros["orden"] != "recientes")
+        )
+        context["query_string"] = self.build_filter_querystring()
         if context.get("is_paginated"):
             context["page_numbers"] = context["paginator"].get_elided_page_range(
                 number=context["page_obj"].number,
