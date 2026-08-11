@@ -904,6 +904,14 @@ html.dark .app-content .border-red-200 { border-color: rgba(244, 63, 94, .28) !i
 html.dark .app-content .border-indigo-200,
 html.dark .app-content .border-violet-200 { border-color: rgba(139, 92, 246, .28) !important; }
 
+html.dark .app-content [data-change-type-toggle],
+html.dark .app-content .asset-type-change-toggle {
+    background: #fbbf24 !important;
+    border-color: #fde68a !important;
+    color: #1f2937 !important;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, .22) !important;
+}
+
 html.dark .app-content .bg-slate-700,
 html.dark .app-content .bg-slate-800,
 html.dark .app-content .bg-slate-900 {

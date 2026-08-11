@@ -1061,6 +1061,8 @@ class ActivoCreateViewTests(TestCase):
         self.assertContains(response, "Foto 1")
         self.assertContains(response, "Al guardar un cambio de tipo, el sistema hará lo siguiente:")
         self.assertContains(response, "Motivo del cambio de tipo")
+        self.assertContains(response, f'data-original-type-id="{self.tipo_laptop.pk}"')
+        self.assertContains(response, "asset-type-change-toggle")
         contenido = response.content.decode()
         self.assertLess(contenido.index("Fotos del activo"), contenido.index("Cambio del tipo de activo"))
         self.assertLess(contenido.index("Cambio del tipo de activo"), contenido.index("Guardar cambios"))

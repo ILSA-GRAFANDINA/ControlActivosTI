@@ -273,7 +273,13 @@
     </div>
 
     {% if es_edicion %}
-    <details class="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm" {% if form.confirmar_cambio_tipo.errors or form.motivo_cambio_tipo.errors %}open{% endif %}>
+    <details
+        class="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm"
+        data-change-type-details
+        data-original-type-id="{{ activo_edicion_tipo_id|default_if_none:'' }}"
+        data-has-validation-error="{% if form.confirmar_cambio_tipo.errors or form.motivo_cambio_tipo.errors %}true{% else %}false{% endif %}"
+        {% if form.confirmar_cambio_tipo.errors or form.motivo_cambio_tipo.errors %}open{% endif %}
+    >
         <summary class="cursor-pointer list-none">
         <div class="flex items-start gap-3">
             <span class="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 font-bold text-amber-800" aria-hidden="true">!</span>
@@ -281,7 +287,7 @@
                 <h3 class="text-lg font-semibold text-amber-800">Cambio del tipo de activo</h3>
                 <p class="mt-1 text-sm font-medium text-amber-700">Abrir solo si vas a reclasificar este activo.</p>
             </div>
-            <span class="ml-auto shrink-0 rounded-full border border-amber-200 bg-white/80 px-3 py-1 text-xs font-semibold text-amber-700">Desplegar</span>
+            <span class="asset-type-change-toggle ml-auto shrink-0 rounded-full border border-amber-300 bg-amber-300 px-3 py-1 text-xs font-bold text-slate-950 shadow-sm" data-change-type-toggle>Desplegar</span>
         </div>
         </summary>
 
@@ -336,6 +342,8 @@
         const addPhotoButton = form.querySelector("[data-add-photo-form]");
         const photoTemplate = document.getElementById("photo-empty-form-template");
         const totalFormsInput = form.querySelector("#id_fotos-TOTAL_FORMS");
+        const changeTypeDetails = form.querySelector("[data-change-type-details]");
+        const changeTypeToggle = form.querySelector("[data-change-type-toggle]");
         const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/jpg"];
         const keywords = ["laptop", "pc", "desktop", "escritorio", "computador", "computadora"];
 
@@ -359,6 +367,27 @@
                     }
                 }
             });
+        };
+
+        const updateChangeTypeToggleLabel = () => {
+            if (changeTypeToggle && changeTypeDetails) {
+                changeTypeToggle.textContent = changeTypeDetails.open ? "Contraer" : "Desplegar";
+            }
+        };
+
+        const syncChangeTypeDetails = () => {
+            if (!changeTypeDetails || !selectTipo) {
+                return;
+            }
+
+            const originalTypeId = changeTypeDetails.dataset.originalTypeId || "";
+            const typeChanged = Boolean(originalTypeId) && selectTipo.value !== originalTypeId;
+            const hasValidationError = changeTypeDetails.dataset.hasValidationError === "true";
+
+            if (!hasValidationError) {
+                changeTypeDetails.open = typeChanged;
+            }
+            updateChangeTypeToggleLabel();
         };
 
         const escapeHtml = (value) => String(value ?? "").replace(/[&<>'"]/g, (char) => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[char]));
@@ -514,10 +543,15 @@
         }
 
         toggleTechFields();
+        syncChangeTypeDetails();
+        if (changeTypeDetails) {
+            changeTypeDetails.addEventListener("toggle", updateChangeTypeToggleLabel);
+        }
         if (selectTipo) {
             selectTipo.addEventListener("change", () => {
                 toggleTechFields();
                 loadDynamicAttributes();
+                syncChangeTypeDetails();
             });
         }
 

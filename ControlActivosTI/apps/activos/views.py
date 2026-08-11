@@ -501,6 +501,7 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
             else reverse("activos:nuevo")
         )
         context["activo_edicion_id"] = activo_contextual.pk if activo_contextual else None
+        context["activo_edicion_tipo_id"] = activo_contextual.tipo_activo_id if activo_contextual else None
         return context
 
     def post(self, request, *args, **kwargs):
