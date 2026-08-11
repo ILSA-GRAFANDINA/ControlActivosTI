@@ -858,6 +858,63 @@ html:not(.dark) .app-content .bg-indigo-50 {
     border-color: color-mix(in srgb, var(--app-primary) 28%, var(--app-border)) !important;
 }
 
+/* El panel de filtros de Activos usa siempre las superficies del tema activo. */
+.app-content .asset-filter-popover {
+    border-color: var(--app-border) !important;
+    color: var(--app-text) !important;
+    background: var(--app-surface) !important;
+}
+
+.app-content .asset-filter-selection,
+.app-content .asset-filter-nav {
+    border-color: var(--app-border) !important;
+    background: var(--app-surface-soft) !important;
+}
+
+.app-content .asset-filter-actions {
+    border: 1px solid var(--app-border) !important;
+    background: var(--app-surface-soft) !important;
+}
+
+.app-content .asset-filter-reset {
+    color: var(--app-text-muted) !important;
+}
+
+.app-content .asset-filter-reset:hover {
+    color: var(--app-text) !important;
+    background: var(--app-surface) !important;
+}
+
+.app-content .asset-filter-apply {
+    min-width: 8.75rem;
+    background: var(--app-primary) !important;
+    color: #ffffff !important;
+}
+
+.app-content .asset-filter-apply:hover {
+    background: var(--app-primary-strong) !important;
+}
+
+.app-content .asset-filter-header-actions .asset-filter-close {
+    border-left: 1px solid var(--app-border) !important;
+    border-radius: 0.75rem !important;
+    margin-left: 0.125rem;
+}
+
+.app-content .asset-filter-popover label:hover,
+.app-content .asset-filter-nav button:hover,
+.app-content .asset-filter-close:hover {
+    color: var(--app-text) !important;
+    background: color-mix(in srgb, var(--app-primary) 10%, var(--app-surface)) !important;
+}
+
+.app-content .asset-filter-chip,
+.app-content .asset-filter-chip:hover {
+    border-color: color-mix(in srgb, var(--app-primary) 34%, var(--app-border)) !important;
+    color: var(--app-primary-strong) !important;
+    background: var(--app-primary-soft) !important;
+}
+
 html:not(.dark) .app-content .border-violet-200,
 html:not(.dark) .app-content .border-indigo-200 {
     border-color: color-mix(in srgb, var(--app-primary) 26%, var(--app-border)) !important;

@@ -26,17 +26,20 @@ from apps.auditoria.services import registrar_evento
 
 class ActivoFilterMixin:
     FILTER_SESSION_KEY = "activos_filtros_guardados"
+    persist_filter_state = True
     FILTER_FIELDS = (
         "q",
-        "estado",
-        "disponibilidad",
-        "empresa",
-        "proveedor",
-        "factura",
         "orden",
         "mostrar_eliminados",
     )
-    FILTER_MULTI_FIELDS = ("tipo",)
+    FILTER_MULTI_FIELDS = (
+        "estado",
+        "disponibilidad",
+        "tipo",
+        "empresa",
+        "proveedor",
+        "factura",
+    )
     TAB_PARAM = "tab_tipo"
 
     def get_filter_value(self, name):
@@ -52,14 +55,20 @@ class ActivoFilterMixin:
             elif field == "orden" and value not in {"recientes"}:
                 value = ""
             filtros[field] = value
-        filtros["tipo"] = [valor.strip() for valor in source.getlist("tipo") if valor.strip().isdigit()]
+        for field in self.FILTER_MULTI_FIELDS:
+            values = [str(value).strip() for value in source.getlist(field)]
+            if field == "disponibilidad":
+                values = [value for value in values if value in {"disponibles", "asignados"}]
+            elif field == "factura":
+                values = [value for value in values if value.isdigit() or value == "sin_factura"]
+            else:
+                values = [value for value in values if value.isdigit()]
+            filtros[field] = list(dict.fromkeys(values))
         return filtros
 
     def _has_filter_params(self):
         source = self.request.POST if self.request.method == "POST" else self.request.GET
-        return any(field in source for field in self.FILTER_FIELDS) or bool(
-            [valor for valor in source.getlist("tipo") if valor.strip()]
-        )
+        return any(field in source for field in (*self.FILTER_FIELDS, *self.FILTER_MULTI_FIELDS))
 
     def _reset_filter_state(self):
         self.request.session.pop(self.FILTER_SESSION_KEY, None)
@@ -67,25 +76,34 @@ class ActivoFilterMixin:
 
     def get_active_filters(self):
         if self.request.GET.get("reset") == "1" or self.request.POST.get("reset") == "1":
-            self._reset_filter_state()
-            return {**{field: "" for field in self.FILTER_FIELDS}, "tipo": []}
+            if self.persist_filter_state:
+                self._reset_filter_state()
+            return {
+                **{field: "" for field in self.FILTER_FIELDS},
+                **{field: [] for field in self.FILTER_MULTI_FIELDS},
+            }
 
         if self._has_filter_params():
             filtros = self._filters_from_request()
-            self.request.session[self.FILTER_SESSION_KEY] = filtros
-            self.request.session.modified = True
+            if self.persist_filter_state:
+                self.request.session[self.FILTER_SESSION_KEY] = filtros
+                self.request.session.modified = True
             return filtros
 
         filtros_guardados = self.request.session.get(self.FILTER_SESSION_KEY, {})
         if isinstance(filtros_guardados, dict):
             filtros = {field: (filtros_guardados.get(field, "") or "") for field in self.FILTER_FIELDS}
-            tipo_guardado = filtros_guardados.get("tipo", [])
-            if isinstance(tipo_guardado, str):
-                tipo_guardado = [tipo for tipo in tipo_guardado.split(",") if tipo]
-            filtros["tipo"] = [str(tipo) for tipo in tipo_guardado if str(tipo).strip()]
+            for field in self.FILTER_MULTI_FIELDS:
+                saved_values = filtros_guardados.get(field, [])
+                if isinstance(saved_values, str):
+                    saved_values = [value for value in saved_values.split(",") if value]
+                filtros[field] = [str(value) for value in saved_values if str(value).strip()]
             return filtros
 
-        return {**{field: "" for field in self.FILTER_FIELDS}, "tipo": []}
+        return {
+            **{field: "" for field in self.FILTER_FIELDS},
+            **{field: [] for field in self.FILTER_MULTI_FIELDS},
+        }
 
     def get_filtered_queryset(self):
         queryset = (
@@ -126,43 +144,42 @@ class ActivoFilterMixin:
                 )
             )
 
-        estado_id = self.get_filter_value("estado")
-        if estado_id.isdigit():
-            queryset = queryset.filter(estado_activo_id=estado_id)
+        estado_ids = self.get_active_filters()["estado"]
+        if estado_ids:
+            queryset = queryset.filter(estado_activo_id__in=estado_ids)
 
-        disponibilidad = self.get_filter_value("disponibilidad")
-        if disponibilidad == "disponibles":
-            queryset = (
-                queryset.filter(
-                    activo=True,
-                    estado_activo__permite_asignacion=True,
+        disponibilidades = self.get_active_filters()["disponibilidad"]
+        if disponibilidades:
+            filtro_disponibilidad = Q()
+            if "disponibles" in disponibilidades:
+                filtro_disponibilidad |= (
+                    Q(estado_activo__permite_asignacion=True)
+                    & ~Q(estado_activo__nombre__icontains="repar")
+                    & ~Q(estado_activo__nombre__icontains="cuarentena")
                 )
-                .exclude(estado_activo__nombre__icontains="repar")
-                .exclude(estado_activo__nombre__icontains="cuarentena")
-            )
-        elif disponibilidad == "asignados":
-            queryset = queryset.filter(
-                activo=True,
-                estado_activo__nombre__iexact="Asignado",
-            )
+            if "asignados" in disponibilidades:
+                filtro_disponibilidad |= Q(estado_activo__nombre__iexact="Asignado")
+            queryset = queryset.filter(Q(activo=True) & filtro_disponibilidad)
 
         tipo_ids = self.get_active_filters().get("tipo", [])
         if tipo_ids:
             queryset = queryset.filter(tipo_activo_id__in=tipo_ids)
 
-        empresa_id = self.get_filter_value("empresa")
-        if empresa_id.isdigit():
-            queryset = queryset.filter(empresa_id=empresa_id)
+        empresa_ids = self.get_active_filters()["empresa"]
+        if empresa_ids:
+            queryset = queryset.filter(empresa_id__in=empresa_ids)
 
-        proveedor_id = self.get_filter_value("proveedor")
-        if proveedor_id.isdigit():
-            queryset = queryset.filter(proveedor_id=proveedor_id)
+        proveedor_ids = self.get_active_filters()["proveedor"]
+        if proveedor_ids:
+            queryset = queryset.filter(proveedor_id__in=proveedor_ids)
 
-        factura_id = self.get_filter_value("factura")
-        if factura_id.isdigit():
-            queryset = queryset.filter(factura_compra_id=factura_id)
-        elif factura_id == "sin_factura":
-            queryset = queryset.filter(factura_compra__isnull=True)
+        facturas = self.get_active_filters()["factura"]
+        if facturas:
+            factura_ids = [value for value in facturas if value.isdigit()]
+            filtro_factura = Q(factura_compra_id__in=factura_ids)
+            if "sin_factura" in facturas:
+                filtro_factura |= Q(factura_compra__isnull=True)
+            queryset = queryset.filter(filtro_factura)
 
         if self.get_filter_value("mostrar_eliminados") != "1":
             queryset = queryset.filter(activo=True)
@@ -176,14 +193,23 @@ class ActivoFilterMixin:
         filtros = self.get_active_filters()
         return {
             "busqueda": filtros["q"],
-            "estado_seleccionado": filtros["estado"],
-            "disponibilidad_seleccionada": filtros["disponibilidad"],
+            "estado_seleccionado": filtros["estado"][0] if filtros["estado"] else "",
+            "estados_seleccionados": filtros["estado"],
+            "disponibilidad_seleccionada": filtros["disponibilidad"][0] if filtros["disponibilidad"] else "",
+            "disponibilidades_seleccionadas": filtros["disponibilidad"],
             "tipos_seleccionados": filtros["tipo"],
-            "empresa_seleccionada": filtros["empresa"],
-            "proveedor_seleccionado": filtros["proveedor"],
-            "factura_seleccionada": filtros["factura"],
+            "empresa_seleccionada": filtros["empresa"][0] if filtros["empresa"] else "",
+            "empresas_seleccionadas": filtros["empresa"],
+            "proveedor_seleccionado": filtros["proveedor"][0] if filtros["proveedor"] else "",
+            "proveedores_seleccionados": filtros["proveedor"],
+            "factura_seleccionada": filtros["factura"][0] if filtros["factura"] else "",
+            "facturas_seleccionadas": filtros["factura"],
             "orden_seleccionado": filtros["orden"],
             "mostrar_eliminados": filtros["mostrar_eliminados"] == "1",
+            "cantidad_filtros_activos": (
+                sum(len(filtros[field]) for field in self.FILTER_MULTI_FIELDS)
+                + sum(bool(filtros[field]) for field in self.FILTER_FIELDS)
+            ),
             "estados_activo": EstadoActivo.objects.filter(activo=True).order_by("nombre"),
             "tipos_activo": TipoActivo.objects.filter(activo=True).order_by("nombre"),
             "empresas_activo": Empresa.objects.filter(activo=True).order_by("nombre"),
@@ -196,12 +222,8 @@ class ActivoFilterMixin:
         params = self.request.GET.copy()
         params.pop("cols", None)
         params["q"] = filtros["q"]
-        params["estado"] = filtros["estado"]
-        params["disponibilidad"] = filtros["disponibilidad"]
-        params.setlist("tipo", filtros["tipo"])
-        params["empresa"] = filtros["empresa"]
-        params["proveedor"] = filtros["proveedor"]
-        params["factura"] = filtros["factura"]
+        for field in self.FILTER_MULTI_FIELDS:
+            params.setlist(field, filtros[field])
         params["orden"] = filtros["orden"]
         if filtros["mostrar_eliminados"] == "1":
             params["mostrar_eliminados"] = "1"
@@ -366,6 +388,9 @@ class ActivoListView(LoginRequiredMixin, ActivoFilterMixin, ListView):
 
 class ActivoExportView(LoginRequiredMixin, ActivoFilterMixin, TemplateView):
     template_name = "activos/exportar.html"
+    # Exportar consume filtros, pero nunca debe sustituir la selección persistida
+    # del listado principal con los campos auxiliares de su formulario.
+    persist_filter_state = False
 
     def get_filtered_export_queryset(self):
         queryset = self.get_filtered_queryset()
@@ -394,8 +419,14 @@ class ActivoExportView(LoginRequiredMixin, ActivoFilterMixin, TemplateView):
         return context
 
     def post(self, request, *args, **kwargs):
+        is_async_download = request.headers.get("X-Requested-With") == "XMLHttpRequest"
         selected_ids = [pk for pk in request.POST.getlist("activos") if pk.isdigit()]
         if not selected_ids:
+            if is_async_download:
+                return JsonResponse(
+                    {"ok": False, "message": "Debes seleccionar al menos un activo para exportar."},
+                    status=400,
+                )
             context = self.get_context_data(
                 error_exportacion="Debes seleccionar al menos un activo para exportar.",
                 selected_ids=[],
@@ -404,6 +435,11 @@ class ActivoExportView(LoginRequiredMixin, ActivoFilterMixin, TemplateView):
 
         activos = list(self.get_filtered_queryset().filter(pk__in=selected_ids))
         if not activos:
+            if is_async_download:
+                return JsonResponse(
+                    {"ok": False, "message": "Los activos seleccionados ya no están disponibles con estos filtros."},
+                    status=400,
+                )
             context = self.get_context_data(
                 error_exportacion="Los activos seleccionados no estan disponibles con los filtros actuales.",
                 selected_ids=selected_ids,
@@ -416,6 +452,7 @@ class ActivoExportView(LoginRequiredMixin, ActivoFilterMixin, TemplateView):
         )
         filename = f"activos_export_{timezone.localdate().isoformat()}.xlsx"
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        response["X-Export-Message"] = f"Se exportaron {len(activos)} activo(s) correctamente."
         workbook.save(response)
         return response
 

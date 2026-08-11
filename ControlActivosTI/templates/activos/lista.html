@@ -73,194 +73,135 @@
     </dialog>
 {% endif %}
 
-<div class="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-    <form method="get" class="space-y-4" data-scroll-to-results data-compact-filters>
+<div class="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+    <form method="get" class="space-y-4" data-scroll-to-results data-compact-filters data-asset-filters>
         {% if tab_tipo_activa %}
             <input type="hidden" name="tab_tipo" value="{{ tab_tipo_activa }}">
         {% endif %}
-        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-            <div>
-                <label class="mb-2 block text-sm font-semibold text-slate-700">Búsqueda</label>
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
+            <div class="relative min-w-0 flex-1">
+                <label for="filtro-busqueda" class="sr-only">Buscar activos</label>
+                <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 3.44 9.79l2.64 2.64a.75.75 0 1 0 1.06-1.06l-2.64-2.64A5.5 5.5 0 0 0 9 3.5ZM5 9a4 4 0 1 1 8 0 4 4 0 0 1-8 0Z" clip-rule="evenodd" />
+                    </svg>
+                </span>
                 <input
+                    id="filtro-busqueda"
                     type="text"
                     name="q"
                     value="{{ busqueda }}"
-                    placeholder="Buscar por código, código SAP, marca, modelo o serie"
-                    class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+                    placeholder="Buscar por código, SAP, marca, modelo o serie"
+                    class="w-full rounded-xl border border-slate-300 bg-white py-3 pl-11 pr-4 text-sm text-slate-900 shadow-sm outline-none transition duration-200 placeholder:text-slate-400 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
                 >
             </div>
+            <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700">
+                Buscar
+            </button>
 
-            <div>
-                <label for="filtro-estado" class="mb-2 block text-sm font-semibold text-slate-700">Estado</label>
-                <select
-                    id="filtro-estado"
-                    name="estado"
-                    class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
-                >
-                    <option value="">Todos los estados</option>
-                    {% for estado in estados_activo %}
-                        <option value="{{ estado.pk }}" {% if estado_seleccionado == estado.pk|stringformat:"s" %}selected{% endif %}>
-                            {{ estado.nombre }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
+            <details class="group relative" data-filter-popover>
+                <summary class="inline-flex w-full cursor-pointer list-none items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-cyan-400 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-cyan-100 lg:w-auto">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M2.75 4.5a.75.75 0 0 1 .75-.75h13a.75.75 0 0 1 0 1.5h-13a.75.75 0 0 1-.75-.75ZM5.75 10a.75.75 0 0 1 .75-.75h7a.75.75 0 0 1 0 1.5h-7a.75.75 0 0 1-.75-.75ZM8.75 15.5a.75.75 0 0 1 .75-.75h1a.75.75 0 0 1 0 1.5h-1a.75.75 0 0 1-.75-.75Z" /></svg>
+                    <span>Filtros</span>
+                    <span data-filter-count class="inline-flex min-w-5 items-center justify-center rounded-full bg-cyan-100 px-1.5 py-0.5 text-[11px] font-bold text-cyan-700 {% if not cantidad_filtros_activos %}hidden{% endif %}">{{ cantidad_filtros_activos }}</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400 transition group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08Z" clip-rule="evenodd" /></svg>
+                </summary>
 
-            <div>
-                <label for="filtro-disponibilidad" class="mb-2 block text-sm font-semibold text-slate-700">Disponibilidad</label>
-                <select
-                    id="filtro-disponibilidad"
-                    name="disponibilidad"
-                    class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
-                >
-                    <option value="">Todas</option>
-                    <option value="disponibles" {% if disponibilidad_seleccionada == "disponibles" %}selected{% endif %}>Disponibles</option>
-                    <option value="asignados" {% if disponibilidad_seleccionada == "asignados" %}selected{% endif %}>Asignados</option>
-                </select>
-            </div>
-
-            <div>
-                <label class="mb-2 block text-sm font-semibold text-slate-700">Tipo</label>
-                <details class="relative">
-                    <summary class="flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition duration-200 hover:border-cyan-400 hover:bg-slate-50 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
-                        <span class="{% if tipos_seleccionados %}text-slate-900{% else %}text-slate-400{% endif %}">
-                            {% if tipos_seleccionados %}
-                                {{ tipos_seleccionados|length }} tipo{{ tipos_seleccionados|length|pluralize }} seleccionado{{ tipos_seleccionados|length|pluralize:"s" }}
-                            {% else %}
-                                Selecciona uno o varios tipos
-                            {% endif %}
-                        </span>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08Z" clip-rule="evenodd" />
-                        </svg>
-                    </summary>
-                    <div class="absolute left-0 right-0 z-20 mt-2 max-h-72 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
-                        <div class="grid gap-2">
-                            {% for tipo in tipos_activo %}
-                                <label class="flex w-full min-w-0 cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm text-slate-700 transition hover:border-cyan-300 hover:bg-cyan-50/70">
-                                    <input
-                                        type="checkbox"
-                                        name="tipo"
-                                        value="{{ tipo.pk }}"
-                                        class="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
-                                        {% if tipo.pk|stringformat:"s" in tipos_seleccionados %}checked{% endif %}
-                                    >
-                                    <span class="min-w-0 flex-1 whitespace-normal break-words leading-snug font-medium">
-                                        {{ tipo.nombre }}
-                                    </span>
-                                </label>
-                            {% endfor %}
+                <div class="asset-filter-popover absolute right-0 z-30 mt-2 w-[min(92vw,44rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 sm:px-5">
+                        <div><p class="text-sm font-semibold text-slate-900">Filtrar activos</p><p class="mt-0.5 text-xs text-slate-500">Combina uno o varios criterios.</p></div>
+                        <div class="asset-filter-header-actions flex items-center gap-3">
+                            <div class="asset-filter-actions flex items-center gap-2 rounded-2xl bg-slate-50 p-1">
+                                <a href="{% url 'activos:lista' %}?reset=1" class="asset-filter-reset rounded-xl border border-transparent px-3 py-2 text-xs font-semibold text-slate-700 transition">Restablecer</a>
+                                <button type="submit" class="asset-filter-apply rounded-xl bg-cyan-600 px-5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-cyan-700">Aplicar filtros</button>
+                            </div>
+                            <button type="button" data-filter-close class="asset-filter-close inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition" aria-label="Cerrar filtros">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M4.47 4.47a.75.75 0 0 1 1.06 0L10 8.94l4.47-4.47a.75.75 0 1 1 1.06 1.06L11.06 10l4.47 4.47a.75.75 0 0 1-1.06 1.06L10 11.06l-4.47 4.47a.75.75 0 0 1-1.06-1.06L8.94 10 4.47 5.53a.75.75 0 0 1 0-1.06Z" /></svg>
+                            </button>
                         </div>
-                        <p class="mt-3 text-xs text-slate-500">Selecciona uno o varios tipos para combinar la búsqueda.</p>
                     </div>
-                </details>
-            </div>
-
-            <div>
-                <label for="filtro-empresa" class="mb-2 block text-sm font-semibold text-slate-700">Empresa</label>
-                <select
-                    id="filtro-empresa"
-                    name="empresa"
-                    class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
-                >
-                    <option value="">Todas las empresas</option>
-                    {% for empresa in empresas_activo %}
-                        <option value="{{ empresa.pk }}" {% if empresa_seleccionada == empresa.pk|stringformat:"s" %}selected{% endif %}>
-                            {{ empresa.nombre }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
+                    <div class="asset-filter-selection border-b border-slate-200 px-4 py-3 sm:px-5">
+                        <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Selección actual</p>
+                        <div class="flex min-h-7 flex-wrap items-center gap-2" data-live-filter-summary aria-live="polite">
+                            <span class="text-xs text-slate-400" data-filter-empty>Ningún filtro seleccionado</span>
+                        </div>
+                    </div>
+                    <div class="grid min-h-[22rem] grid-cols-[8.5rem_minmax(0,1fr)] sm:grid-cols-[12rem_minmax(0,1fr)]">
+                        <nav class="asset-filter-nav space-y-1 border-r border-slate-200 p-2 sm:p-3" aria-label="Categorías de filtros">
+                            <button type="button" data-filter-tab="estado" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition">Estado</button>
+                            <button type="button" data-filter-tab="tipo" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition">Tipo</button>
+                            <button type="button" data-filter-tab="empresa" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition">Empresa</button>
+                            <button type="button" data-filter-tab="compra" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition">Compra</button>
+                            <button type="button" data-filter-tab="vista" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition">Vista</button>
+                        </nav>
+                        <div class="max-h-[24rem] overflow-y-auto p-4 sm:p-5">
+                            <section data-filter-panel="estado" class="space-y-5">
+                                <fieldset><legend class="mb-1 text-sm font-semibold text-slate-900">Estado operativo</legend><p class="mb-3 text-xs text-slate-500">Selecciona todos los estados que quieras incluir.</p><div class="space-y-2">
+                                    {% for estado in estados_activo %}<label class="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" name="estado" value="{{ estado.pk }}" data-filter-prefix="Estado" class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" {% if estado.pk|stringformat:"s" in estados_seleccionados %}checked{% endif %}><span>{{ estado.nombre }}</span></label>{% endfor %}
+                                </div></fieldset>
+                                <fieldset><legend class="mb-3 text-sm font-semibold text-slate-900">Disponibilidad</legend><div class="space-y-2">
+                                    <label class="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" name="disponibilidad" value="disponibles" data-filter-prefix="Disponibilidad" class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" {% if 'disponibles' in disponibilidades_seleccionadas %}checked{% endif %}><span>Disponibles</span></label>
+                                    <label class="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" name="disponibilidad" value="asignados" data-filter-prefix="Disponibilidad" class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" {% if 'asignados' in disponibilidades_seleccionadas %}checked{% endif %}><span>Asignados</span></label>
+                                </div></fieldset>
+                            </section>
+                            <section data-filter-panel="tipo" class="hidden space-y-3"><h3 class="text-sm font-semibold text-slate-900">Tipo de activo</h3><p class="text-xs text-slate-500">Puedes seleccionar varios tipos.</p><div class="space-y-1">
+                                {% for tipo in tipos_activo %}<label class="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" name="tipo" value="{{ tipo.pk }}" data-filter-prefix="Tipo" class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" {% if tipo.pk|stringformat:"s" in tipos_seleccionados %}checked{% endif %}><span>
+                                    {{ tipo.nombre }}
+                                </span></label>{% endfor %}
+                            </div></section>
+                            <section data-filter-panel="empresa" class="hidden space-y-3"><h3 class="text-sm font-semibold text-slate-900">Empresa</h3><p class="text-xs text-slate-500">Sin selección se incluyen todas las empresas.</p><div class="space-y-1">
+                                {% for empresa in empresas_activo %}<label class="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" name="empresa" value="{{ empresa.pk }}" data-filter-prefix="Empresa" class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" {% if empresa.pk|stringformat:"s" in empresas_seleccionadas %}checked{% endif %}><span>{{ empresa.nombre }}</span></label>{% endfor %}
+                            </div></section>
+                            <section data-filter-panel="compra" class="hidden space-y-5">
+                                <fieldset><legend class="mb-2 text-sm font-semibold text-slate-900">Proveedor</legend><div class="max-h-40 space-y-1 overflow-y-auto rounded-xl border border-slate-200 p-2">{% for proveedor in proveedores %}<label class="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" name="proveedor" value="{{ proveedor.pk }}" data-filter-prefix="Proveedor" class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" {% if proveedor.pk|stringformat:"s" in proveedores_seleccionados %}checked{% endif %}><span>{{ proveedor }}</span></label>{% empty %}<p class="px-2 py-1 text-xs text-slate-400">No hay proveedores registrados.</p>{% endfor %}</div></fieldset>
+                                <fieldset><legend class="mb-2 text-sm font-semibold text-slate-900">Factura</legend><div class="max-h-40 space-y-1 overflow-y-auto rounded-xl border border-slate-200 p-2"><label class="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" name="factura" value="sin_factura" data-filter-prefix="Factura" class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" {% if 'sin_factura' in facturas_seleccionadas %}checked{% endif %}><span>Sin registrar</span></label>{% for factura in facturas_compra %}<label class="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" name="factura" value="{{ factura.pk }}" data-filter-prefix="Factura" class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" {% if factura.pk|stringformat:"s" in facturas_seleccionadas %}checked{% endif %}><span>{{ factura.numero_factura }} · {{ factura.proveedor }}</span></label>{% endfor %}</div></fieldset>
+                            </section>
+                            <section data-filter-panel="vista" class="hidden space-y-5">
+                                <div><label for="filtro-orden" class="mb-2 block text-sm font-semibold text-slate-900">Ordenar por</label><select id="filtro-orden" name="orden" data-filter-select-label="Orden" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"><option value="">Tipo y código</option><option value="recientes" {% if orden_seleccionado == 'recientes' %}selected{% endif %}>Más recientes primero</option></select></div>
+                                <label class="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-semibold text-slate-700"><input type="checkbox" name="mostrar_eliminados" value="1" data-filter-label="Incluye eliminados" class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" {% if mostrar_eliminados %}checked{% endif %}><span>Mostrar activos eliminados</span></label>
+                            </section>
+                        </div>
+                    </div>
+                </div>
+            </details>
         </div>
 
-        <div class="grid gap-4 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(12rem,.7fr)_auto_auto] xl:items-end">
-            <div>
-                <label for="filtro-proveedor" class="mb-2 block text-sm font-semibold text-slate-700">Proveedor</label>
-                <select id="filtro-proveedor" name="proveedor" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
-                    <option value="">Todos los proveedores</option>
-                    {% for proveedor in proveedores %}<option value="{{ proveedor.pk }}" {% if proveedor_seleccionado == proveedor.pk|stringformat:"s" %}selected{% endif %}>{{ proveedor }}</option>{% endfor %}
-                </select>
-            </div>
-
-            <div>
-                <label for="filtro-factura" class="mb-2 block text-sm font-semibold text-slate-700">Factura</label>
-                <select id="filtro-factura" name="factura" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
-                    <option value="">Todas las facturas</option>
-                    <option value="sin_factura" {% if factura_seleccionada == 'sin_factura' %}selected{% endif %}>Sin factura registrada</option>
-                    {% for factura in facturas_compra %}<option value="{{ factura.pk }}" {% if factura_seleccionada == factura.pk|stringformat:"s" %}selected{% endif %}>{{ factura.numero_factura }} · {{ factura.proveedor }}</option>{% endfor %}
-                </select>
-            </div>
-
-            <div>
-                <label for="filtro-orden" class="mb-2 block text-sm font-semibold text-slate-700">Ordenar por</label>
-                <select id="filtro-orden" name="orden" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-violet-500 focus:ring-4 focus:ring-violet-100">
-                    <option value="">Tipo y código</option>
-                    <option value="recientes" {% if orden_seleccionado == "recientes" %}selected{% endif %}>Más recientes primero</option>
-                </select>
-            </div>
-
-            <div class="flex min-h-[46px] items-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <label class="inline-flex cursor-pointer items-center gap-3 whitespace-nowrap text-sm font-semibold text-slate-700">
-                    <input
-                        type="checkbox"
-                        name="mostrar_eliminados"
-                        value="1"
-                        class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
-                        {% if mostrar_eliminados %}checked{% endif %}
-                    >
-                    <span>Mostrar eliminados</span>
-                </label>
-            </div>
-
-            <div class="flex flex-wrap justify-end gap-3 xl:flex-nowrap" data-filter-actions>
-                <button type="submit" class="rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700">
-                    Aplicar
-                </button>
-                <a href="{% url 'activos:lista' %}?reset=1" class="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-                    Restablecer
-                </a>
-            </div>
-        </div>
-
-        {% if busqueda or estado_seleccionado or disponibilidad_seleccionada or tipos_seleccionados or empresa_seleccionada or proveedor_seleccionado or factura_seleccionada or orden_seleccionado or mostrar_eliminados %}
-            <div class="flex flex-wrap items-center gap-2">
-                <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Filtros activos</span>
+        {% if busqueda or estados_seleccionados or disponibilidades_seleccionadas or tipos_seleccionados or empresas_seleccionadas or proveedores_seleccionados or facturas_seleccionadas or orden_seleccionado or mostrar_eliminados %}
+            <div class="flex flex-wrap items-center gap-2" aria-label="Filtros activos">
                 {% if busqueda %}
-                    <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">Búsqueda: {{ busqueda }}</span>
+                    <button type="button" data-remove-filter="q" class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-slate-300"><span>Búsqueda: {{ busqueda }}</span><span aria-hidden="true">×</span><span class="sr-only">Quitar búsqueda</span></button>
                 {% endif %}
-                {% if estado_seleccionado %}
+                {% if estados_seleccionados %}
                     {% for estado in estados_activo %}
-                        {% if estado_seleccionado == estado.pk|stringformat:"s" %}
-                            <span class="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-medium text-cyan-700">Estado: {{ estado.nombre }}</span>
+                        {% if estado.pk|stringformat:"s" in estados_seleccionados %}
+                            <button type="button" data-remove-filter="estado" data-remove-value="{{ estado.pk }}" class="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-xs font-medium text-cyan-700 transition hover:border-cyan-300"><span>Estado: {{ estado.nombre }}</span><span aria-hidden="true">×</span></button>
                         {% endif %}
                     {% endfor %}
                 {% endif %}
-                {% if disponibilidad_seleccionada == "disponibles" %}
-                    <span class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">Disponibilidad: Disponibles</span>
-                {% elif disponibilidad_seleccionada == "asignados" %}
-                    <span class="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-medium text-cyan-700">Disponibilidad: Asignados</span>
-                {% endif %}
+                {% if 'disponibles' in disponibilidades_seleccionadas %}<button type="button" data-remove-filter="disponibilidad" data-remove-value="disponibles" class="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700"><span>Disponibilidad: Disponibles</span><span aria-hidden="true">×</span></button>{% endif %}
+                {% if 'asignados' in disponibilidades_seleccionadas %}<button type="button" data-remove-filter="disponibilidad" data-remove-value="asignados" class="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-xs font-medium text-cyan-700"><span>Disponibilidad: Asignados</span><span aria-hidden="true">×</span></button>{% endif %}
                 {% if tipos_seleccionados %}
                     {% for tipo in tipos_activo %}
                         {% if tipo.pk|stringformat:"s" in tipos_seleccionados %}
-                            <span class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">Tipo: {{ tipo.nombre }}</span>
+                            <button type="button" data-remove-filter="tipo" data-remove-value="{{ tipo.pk }}" class="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700"><span>Tipo: {{ tipo.nombre }}</span><span aria-hidden="true">×</span></button>
                         {% endif %}
                     {% endfor %}
                 {% endif %}
-                {% if empresa_seleccionada %}
+                {% if empresas_seleccionadas %}
                     {% for empresa in empresas_activo %}
-                        {% if empresa_seleccionada == empresa.pk|stringformat:"s" %}
-                            <span class="rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700">Empresa: {{ empresa.nombre }}</span>
+                        {% if empresa.pk|stringformat:"s" in empresas_seleccionadas %}
+                            <button type="button" data-remove-filter="empresa" data-remove-value="{{ empresa.pk }}" class="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-medium text-violet-700"><span>Empresa: {{ empresa.nombre }}</span><span aria-hidden="true">×</span></button>
                         {% endif %}
                     {% endfor %}
                 {% endif %}
-                {% if proveedor_seleccionado %}{% for proveedor in proveedores %}{% if proveedor_seleccionado == proveedor.pk|stringformat:"s" %}<span class="rounded-full border border-teal-200 bg-teal-50 px-3 py-1 text-xs font-medium text-teal-700">Proveedor: {{ proveedor }}</span>{% endif %}{% endfor %}{% endif %}
-                {% if factura_seleccionada %}<span class="rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700">Factura: {% if factura_seleccionada == 'sin_factura' %}Sin registrar{% else %}{% for factura in facturas_compra %}{% if factura_seleccionada == factura.pk|stringformat:"s" %}{{ factura.numero_factura }}{% endif %}{% endfor %}{% endif %}</span>{% endif %}
+                {% if proveedores_seleccionados %}{% for proveedor in proveedores %}{% if proveedor.pk|stringformat:"s" in proveedores_seleccionados %}<button type="button" data-remove-filter="proveedor" data-remove-value="{{ proveedor.pk }}" class="inline-flex items-center gap-2 rounded-full border border-teal-200 bg-teal-50 px-3 py-1.5 text-xs font-medium text-teal-700"><span>Proveedor: {{ proveedor }}</span><span aria-hidden="true">×</span></button>{% endif %}{% endfor %}{% endif %}
+                {% if 'sin_factura' in facturas_seleccionadas %}<button type="button" data-remove-filter="factura" data-remove-value="sin_factura" class="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-medium text-violet-700"><span>Factura: Sin registrar</span><span aria-hidden="true">×</span></button>{% endif %}
+                {% for factura in facturas_compra %}{% if factura.pk|stringformat:"s" in facturas_seleccionadas %}<button type="button" data-remove-filter="factura" data-remove-value="{{ factura.pk }}" class="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-medium text-violet-700"><span>Factura: {{ factura.numero_factura }}</span><span aria-hidden="true">×</span></button>{% endif %}{% endfor %}
                 {% if orden_seleccionado == "recientes" %}
-                    <span class="rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700">Orden: Más recientes</span>
+                    <button type="button" data-remove-filter="orden" class="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-medium text-violet-700"><span>Orden: Más recientes</span><span aria-hidden="true">×</span></button>
                 {% endif %}
                 {% if mostrar_eliminados %}
-                    <span class="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">Incluye eliminados</span>
+                    <button type="button" data-remove-filter="mostrar_eliminados" class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700"><span>Incluye eliminados</span><span aria-hidden="true">×</span></button>
                 {% endif %}
             </div>
         {% endif %}
@@ -398,6 +339,119 @@
     </div>
 
 </div>
+
+<script>
+    (() => {
+        const form = document.querySelector("[data-asset-filters]");
+        if (!form) return;
+
+        const popover = form.querySelector("[data-filter-popover]");
+        const tabs = Array.from(form.querySelectorAll("[data-filter-tab]"));
+        const panels = Array.from(form.querySelectorAll("[data-filter-panel]"));
+
+        function activateTab(name) {
+            tabs.forEach((tab) => {
+                const active = tab.dataset.filterTab === name;
+                tab.classList.toggle("bg-white", active);
+                tab.classList.toggle("text-cyan-700", active);
+                tab.classList.toggle("shadow-sm", active);
+                tab.classList.toggle("text-slate-600", !active);
+                tab.setAttribute("aria-selected", String(active));
+            });
+            panels.forEach((panel) => panel.classList.toggle("hidden", panel.dataset.filterPanel !== name));
+        }
+
+        tabs.forEach((tab) => tab.addEventListener("click", () => activateTab(tab.dataset.filterTab)));
+        activateTab("estado");
+
+        const liveSummary = form.querySelector("[data-live-filter-summary]");
+        const countBadge = form.querySelector("[data-filter-count]");
+
+        function selectedFilterControls() {
+            const selected = Array.from(form.querySelectorAll("[data-filter-label], [data-filter-prefix]"))
+                .filter((control) => control.checked)
+                .map((control) => ({
+                    control,
+                    label: control.dataset.filterLabel || `${control.dataset.filterPrefix}: ${control.closest("label").querySelector("span").textContent.trim()}`,
+                }));
+            const search = form.elements.q;
+            if (search?.value.trim()) selected.unshift({ control: search, label: `Búsqueda: ${search.value.trim()}` });
+            form.querySelectorAll("[data-filter-select-label]").forEach((select) => {
+                if (select.value) selected.push({
+                    control: select,
+                    label: `${select.dataset.filterSelectLabel}: ${select.selectedOptions[0].textContent.trim()}`,
+                });
+            });
+            return selected;
+        }
+
+        function refreshLiveSummary() {
+            if (!liveSummary) return;
+            const selected = selectedFilterControls();
+            liveSummary.replaceChildren();
+            if (!selected.length) {
+                const empty = document.createElement("span");
+                empty.className = "text-xs text-slate-400";
+                empty.textContent = "Ningún filtro seleccionado";
+                liveSummary.append(empty);
+            } else {
+                selected.forEach(({ control, label }) => {
+                    const chip = document.createElement("button");
+                    chip.type = "button";
+                    chip.className = "asset-filter-chip inline-flex items-center gap-1.5 rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-xs font-medium text-cyan-700 transition hover:border-cyan-300";
+                    chip.innerHTML = `<span></span><span aria-hidden="true">×</span>`;
+                    chip.firstElementChild.textContent = label;
+                    chip.setAttribute("aria-label", `Quitar ${label}`);
+                    chip.addEventListener("click", () => {
+                        if (control.type === "checkbox" || control.type === "radio") control.checked = false;
+                        else control.value = "";
+                        refreshLiveSummary();
+                    });
+                    liveSummary.append(chip);
+                });
+            }
+            if (countBadge) {
+                countBadge.textContent = selected.length;
+                countBadge.classList.toggle("hidden", selected.length === 0);
+            }
+        }
+
+        form.addEventListener("input", (event) => {
+            if (event.target.matches("[data-filter-label], [data-filter-prefix], [data-filter-select-label], [name='q']")) refreshLiveSummary();
+        });
+        form.addEventListener("change", (event) => {
+            if (event.target.matches("[data-filter-label], [data-filter-prefix], [data-filter-select-label]")) refreshLiveSummary();
+        });
+        refreshLiveSummary();
+
+        form.querySelector("[data-filter-close]")?.addEventListener("click", () => {
+            popover?.removeAttribute("open");
+        });
+
+        document.addEventListener("click", (event) => {
+            if (popover?.open && !popover.contains(event.target)) popover.removeAttribute("open");
+        });
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape" && popover?.open) popover.removeAttribute("open");
+        });
+
+        form.querySelectorAll("[data-remove-filter]").forEach((button) => {
+            button.addEventListener("click", () => {
+                const name = button.dataset.removeFilter;
+                const value = button.dataset.removeValue;
+                const controls = Array.from(form.elements).filter((control) => control.name === name);
+
+                controls.forEach((control) => {
+                    if (control.type === "radio") control.checked = control.value === "";
+                    else if (control.type === "checkbox") {
+                        if (!value || control.value === value) control.checked = false;
+                    } else control.value = "";
+                });
+                form.requestSubmit();
+            });
+        });
+    })();
+</script>
 
 {% if hay_filtros_para_exportar %}
 <script>

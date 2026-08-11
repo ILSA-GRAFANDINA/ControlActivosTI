@@ -605,6 +605,63 @@ class ActivoListViewTests(TestCase):
         self.assertTrue(activo_baja.activo)
         self.assertFalse(estado_baja.permite_asignacion)
 
+    def test_list_view_can_filter_by_multiple_operational_states(self):
+        estado_asignado = EstadoActivo.objects.create(nombre="Asignado", permite_asignacion=False)
+        estado_baja = EstadoActivo.objects.create(nombre="Dado de baja", permite_asignacion=False)
+        activo_asignado = Activo.objects.create(
+            tipo_activo=self.tipo_laptop,
+            empresa=self.empresa_acme,
+            marca="Dell",
+            modelo="Asignado",
+            serie="EST-ASIGNADO",
+            estado_activo=estado_asignado,
+        )
+        activo_baja = Activo.objects.create(
+            tipo_activo=self.tipo_pc,
+            empresa=self.empresa_globex,
+            marca="Lenovo",
+            modelo="Retirado",
+            serie="EST-BAJA",
+            estado_activo=estado_baja,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse("activos:lista"),
+            {"estado": [estado_asignado.pk, estado_baja.pk]},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertCountEqual(
+            response.context["estados_seleccionados"],
+            [str(estado_asignado.pk), str(estado_baja.pk)],
+        )
+        self.assertContains(response, activo_asignado.codigo)
+        self.assertContains(response, activo_baja.codigo)
+        self.assertNotContains(response, "LAP-001")
+        self.assertContains(response, "Estado: Asignado")
+        self.assertContains(response, "Estado: Dado de baja")
+
+    def test_multiple_filters_persist_until_reset(self):
+        estado_baja = EstadoActivo.objects.create(nombre="Dado de baja", permite_asignacion=False)
+        self.client.force_login(self.user)
+        self.client.get(
+            reverse("activos:lista"),
+            {"estado": [self.estado.pk, estado_baja.pk], "empresa": [self.empresa_acme.pk]},
+        )
+
+        remembered_response = self.client.get(reverse("activos:lista"))
+
+        self.assertCountEqual(
+            remembered_response.context["estados_seleccionados"],
+            [str(self.estado.pk), str(estado_baja.pk)],
+        )
+        self.assertEqual(remembered_response.context["empresas_seleccionadas"], [str(self.empresa_acme.pk)])
+        self.client.get(reverse("activos:lista"), {"reset": "1"})
+        cleared_response = self.client.get(reverse("activos:lista"))
+        self.assertEqual(cleared_response.context["estados_seleccionados"], [])
+        self.assertEqual(cleared_response.context["empresas_seleccionadas"], [])
+
     def test_list_view_can_order_assets_by_most_recent(self):
         activos = list(Activo.objects.order_by("pk"))
         for index, activo in enumerate(activos):
@@ -864,6 +921,9 @@ class ActivoExportViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Exportar seleccionados")
+        self.assertContains(response, "data-export-filters")
+        self.assertContains(response, "asset-filter-popover")
+        self.assertContains(response, "Selección actual")
         self.assertContains(response, self.activo_laptop.codigo)
         self.assertNotContains(response, self.activo_mouse.codigo)
 
@@ -905,6 +965,7 @@ class ActivoExportViewTests(TestCase):
             response["Content-Type"],
         )
         self.assertIn("activos_export_", response["Content-Disposition"])
+        self.assertIn("Se exportaron", response["X-Export-Message"])
 
         workbook = load_workbook(BytesIO(response.content))
         worksheet = workbook.active
@@ -921,6 +982,42 @@ class ActivoExportViewTests(TestCase):
         self.assertEqual(rows[0][12], self.activo_laptop.valor)
         self.assertEqual(rows[0][14], "Si")
 
+    def test_export_does_not_overwrite_persisted_list_filters(self):
+        self.client.force_login(self.user)
+        self.client.get(
+            reverse("activos:lista"),
+            {"tipo": [self.tipo_laptop.pk, self.tipo_pc.pk]},
+        )
+
+        export_response = self.client.post(
+            reverse("activos:exportar"),
+            {
+                "activos": [str(self.activo_laptop.pk)],
+                "tipo": [str(self.tipo_laptop.pk)],
+            },
+        )
+
+        self.assertEqual(export_response.status_code, 200)
+        remembered_response = self.client.get(reverse("activos:lista"))
+        self.assertCountEqual(
+            remembered_response.context["tipos_seleccionados"],
+            [str(self.tipo_laptop.pk), str(self.tipo_pc.pk)],
+        )
+
+    def test_export_form_keeps_every_selected_filter_value(self):
+        estado_baja = EstadoActivo.objects.create(nombre="Dado de baja", permite_asignacion=False)
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse("activos:exportar"),
+            {"estado": [self.estado.pk, estado_baja.pk], "tipo": [self.tipo_laptop.pk, self.tipo_pc.pk]},
+        )
+
+        self.assertContains(response, f'<input type="hidden" name="estado" value="{self.estado.pk}">')
+        self.assertContains(response, f'<input type="hidden" name="estado" value="{estado_baja.pk}">')
+        self.assertContains(response, f'<input type="hidden" name="tipo" value="{self.tipo_laptop.pk}">')
+        self.assertContains(response, f'<input type="hidden" name="tipo" value="{self.tipo_pc.pk}">')
+
     def test_export_view_requires_at_least_one_selected_asset(self):
         self.client.force_login(self.user)
 
@@ -928,6 +1025,19 @@ class ActivoExportViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Debes seleccionar al menos un activo para exportar.")
+
+    def test_async_export_returns_json_error_for_empty_selection(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse("activos:exportar"),
+            {},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(response.json()["ok"])
+        self.assertIn("seleccionar al menos", response.json()["message"])
 
 
 class ActivoCreateViewTests(TestCase):

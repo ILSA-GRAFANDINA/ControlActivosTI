@@ -14,7 +14,65 @@
     </a>
 </div>
 
-<div class="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+<div class="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+    <form method="get" class="space-y-4" data-scroll-to-results data-export-filters>
+        {% if tab_tipo_activa %}<input type="hidden" name="tab_tipo" value="{{ tab_tipo_activa }}">{% endif %}
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
+            <div class="relative min-w-0 flex-1">
+                <label for="export-filter-search" class="sr-only">Buscar activos para exportar</label>
+                <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 3.44 9.79l2.64 2.64a.75.75 0 1 0 1.06-1.06l-2.64-2.64A5.5 5.5 0 0 0 9 3.5ZM5 9a4 4 0 1 1 8 0 4 4 0 0 1-8 0Z" clip-rule="evenodd" /></svg>
+                </span>
+                <input id="export-filter-search" type="text" name="q" value="{{ busqueda }}" placeholder="Buscar por código, SAP, marca, modelo o serie" class="w-full rounded-xl border border-slate-300 bg-white py-3 pl-11 pr-4 text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
+            </div>
+            <button type="submit" class="rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700">Buscar</button>
+            <details class="group relative" data-export-filter-popover>
+                <summary class="inline-flex w-full cursor-pointer list-none items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-cyan-400 focus:outline-none focus:ring-4 focus:ring-cyan-100 lg:w-auto">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M2.75 4.5a.75.75 0 0 1 .75-.75h13a.75.75 0 0 1 0 1.5h-13a.75.75 0 0 1-.75-.75ZM5.75 10a.75.75 0 0 1 .75-.75h7a.75.75 0 0 1 0 1.5h-7a.75.75 0 0 1-.75-.75ZM8.75 15.5a.75.75 0 0 1 .75-.75h1a.75.75 0 0 1 0 1.5h-1a.75.75 0 0 1-.75-.75Z" /></svg>
+                    <span>Filtros</span>
+                    {% if cantidad_filtros_activos %}<span class="inline-flex min-w-5 items-center justify-center rounded-full bg-cyan-100 px-1.5 py-0.5 text-[11px] font-bold text-cyan-700">{{ cantidad_filtros_activos }}</span>{% endif %}
+                </summary>
+                <div class="asset-filter-popover absolute right-0 z-30 mt-2 w-[min(92vw,44rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 sm:px-5">
+                        <div><p class="text-sm font-semibold text-slate-900">Filtrar exportación</p><p class="mt-0.5 text-xs text-slate-500">Selecciona uno o varios criterios.</p></div>
+                        <div class="asset-filter-header-actions flex items-center gap-3">
+                            <div class="asset-filter-actions flex items-center gap-2 rounded-2xl bg-slate-50 p-1">
+                                <a href="{% url 'activos:exportar' %}?reset=1" class="asset-filter-reset rounded-xl border border-transparent px-3 py-2 text-xs font-semibold text-slate-700">Restablecer</a>
+                                <button type="submit" class="asset-filter-apply rounded-xl bg-cyan-600 px-5 py-2 text-xs font-semibold text-white">Aplicar filtros</button>
+                            </div>
+                            <button type="button" data-export-filter-close class="asset-filter-close inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500" aria-label="Cerrar filtros">×</button>
+                        </div>
+                    </div>
+                    <div class="asset-filter-selection border-b border-slate-200 px-4 py-3 sm:px-5">
+                        <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Selección actual</p>
+                        <div class="flex min-h-7 flex-wrap items-center gap-2" data-export-filter-summary></div>
+                    </div>
+                    <div class="grid min-h-[22rem] grid-cols-[8.5rem_minmax(0,1fr)] sm:grid-cols-[12rem_minmax(0,1fr)]">
+                        <nav class="asset-filter-nav space-y-1 border-r border-slate-200 p-2 sm:p-3" aria-label="Categorías de filtros">
+                            <button type="button" data-export-filter-tab="estado" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold">Estado</button>
+                            <button type="button" data-export-filter-tab="tipo" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold">Tipo</button>
+                            <button type="button" data-export-filter-tab="empresa" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold">Empresa</button>
+                            <button type="button" data-export-filter-tab="compra" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold">Compra</button>
+                            <button type="button" data-export-filter-tab="vista" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold">Vista</button>
+                        </nav>
+                        <div class="max-h-[24rem] overflow-y-auto p-4 sm:p-5">
+                            <section data-export-filter-panel="estado" class="space-y-5"><fieldset><legend class="mb-2 text-sm font-semibold text-slate-900">Estado operativo</legend><div class="space-y-1">{% for estado in estados_activo %}<label class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-700"><input type="checkbox" name="estado" value="{{ estado.pk }}" data-filter-prefix="Estado" class="h-4 w-4 rounded border-slate-300 text-cyan-600" {% if estado.pk|stringformat:"s" in estados_seleccionados %}checked{% endif %}><span>{{ estado.nombre }}</span></label>{% endfor %}</div></fieldset><fieldset><legend class="mb-2 text-sm font-semibold text-slate-900">Disponibilidad</legend><div class="space-y-1"><label class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-700"><input type="checkbox" name="disponibilidad" value="disponibles" data-filter-prefix="Disponibilidad" class="h-4 w-4 rounded border-slate-300 text-cyan-600" {% if 'disponibles' in disponibilidades_seleccionadas %}checked{% endif %}><span>Disponibles</span></label><label class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-700"><input type="checkbox" name="disponibilidad" value="asignados" data-filter-prefix="Disponibilidad" class="h-4 w-4 rounded border-slate-300 text-cyan-600" {% if 'asignados' in disponibilidades_seleccionadas %}checked{% endif %}><span>Asignados</span></label></div></fieldset></section>
+                            <section data-export-filter-panel="tipo" class="hidden space-y-2"><h3 class="text-sm font-semibold text-slate-900">Tipo de activo</h3>{% for tipo in tipos_activo %}<label class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-700"><input type="checkbox" name="tipo" value="{{ tipo.pk }}" data-filter-prefix="Tipo" class="h-4 w-4 rounded border-slate-300 text-cyan-600" {% if tipo.pk|stringformat:"s" in tipos_seleccionados %}checked{% endif %}><span>
+                                {{ tipo.nombre }}
+                            </span></label>{% endfor %}</section>
+                            <section data-export-filter-panel="empresa" class="hidden space-y-2"><h3 class="text-sm font-semibold text-slate-900">Empresa</h3>{% for empresa in empresas_activo %}<label class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-700"><input type="checkbox" name="empresa" value="{{ empresa.pk }}" data-filter-prefix="Empresa" class="h-4 w-4 rounded border-slate-300 text-cyan-600" {% if empresa.pk|stringformat:"s" in empresas_seleccionadas %}checked{% endif %}><span>{{ empresa.nombre }}</span></label>{% endfor %}</section>
+                            <section data-export-filter-panel="compra" class="hidden space-y-5"><fieldset><legend class="mb-2 text-sm font-semibold text-slate-900">Proveedor</legend><div class="max-h-36 overflow-y-auto rounded-xl border border-slate-200 p-2">{% for proveedor in proveedores %}<label class="flex items-center gap-3 rounded-lg px-2 py-2 text-sm text-slate-700"><input type="checkbox" name="proveedor" value="{{ proveedor.pk }}" data-filter-prefix="Proveedor" class="h-4 w-4 rounded border-slate-300 text-cyan-600" {% if proveedor.pk|stringformat:"s" in proveedores_seleccionados %}checked{% endif %}><span>{{ proveedor }}</span></label>{% endfor %}</div></fieldset><fieldset><legend class="mb-2 text-sm font-semibold text-slate-900">Factura</legend><div class="max-h-36 overflow-y-auto rounded-xl border border-slate-200 p-2"><label class="flex items-center gap-3 rounded-lg px-2 py-2 text-sm text-slate-700"><input type="checkbox" name="factura" value="sin_factura" data-filter-prefix="Factura" class="h-4 w-4 rounded border-slate-300 text-cyan-600" {% if 'sin_factura' in facturas_seleccionadas %}checked{% endif %}><span>Sin registrar</span></label>{% for factura in facturas_compra %}<label class="flex items-center gap-3 rounded-lg px-2 py-2 text-sm text-slate-700"><input type="checkbox" name="factura" value="{{ factura.pk }}" data-filter-prefix="Factura" class="h-4 w-4 rounded border-slate-300 text-cyan-600" {% if factura.pk|stringformat:"s" in facturas_seleccionadas %}checked{% endif %}><span>{{ factura.numero_factura }} · {{ factura.proveedor }}</span></label>{% endfor %}</div></fieldset></section>
+                            <section data-export-filter-panel="vista" class="hidden space-y-5"><div><label for="export-filter-order" class="mb-2 block text-sm font-semibold text-slate-900">Ordenar por</label><select id="export-filter-order" name="orden" data-filter-select-label="Orden" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm"><option value="">Tipo y código</option><option value="recientes" {% if orden_seleccionado == 'recientes' %}selected{% endif %}>Más recientes primero</option></select></div><label class="flex items-center gap-3 rounded-xl border border-slate-200 px-3 py-3 text-sm font-semibold text-slate-700"><input type="checkbox" name="mostrar_eliminados" value="1" data-filter-label="Incluye eliminados" class="h-4 w-4 rounded border-slate-300 text-cyan-600" {% if mostrar_eliminados %}checked{% endif %}><span>Mostrar activos eliminados</span></label></section>
+                        </div>
+                    </div>
+                </div>
+            </details>
+        </div>
+    </form>
+</div>
+
+{# Formulario anterior conservado temporalmente como referencia funcional, fuera de la interfaz. #}
+<div class="hidden" aria-hidden="true" inert>
     <form method="get" class="space-y-6" data-scroll-to-results>
         {% if tab_tipo_activa %}
             <input type="hidden" name="tab_tipo" value="{{ tab_tipo_activa }}">
@@ -193,14 +251,24 @@
     <form method="post" class="space-y-4 p-6" data-export-selection-form>
         {% csrf_token %}
         <input type="hidden" name="q" value="{{ busqueda }}">
-        <input type="hidden" name="estado" value="{{ estado_seleccionado }}">
-        <input type="hidden" name="disponibilidad" value="{{ disponibilidad_seleccionada }}">
+        {% for estado_id in estados_seleccionados %}
+            <input type="hidden" name="estado" value="{{ estado_id }}">
+        {% endfor %}
+        {% for disponibilidad in disponibilidades_seleccionadas %}
+            <input type="hidden" name="disponibilidad" value="{{ disponibilidad }}">
+        {% endfor %}
         {% for tipo_id in tipos_seleccionados %}
             <input type="hidden" name="tipo" value="{{ tipo_id }}">
         {% endfor %}
-        <input type="hidden" name="empresa" value="{{ empresa_seleccionada }}">
-        <input type="hidden" name="proveedor" value="{{ proveedor_seleccionado }}">
-        <input type="hidden" name="factura" value="{{ factura_seleccionada }}">
+        {% for empresa_id in empresas_seleccionadas %}
+            <input type="hidden" name="empresa" value="{{ empresa_id }}">
+        {% endfor %}
+        {% for proveedor_id in proveedores_seleccionados %}
+            <input type="hidden" name="proveedor" value="{{ proveedor_id }}">
+        {% endfor %}
+        {% for factura_id in facturas_seleccionadas %}
+            <input type="hidden" name="factura" value="{{ factura_id }}">
+        {% endfor %}
         <input type="hidden" name="orden" value="{{ orden_seleccionado }}">
         {% if tab_tipo_activa %}
             <input type="hidden" name="tab_tipo" value="{{ tab_tipo_activa }}">
@@ -288,6 +356,66 @@
 
 <script>
     (() => {
+        const filtersForm = document.querySelector("[data-export-filters]");
+        const filterPopover = filtersForm?.querySelector("[data-export-filter-popover]");
+        const filterTabs = Array.from(filtersForm?.querySelectorAll("[data-export-filter-tab]") || []);
+        const filterPanels = Array.from(filtersForm?.querySelectorAll("[data-export-filter-panel]") || []);
+        const filterSummary = filtersForm?.querySelector("[data-export-filter-summary]");
+
+        const activateFilterTab = (name) => {
+            filterTabs.forEach((tab) => {
+                const active = tab.dataset.exportFilterTab === name;
+                tab.classList.toggle("bg-white", active);
+                tab.classList.toggle("text-cyan-700", active);
+                tab.classList.toggle("shadow-sm", active);
+                tab.classList.toggle("text-slate-600", !active);
+            });
+            filterPanels.forEach((panel) => panel.classList.toggle("hidden", panel.dataset.exportFilterPanel !== name));
+        };
+
+        const refreshFilterSummary = () => {
+            if (!filtersForm || !filterSummary) return;
+            const selected = Array.from(filtersForm.querySelectorAll("[data-filter-label], [data-filter-prefix]"))
+                .filter((control) => control.checked)
+                .map((control) => ({
+                    control,
+                    label: control.dataset.filterLabel || `${control.dataset.filterPrefix}: ${control.closest("label").querySelector("span").textContent.trim()}`,
+                }));
+            const search = filtersForm.elements.q;
+            if (search?.value.trim()) selected.unshift({ control: search, label: `Búsqueda: ${search.value.trim()}` });
+            filtersForm.querySelectorAll("[data-filter-select-label]").forEach((select) => {
+                if (select.value) selected.push({ control: select, label: `${select.dataset.filterSelectLabel}: ${select.selectedOptions[0].textContent.trim()}` });
+            });
+            filterSummary.replaceChildren();
+            if (!selected.length) {
+                const empty = document.createElement("span");
+                empty.className = "text-xs text-slate-400";
+                empty.textContent = "Ningún filtro seleccionado";
+                filterSummary.append(empty);
+                return;
+            }
+            selected.forEach(({ control, label }) => {
+                const chip = document.createElement("button");
+                chip.type = "button";
+                chip.className = "asset-filter-chip inline-flex items-center gap-1.5 rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-xs font-medium text-cyan-700";
+                chip.innerHTML = "<span></span><span aria-hidden='true'>×</span>";
+                chip.firstElementChild.textContent = label;
+                chip.addEventListener("click", () => {
+                    if (control.type === "checkbox") control.checked = false;
+                    else control.value = "";
+                    refreshFilterSummary();
+                });
+                filterSummary.append(chip);
+            });
+        };
+
+        filterTabs.forEach((tab) => tab.addEventListener("click", () => activateFilterTab(tab.dataset.exportFilterTab)));
+        filtersForm?.addEventListener("input", refreshFilterSummary);
+        filtersForm?.addEventListener("change", refreshFilterSummary);
+        filtersForm?.querySelector("[data-export-filter-close]")?.addEventListener("click", () => filterPopover?.removeAttribute("open"));
+        activateFilterTab("estado");
+        refreshFilterSummary();
+
         const form = document.querySelector("[data-export-selection-form]");
         const checkboxes = Array.from(document.querySelectorAll("[data-activo-checkbox]"));
         const hiddenInputsContainer = document.querySelector("[data-selected-hidden-inputs]");
@@ -301,12 +429,12 @@
         const filtersKey = `activos-export-filters:${window.location.pathname}`;
         const currentFilterSignature = JSON.stringify({
             q: "{{ busqueda|escapejs }}",
-            estado: "{{ estado_seleccionado|escapejs }}",
-            disponibilidad: "{{ disponibilidad_seleccionada|escapejs }}",
+            estados: [{% for estado_id in estados_seleccionados %}"{{ estado_id|escapejs }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
+            disponibilidades: [{% for disponibilidad in disponibilidades_seleccionadas %}"{{ disponibilidad|escapejs }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
             tipos: [{% for tipo_id in tipos_seleccionados %}"{{ tipo_id|escapejs }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
-            empresa: "{{ empresa_seleccionada|escapejs }}",
-            proveedor: "{{ proveedor_seleccionado|escapejs }}",
-            factura: "{{ factura_seleccionada|escapejs }}",
+            empresas: [{% for empresa_id in empresas_seleccionadas %}"{{ empresa_id|escapejs }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
+            proveedores: [{% for proveedor_id in proveedores_seleccionados %}"{{ proveedor_id|escapejs }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
+            facturas: [{% for factura_id in facturas_seleccionadas %}"{{ factura_id|escapejs }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
             eliminados: "{{ mostrar_eliminados|yesno:'1,0' }}",
         });
         const selectionKey = `activos-export-selection:${window.location.pathname}:${currentFilterSignature}`;
@@ -383,8 +511,58 @@
             });
         }
 
-        form.addEventListener("submit", () => {
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
             syncHiddenInputs();
+            if (selectedIds.size === 0) {
+                window.showAppToast?.("Selecciona al menos un activo antes de exportar.", "warning");
+                return;
+            }
+
+            const submitButton = form.querySelector("button[type='submit']");
+            const originalLabel = submitButton?.textContent;
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.textContent = "Generando Excel...";
+            }
+
+            try {
+                const response = await fetch(form.action || window.location.href, {
+                    method: "POST",
+                    body: new FormData(form),
+                    headers: { "X-Requested-With": "XMLHttpRequest" },
+                    credentials: "same-origin",
+                });
+                const contentType = response.headers.get("Content-Type") || "";
+                if (!response.ok || !contentType.includes("spreadsheetml")) {
+                    let message = "No se pudo generar el archivo de activos.";
+                    if (contentType.includes("application/json")) {
+                        const payload = await response.json();
+                        message = payload.message || message;
+                    }
+                    throw new Error(message);
+                }
+
+                const blob = await response.blob();
+                const disposition = response.headers.get("Content-Disposition") || "";
+                const filenameMatch = disposition.match(/filename="?([^";]+)"?/i);
+                const downloadUrl = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.href = downloadUrl;
+                link.download = filenameMatch?.[1] || "activos_export.xlsx";
+                document.body.append(link);
+                link.click();
+                link.remove();
+                window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+                window.showAppToast?.(response.headers.get("X-Export-Message") || "El Excel se descargó correctamente.", "success");
+            } catch (error) {
+                window.showAppToast?.(error.message || "No se pudo descargar el Excel.", "error");
+            } finally {
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.textContent = originalLabel;
+                }
+            }
         });
     })();
 </script>
