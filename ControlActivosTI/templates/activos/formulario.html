@@ -14,7 +14,7 @@
     </a>
 </div>
 
-<form method="post" action="{{ form_action_url }}" enctype="multipart/form-data" class="space-y-6" data-activo-form>
+<form method="post" action="{{ form_action_url }}" enctype="multipart/form-data" class="space-y-6" data-activo-form data-facturas-proveedor-url="{% url 'activos:facturas-proveedor-json' %}">
     {% csrf_token %}
     {% if es_edicion %}
         <input type="hidden" name="activo_id" value="{{ activo_edicion_id }}">
@@ -55,13 +55,21 @@
             </div>
             <div>
                 <label class="mb-2 block text-sm font-semibold text-slate-700">Proveedor de adquisicion</label>
-                {{ form.proveedor }}
+                <div class="relative mb-2">
+                    <input type="search" data-provider-search placeholder="Buscar proveedor" autocomplete="off" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
+                    <div class="asset-combobox-results hidden" data-provider-results></div>
+                </div>
+                <div class="sr-only">{{ form.proveedor }}</div>
                 {% if form.proveedor.help_text %}<p class="mt-2 text-xs text-slate-500">{{ form.proveedor.help_text }}</p>{% endif %}
                 {% if form.proveedor.errors %}<p class="mt-2 text-sm text-red-600">{{ form.proveedor.errors|join:", " }}</p>{% endif %}
             </div>
             <div>
                 <label class="mb-2 block text-sm font-semibold text-slate-700">Factura de compra</label>
-                {{ form.factura_compra }}
+                <div class="relative mb-2">
+                    <input type="search" data-invoice-search placeholder="Selecciona un proveedor para buscar facturas" autocomplete="off" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
+                    <div class="asset-combobox-results hidden" data-invoice-results></div>
+                </div>
+                <div class="sr-only">{{ form.factura_compra }}</div>
                 {% if form.factura_compra.help_text %}<p class="mt-2 text-xs text-slate-500">{{ form.factura_compra.help_text }}</p>{% endif %}
                 {% if form.factura_compra.errors %}<p class="mt-2 text-sm text-red-600">{{ form.factura_compra.errors|join:", " }}</p>{% endif %}
             </div>
@@ -346,6 +354,154 @@
         const changeTypeToggle = form.querySelector("[data-change-type-toggle]");
         const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/jpg"];
         const keywords = ["laptop", "pc", "desktop", "escritorio", "computador", "computadora"];
+        const providerSelect = form.querySelector("#id_proveedor");
+        const invoiceSelect = form.querySelector("#id_factura_compra");
+        const providerSearch = form.querySelector("[data-provider-search]");
+        const invoiceSearch = form.querySelector("[data-invoice-search]");
+        const providerResults = form.querySelector("[data-provider-results]");
+        const invoiceResults = form.querySelector("[data-invoice-results]");
+        const invoicesEndpoint = form.dataset.facturasProveedorUrl;
+
+        const optionMatches = (option, term) => !term || option.textContent.toLowerCase().includes(term);
+
+        const filterSelectOptions = (select, term) => {
+            if (!select) return;
+            const normalized = (term || "").trim().toLowerCase();
+            Array.from(select.options).forEach((option) => {
+                option.hidden = option.value !== "" && !optionMatches(option, normalized);
+            });
+        };
+
+        const selectedOptionText = (select) => select?.selectedOptions?.[0]?.value ? select.selectedOptions[0].textContent.trim() : "";
+
+        const syncSearchText = (select, searchInput) => {
+            if (searchInput) searchInput.value = selectedOptionText(select);
+        };
+
+        const hideResults = (results) => {
+            results?.classList.add("hidden");
+            if (results) results.replaceChildren();
+        };
+
+        const renderSelectSuggestions = (select, searchInput, results, { onSelect } = {}) => {
+            if (!select || !searchInput || !results || searchInput.disabled) return;
+            const term = searchInput.value.trim().toLowerCase();
+            const matches = Array.from(select.options)
+                .filter((option) => option.value && optionMatches(option, term))
+                .slice(0, 8);
+            results.replaceChildren();
+            if (!matches.length) {
+                const empty = document.createElement("div");
+                empty.className = "px-3 py-2 text-xs text-slate-400";
+                empty.textContent = "Sin coincidencias";
+                results.append(empty);
+            } else {
+                matches.forEach((option) => {
+                    const button = document.createElement("button");
+                    button.type = "button";
+                    button.className = "asset-combobox-option";
+                    button.textContent = option.textContent.trim();
+                    button.addEventListener("mousedown", (event) => event.preventDefault());
+                    button.addEventListener("click", () => {
+                        select.value = option.value;
+                        searchInput.value = option.textContent.trim();
+                        hideResults(results);
+                        select.dispatchEvent(new Event("change", { bubbles: true }));
+                        onSelect?.(option);
+                    });
+                    results.append(button);
+                });
+            }
+            results.classList.remove("hidden");
+        };
+
+        const setInvoiceDisabledState = (disabled) => {
+            if (!invoiceSelect) return;
+            invoiceSelect.disabled = disabled;
+            invoiceSelect.classList.toggle("opacity-60", disabled);
+            invoiceSelect.classList.toggle("cursor-not-allowed", disabled);
+            if (invoiceSearch) {
+                invoiceSearch.disabled = disabled;
+                invoiceSearch.classList.toggle("opacity-60", disabled);
+                invoiceSearch.classList.toggle("cursor-not-allowed", disabled);
+                if (disabled) {
+                    invoiceSearch.value = "";
+                    hideResults(invoiceResults);
+                }
+                invoiceSearch.placeholder = disabled
+                    ? "Selecciona un proveedor para buscar facturas"
+                    : "Buscar factura";
+            }
+        };
+
+        const rebuildInvoiceOptions = (facturas, selectedValue = "") => {
+            if (!invoiceSelect) return;
+            invoiceSelect.replaceChildren();
+            invoiceSelect.append(new Option("---------", ""));
+            facturas.forEach((factura) => {
+                const option = new Option(factura.label, String(factura.id));
+                option.dataset.providerId = String(factura.proveedor_id);
+                option.dataset.searchText = `${factura.numero} ${factura.proveedor} ${factura.empresa} ${factura.fecha}`.toLowerCase();
+                invoiceSelect.append(option);
+            });
+            invoiceSelect.value = Array.from(invoiceSelect.options).some((option) => option.value === selectedValue)
+                ? selectedValue
+                : "";
+            filterSelectOptions(invoiceSelect, invoiceSearch?.value || "");
+            syncSearchText(invoiceSelect, invoiceSearch);
+        };
+
+        const refreshInvoicesForProvider = async ({ keepSelected = false } = {}) => {
+            if (!providerSelect || !invoiceSelect || !invoicesEndpoint) return;
+            const providerId = providerSelect.value;
+            const selectedValue = keepSelected ? invoiceSelect.value : "";
+            if (!providerId) {
+                rebuildInvoiceOptions([], "");
+                setInvoiceDisabledState(true);
+                return;
+            }
+            setInvoiceDisabledState(false);
+            const url = new URL(invoicesEndpoint, window.location.origin);
+            url.searchParams.append("proveedor", providerId);
+            if (selectedValue) url.searchParams.append("factura", selectedValue);
+            try {
+                const response = await fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } });
+                if (!response.ok) throw new Error("No se pudieron cargar las facturas.");
+                const data = await response.json();
+                rebuildInvoiceOptions(data.facturas || [], selectedValue);
+            } catch (error) {
+                rebuildInvoiceOptions([], "");
+            }
+        };
+
+        providerSearch?.addEventListener("input", () => {
+            if (!providerSearch.value.trim() && providerSelect) {
+                providerSelect.value = "";
+                refreshInvoicesForProvider();
+            }
+            filterSelectOptions(providerSelect, providerSearch.value);
+            renderSelectSuggestions(providerSelect, providerSearch, providerResults);
+        });
+        providerSearch?.addEventListener("focus", () => renderSelectSuggestions(providerSelect, providerSearch, providerResults));
+        invoiceSearch?.addEventListener("input", () => {
+            if (!invoiceSearch.value.trim() && invoiceSelect) {
+                invoiceSelect.value = "";
+            }
+            filterSelectOptions(invoiceSelect, invoiceSearch.value);
+            renderSelectSuggestions(invoiceSelect, invoiceSearch, invoiceResults);
+        });
+        invoiceSearch?.addEventListener("focus", () => renderSelectSuggestions(invoiceSelect, invoiceSearch, invoiceResults));
+        providerSelect?.addEventListener("change", () => {
+            syncSearchText(providerSelect, providerSearch);
+            refreshInvoicesForProvider();
+        });
+        invoiceSelect?.addEventListener("change", () => syncSearchText(invoiceSelect, invoiceSearch));
+        document.addEventListener("click", (event) => {
+            if (!event.target.closest("[data-provider-search]") && !event.target.closest("[data-provider-results]")) hideResults(providerResults);
+            if (!event.target.closest("[data-invoice-search]") && !event.target.closest("[data-invoice-results]")) hideResults(invoiceResults);
+        });
+        syncSearchText(providerSelect, providerSearch);
+        refreshInvoicesForProvider({ keepSelected: true });
 
         const usaEspecificaciones = () => {
             if (!selectTipo || selectTipo.selectedIndex < 0) {

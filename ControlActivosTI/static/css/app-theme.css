@@ -863,12 +863,23 @@ html:not(.dark) .app-content .bg-indigo-50 {
     border-color: var(--app-border) !important;
     color: var(--app-text) !important;
     background: var(--app-surface) !important;
+    box-shadow: 0 24px 64px rgba(15, 23, 42, 0.18), 0 6px 18px rgba(15, 23, 42, 0.08) !important;
 }
 
 .app-content .asset-filter-selection,
 .app-content .asset-filter-nav {
     border-color: var(--app-border) !important;
     background: var(--app-surface-soft) !important;
+}
+
+.app-content .asset-filter-selection {
+    max-height: 6.25rem;
+    overflow-y: auto;
+}
+
+html.dark .app-content .asset-filter-popover {
+    border-color: color-mix(in srgb, var(--app-primary) 34%, var(--app-border)) !important;
+    box-shadow: 0 24px 68px rgba(0, 0, 0, 0.56), 0 0 0 1px color-mix(in srgb, var(--app-primary) 18%, transparent) !important;
 }
 
 .app-content .asset-filter-actions {
@@ -913,6 +924,35 @@ html:not(.dark) .app-content .bg-indigo-50 {
     border-color: color-mix(in srgb, var(--app-primary) 34%, var(--app-border)) !important;
     color: var(--app-primary-strong) !important;
     background: var(--app-primary-soft) !important;
+}
+
+.app-content .asset-combobox-results {
+    position: absolute;
+    z-index: 40;
+    top: calc(100% + 0.25rem);
+    left: 0;
+    right: 0;
+    max-height: 14rem;
+    overflow-y: auto;
+    border: 1px solid var(--app-border);
+    border-radius: 0.875rem;
+    background: var(--app-surface);
+    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.16);
+}
+
+.app-content .asset-combobox-option {
+    display: block;
+    width: 100%;
+    padding: 0.625rem 0.75rem;
+    text-align: left;
+    font-size: 0.875rem;
+    color: var(--app-text);
+}
+
+.app-content .asset-combobox-option:hover,
+.app-content .asset-combobox-option:focus {
+    outline: none;
+    background: color-mix(in srgb, var(--app-primary) 10%, var(--app-surface));
 }
 
 html:not(.dark) .app-content .border-violet-200,

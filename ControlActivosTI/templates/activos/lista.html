@@ -74,7 +74,7 @@
 {% endif %}
 
 <div class="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-    <form method="get" class="space-y-4" data-scroll-to-results data-compact-filters data-asset-filters>
+    <form method="get" class="space-y-4" data-scroll-to-results data-compact-filters data-asset-filters data-facturas-proveedor-url="{% url 'activos:facturas-proveedor-json' %}">
         {% if tab_tipo_activa %}
             <input type="hidden" name="tab_tipo" value="{{ tab_tipo_activa }}">
         {% endif %}
@@ -107,7 +107,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400 transition group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08Z" clip-rule="evenodd" /></svg>
                 </summary>
 
-                <div class="asset-filter-popover absolute right-0 z-30 mt-2 w-[min(92vw,44rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                <div class="asset-filter-popover absolute right-0 z-30 mt-2 w-[min(92vw,40rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
                     <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 sm:px-5">
                         <div><p class="text-sm font-semibold text-slate-900">Filtrar activos</p><p class="mt-0.5 text-xs text-slate-500">Combina uno o varios criterios.</p></div>
                         <div class="asset-filter-header-actions flex items-center gap-3">
@@ -126,7 +126,7 @@
                             <span class="text-xs text-slate-400" data-filter-empty>Ningún filtro seleccionado</span>
                         </div>
                     </div>
-                    <div class="grid min-h-[22rem] grid-cols-[8.5rem_minmax(0,1fr)] sm:grid-cols-[12rem_minmax(0,1fr)]">
+                    <div class="grid h-[18rem] grid-cols-[8.5rem_minmax(0,1fr)] sm:grid-cols-[11rem_minmax(0,1fr)]">
                         <nav class="asset-filter-nav space-y-1 border-r border-slate-200 p-2 sm:p-3" aria-label="Categorías de filtros">
                             <button type="button" data-filter-tab="estado" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition">Estado</button>
                             <button type="button" data-filter-tab="tipo" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition">Tipo</button>
@@ -134,14 +134,10 @@
                             <button type="button" data-filter-tab="compra" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition">Compra</button>
                             <button type="button" data-filter-tab="vista" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition">Vista</button>
                         </nav>
-                        <div class="max-h-[24rem] overflow-y-auto p-4 sm:p-5">
+                        <div class="h-[18rem] overflow-y-auto p-3 sm:p-4">
                             <section data-filter-panel="estado" class="space-y-5">
                                 <fieldset><legend class="mb-1 text-sm font-semibold text-slate-900">Estado operativo</legend><p class="mb-3 text-xs text-slate-500">Selecciona todos los estados que quieras incluir.</p><div class="space-y-2">
                                     {% for estado in estados_activo %}<label class="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" name="estado" value="{{ estado.pk }}" data-filter-prefix="Estado" class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" {% if estado.pk|stringformat:"s" in estados_seleccionados %}checked{% endif %}><span>{{ estado.nombre }}</span></label>{% endfor %}
-                                </div></fieldset>
-                                <fieldset><legend class="mb-3 text-sm font-semibold text-slate-900">Disponibilidad</legend><div class="space-y-2">
-                                    <label class="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" name="disponibilidad" value="disponibles" data-filter-prefix="Disponibilidad" class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" {% if 'disponibles' in disponibilidades_seleccionadas %}checked{% endif %}><span>Disponibles</span></label>
-                                    <label class="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" name="disponibilidad" value="asignados" data-filter-prefix="Disponibilidad" class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" {% if 'asignados' in disponibilidades_seleccionadas %}checked{% endif %}><span>Asignados</span></label>
                                 </div></fieldset>
                             </section>
                             <section data-filter-panel="tipo" class="hidden space-y-3"><h3 class="text-sm font-semibold text-slate-900">Tipo de activo</h3><p class="text-xs text-slate-500">Puedes seleccionar varios tipos.</p><div class="space-y-1">
@@ -153,8 +149,20 @@
                                 {% for empresa in empresas_activo %}<label class="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" name="empresa" value="{{ empresa.pk }}" data-filter-prefix="Empresa" class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" {% if empresa.pk|stringformat:"s" in empresas_seleccionadas %}checked{% endif %}><span>{{ empresa.nombre }}</span></label>{% endfor %}
                             </div></section>
                             <section data-filter-panel="compra" class="hidden space-y-5">
-                                <fieldset><legend class="mb-2 text-sm font-semibold text-slate-900">Proveedor</legend><div class="max-h-40 space-y-1 overflow-y-auto rounded-xl border border-slate-200 p-2">{% for proveedor in proveedores %}<label class="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" name="proveedor" value="{{ proveedor.pk }}" data-filter-prefix="Proveedor" class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" {% if proveedor.pk|stringformat:"s" in proveedores_seleccionados %}checked{% endif %}><span>{{ proveedor }}</span></label>{% empty %}<p class="px-2 py-1 text-xs text-slate-400">No hay proveedores registrados.</p>{% endfor %}</div></fieldset>
-                                <fieldset><legend class="mb-2 text-sm font-semibold text-slate-900">Factura</legend><div class="max-h-40 space-y-1 overflow-y-auto rounded-xl border border-slate-200 p-2"><label class="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" name="factura" value="sin_factura" data-filter-prefix="Factura" class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" {% if 'sin_factura' in facturas_seleccionadas %}checked{% endif %}><span>Sin registrar</span></label>{% for factura in facturas_compra %}<label class="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" name="factura" value="{{ factura.pk }}" data-filter-prefix="Factura" class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" {% if factura.pk|stringformat:"s" in facturas_seleccionadas %}checked{% endif %}><span>{{ factura.numero_factura }} · {{ factura.proveedor }}</span></label>{% endfor %}</div></fieldset>
+                                <fieldset>
+                                    <legend class="mb-2 text-sm font-semibold text-slate-900">Proveedor</legend>
+                                    <input type="search" data-filter-option-search="proveedor" placeholder="Buscar proveedor" class="mb-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
+                                    <div class="max-h-40 space-y-1 overflow-y-auto rounded-xl border border-slate-200 p-2" data-provider-filter-options>
+                                        {% for proveedor in proveedores %}<label class="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" name="proveedor" value="{{ proveedor.pk }}" data-filter-prefix="Proveedor" class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" {% if proveedor.pk|stringformat:"s" in proveedores_seleccionados %}checked{% endif %}><span>{{ proveedor }}</span></label>{% empty %}<p class="px-2 py-1 text-xs text-slate-400">No hay proveedores registrados.</p>{% endfor %}
+                                    </div>
+                                </fieldset>
+                                <fieldset data-invoice-filter-fieldset>
+                                    <legend class="mb-2 text-sm font-semibold text-slate-900">Factura</legend>
+                                    <input type="search" data-filter-option-search="factura" placeholder="Selecciona un proveedor para buscar facturas" class="mb-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
+                                    <div class="max-h-40 space-y-1 overflow-y-auto rounded-xl border border-slate-200 p-2" data-invoice-filter-options data-selected-facturas="{% for factura_id in facturas_seleccionadas %}{{ factura_id }}{% if not forloop.last %},{% endif %}{% endfor %}">
+                                        <p class="px-2 py-1 text-xs text-slate-400">Selecciona un proveedor para ver sus facturas.</p>
+                                    </div>
+                                </fieldset>
                             </section>
                             <section data-filter-panel="vista" class="hidden space-y-5">
                                 <div><label for="filtro-orden" class="mb-2 block text-sm font-semibold text-slate-900">Ordenar por</label><select id="filtro-orden" name="orden" data-filter-select-label="Orden" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"><option value="">Tipo y código</option><option value="recientes" {% if orden_seleccionado == 'recientes' %}selected{% endif %}>Más recientes primero</option></select></div>
@@ -405,6 +413,10 @@
                     chip.addEventListener("click", () => {
                         if (control.type === "checkbox" || control.type === "radio") control.checked = false;
                         else control.value = "";
+                        if (control.name === "proveedor" && filterOptionGroups.factura) {
+                            filterOptionGroups.factura.dataset.selectedFacturas = "";
+                            refreshInvoiceFilterOptions();
+                        }
                         refreshLiveSummary();
                     });
                     liveSummary.append(chip);
@@ -416,12 +428,111 @@
             }
         }
 
+        const filterOptionGroups = {
+            proveedor: form.querySelector("[data-provider-filter-options]"),
+            factura: form.querySelector("[data-invoice-filter-options]"),
+        };
+        const invoiceFieldset = form.querySelector("[data-invoice-filter-fieldset]");
+        const invoiceSearch = form.querySelector("[data-filter-option-search='factura']");
+
+        function filterOptionLabels(group, term) {
+            if (!group) return;
+            const normalized = (term || "").trim().toLowerCase();
+            group.querySelectorAll("label").forEach((label) => {
+                label.classList.toggle("hidden", normalized && !label.textContent.toLowerCase().includes(normalized));
+            });
+        }
+
+        function setInvoiceFilterDisabled(disabled) {
+            invoiceFieldset?.classList.toggle("opacity-60", disabled);
+            invoiceFieldset?.classList.toggle("pointer-events-none", disabled);
+            if (invoiceSearch) {
+                invoiceSearch.disabled = disabled;
+                invoiceSearch.placeholder = disabled
+                    ? "Selecciona un proveedor para buscar facturas"
+                    : "Buscar factura";
+            }
+        }
+
+        function selectedProviderIds() {
+            return Array.from(form.querySelectorAll("input[name='proveedor']:checked")).map((input) => input.value);
+        }
+
+        function selectedFacturaValues() {
+            const raw = filterOptionGroups.factura?.dataset.selectedFacturas || "";
+            return raw.split(",").map((value) => value.trim()).filter(Boolean);
+        }
+
+        function buildFacturaCheckbox(value, label, checked = false) {
+            const item = document.createElement("label");
+            item.className = "flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-sm text-slate-700 hover:bg-slate-50";
+            const input = document.createElement("input");
+            input.type = "checkbox";
+            input.name = "factura";
+            input.value = value;
+            input.dataset.filterPrefix = "Factura";
+            input.className = "h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500";
+            input.checked = checked;
+            const span = document.createElement("span");
+            span.textContent = label;
+            item.append(input, span);
+            return item;
+        }
+
+        async function refreshInvoiceFilterOptions() {
+            const group = filterOptionGroups.factura;
+            if (!group) return;
+            const providers = selectedProviderIds();
+            const selectedFacturas = selectedFacturaValues();
+            group.replaceChildren();
+            if (!providers.length) {
+                group.innerHTML = '<p class="px-2 py-1 text-xs text-slate-400">Selecciona un proveedor para ver sus facturas.</p>';
+                setInvoiceFilterDisabled(true);
+                refreshLiveSummary();
+                return;
+            }
+            setInvoiceFilterDisabled(false);
+            group.append(buildFacturaCheckbox("sin_factura", "Sin registrar", selectedFacturas.includes("sin_factura")));
+            const url = new URL(form.dataset.facturasProveedorUrl, window.location.origin);
+            providers.forEach((providerId) => url.searchParams.append("proveedor", providerId));
+            selectedFacturas.filter((value) => /^\d+$/.test(value)).forEach((facturaId) => url.searchParams.append("factura", facturaId));
+            try {
+                const response = await fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } });
+                if (!response.ok) throw new Error("No se pudieron cargar las facturas.");
+                const data = await response.json();
+                (data.facturas || []).forEach((factura) => {
+                    group.append(buildFacturaCheckbox(String(factura.id), factura.label, selectedFacturas.includes(String(factura.id))));
+                });
+                filterOptionLabels(group, invoiceSearch?.value || "");
+            } catch (error) {
+                const message = document.createElement("p");
+                message.className = "px-2 py-1 text-xs text-rose-500";
+                message.textContent = "No se pudieron cargar las facturas.";
+                group.append(message);
+            }
+            refreshLiveSummary();
+        }
+
+        form.querySelectorAll("[data-filter-option-search]").forEach((searchInput) => {
+            searchInput.addEventListener("input", () => {
+                filterOptionLabels(filterOptionGroups[searchInput.dataset.filterOptionSearch], searchInput.value);
+            });
+        });
+
         form.addEventListener("input", (event) => {
             if (event.target.matches("[data-filter-label], [data-filter-prefix], [data-filter-select-label], [name='q']")) refreshLiveSummary();
         });
         form.addEventListener("change", (event) => {
             if (event.target.matches("[data-filter-label], [data-filter-prefix], [data-filter-select-label]")) refreshLiveSummary();
+            if (event.target.name === "proveedor") {
+                if (filterOptionGroups.factura) filterOptionGroups.factura.dataset.selectedFacturas = "";
+                refreshInvoiceFilterOptions();
+            }
+            if (event.target.name === "factura" && filterOptionGroups.factura) {
+                filterOptionGroups.factura.dataset.selectedFacturas = Array.from(form.querySelectorAll("input[name='factura']:checked")).map((input) => input.value).join(",");
+            }
         });
+        refreshInvoiceFilterOptions();
         refreshLiveSummary();
 
         form.querySelector("[data-filter-close]")?.addEventListener("click", () => {

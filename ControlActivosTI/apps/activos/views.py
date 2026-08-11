@@ -10,7 +10,7 @@ from django.views import View
 from django.views.generic import CreateView, DetailView, ListView, TemplateView
 
 from apps.asignaciones.models import AsignacionDetalle
-from apps.catalogos.models import Empresa, EstadoActivo, TipoActivo
+from apps.catalogos.models import AtributoActivo, Empresa, EstadoActivo, TipoActivo
 from apps.facturas.models import FacturaCompra
 from apps.notificaciones.services import NotificationService
 from apps.depreciacion.services import DepreciationService
@@ -253,12 +253,8 @@ class ActivoFilterMixin:
         filtros = self.get_active_filters()
         params = QueryDict("", mutable=True)
         params["q"] = filtros["q"]
-        params["estado"] = filtros["estado"]
-        params["disponibilidad"] = filtros["disponibilidad"]
-        params.setlist("tipo", filtros["tipo"])
-        params["empresa"] = filtros["empresa"]
-        params["proveedor"] = filtros["proveedor"]
-        params["factura"] = filtros["factura"]
+        for field in self.FILTER_MULTI_FIELDS:
+            params.setlist(field, filtros[field])
         params["orden"] = filtros["orden"]
         if filtros["mostrar_eliminados"] == "1":
             params["mostrar_eliminados"] = "1"
@@ -649,6 +645,43 @@ class TipoActivoAtributosJsonView(LoginRequiredMixin, View):
                 }
             )
         return JsonResponse({"tipo": tipo.nombre, "atributos": atributos})
+
+
+class FacturasProveedorJsonView(LoginRequiredMixin, View):
+    def get(self, request, *args, **kwargs):
+        proveedor_ids = [
+            value
+            for value in request.GET.getlist("proveedor")
+            if str(value).isdigit()
+        ]
+        factura_ids = [
+            value
+            for value in request.GET.getlist("factura")
+            if str(value).isdigit()
+        ]
+        if not proveedor_ids:
+            return JsonResponse({"facturas": []})
+
+        facturas = FacturaCompra.objects.filter(
+            Q(activa=True) | Q(pk__in=factura_ids),
+            proveedor_id__in=proveedor_ids,
+        ).select_related("proveedor", "empresa").order_by("-fecha_emision", "numero_factura")
+        return JsonResponse(
+            {
+                "facturas": [
+                    {
+                        "id": factura.pk,
+                        "numero": factura.numero_factura,
+                        "proveedor_id": factura.proveedor_id,
+                        "proveedor": str(factura.proveedor),
+                        "empresa": factura.empresa.nombre if factura.empresa_id else "",
+                        "fecha": factura.fecha_emision.isoformat() if factura.fecha_emision else "",
+                        "label": f"{factura.numero_factura} - {factura.proveedor}",
+                    }
+                    for factura in facturas
+                ]
+            }
+        )
 
 
 class ActivoDetailView(LoginRequiredMixin, DetailView):

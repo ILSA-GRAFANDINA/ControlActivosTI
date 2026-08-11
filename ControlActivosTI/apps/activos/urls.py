@@ -6,6 +6,7 @@ from .views import (
     ActivoExportView,
     ActivoListView,
     ActivoVigenciaView,
+    FacturasProveedorJsonView,
     TipoActivoAtributosJsonView,
 )
 
@@ -19,6 +20,11 @@ urlpatterns = [
         "atributos/tipo/<int:tipo_id>/",
         TipoActivoAtributosJsonView.as_view(),
         name="atributos-tipo-json",
+    ),
+    path(
+        "facturas/proveedor/",
+        FacturasProveedorJsonView.as_view(),
+        name="facturas-proveedor-json",
     ),
     path(
         "<int:pk>/<str:accion>/",

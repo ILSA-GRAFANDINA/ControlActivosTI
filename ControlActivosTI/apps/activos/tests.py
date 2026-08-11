@@ -17,6 +17,8 @@ from django.urls import reverse
 from apps.asignaciones.models import Asignacion, AsignacionDetalle
 from apps.catalogos.models import Area, Cargo, CentroCosto, Empresa, EstadoActivo, TipoActivo, TipoEventoActivo, Ubicacion
 from apps.colaboradores.models import Colaborador
+from apps.facturas.models import FacturaCompra
+from apps.proveedores.models import Proveedor
 from openpyxl import load_workbook
 from PIL import Image
 
@@ -33,6 +35,35 @@ def make_test_image_file(name="activo.jpg", size=(2200, 1400), color=(36, 99, 23
     image = Image.new("RGB", size, color=color)
     image.save(buffer, format="JPEG", quality=95)
     return SimpleUploadedFile(name, buffer.getvalue(), content_type="image/jpeg")
+
+
+def make_test_pdf_file(name="factura.pdf"):
+    return SimpleUploadedFile(name, b"%PDF-1.4\n%test\n", content_type="application/pdf")
+
+
+def crear_proveedor(nombre, identificacion):
+    return Proveedor.objects.create(
+        tipo_proveedor=Proveedor.TipoProveedor.EMPRESA,
+        tipo_identificacion=Proveedor.TipoIdentificacion.EXTRANJERA,
+        identificacion=identificacion,
+        razon_social=nombre,
+        pais="Colombia",
+    )
+
+
+def crear_factura(proveedor, empresa, usuario, numero):
+    return FacturaCompra.objects.create(
+        proveedor=proveedor,
+        empresa=empresa,
+        numero_factura=numero,
+        fecha_emision=date(2026, 1, 10),
+        archivo=make_test_pdf_file(f"{numero}.pdf"),
+        nombre_original=f"{numero}.pdf",
+        tamano_original=120,
+        tamano_almacenado=120,
+        checksum_sha256=uuid.uuid4().hex * 2,
+        cargado_por=usuario,
+    )
 
 
 def make_test_media_root():
@@ -642,6 +673,25 @@ class ActivoListViewTests(TestCase):
         self.assertContains(response, "Estado: Asignado")
         self.assertContains(response, "Estado: Dado de baja")
 
+    def test_new_filter_panel_does_not_offer_availability_controls(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("activos:lista"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Estado operativo")
+        self.assertNotContains(response, 'data-filter-prefix="Disponibilidad"', html=False)
+
+    def test_purchase_filters_offer_search_and_dependent_invoice_container(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("activos:lista"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-filter-option-search="proveedor"', html=False)
+        self.assertContains(response, 'data-invoice-filter-options', html=False)
+        self.assertContains(response, reverse("activos:facturas-proveedor-json"))
+
     def test_multiple_filters_persist_until_reset(self):
         estado_baja = EstadoActivo.objects.create(nombre="Dado de baja", permite_asignacion=False)
         self.client.force_login(self.user)
@@ -823,6 +873,31 @@ class ActivoListViewTests(TestCase):
         self.assertContains(response, "tab_tipo=%s" % self.tipo_laptop.pk)
         self.assertContains(response, "tab_tipo=%s" % self.tipo_pc.pk)
 
+    def test_tipo_tabs_preserve_active_multi_filters_in_their_urls(self):
+        estado_asignado = EstadoActivo.objects.create(nombre="Asignado", permite_asignacion=False)
+        Activo.objects.create(
+            tipo_activo=self.tipo_laptop,
+            empresa=self.empresa_acme,
+            marca="Dell",
+            modelo="Asignado",
+            serie="TAB-ASIGNADO",
+            estado_activo=estado_asignado,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse("activos:lista"),
+            {
+                "estado": [estado_asignado.pk],
+                "tipo": [self.tipo_laptop.pk],
+            },
+        )
+
+        laptop_tab = next(tab for tab in response.context["tabs_tipo"] if tab["id"] == str(self.tipo_laptop.pk))
+        self.assertIn(f"estado={estado_asignado.pk}", laptop_tab["url"])
+        self.assertIn(f"tipo={self.tipo_laptop.pk}", laptop_tab["url"])
+        self.assertIn(f"tab_tipo={self.tipo_laptop.pk}", laptop_tab["url"])
+
     def test_list_view_can_focus_one_tipo_from_tab(self):
         self.client.force_login(self.user)
 
@@ -923,6 +998,9 @@ class ActivoExportViewTests(TestCase):
         self.assertContains(response, "Exportar seleccionados")
         self.assertContains(response, "data-export-filters")
         self.assertContains(response, "asset-filter-popover")
+        self.assertNotContains(response, 'data-filter-prefix="Disponibilidad"', html=False)
+        self.assertContains(response, 'data-filter-option-search="proveedor"', html=False)
+        self.assertContains(response, 'data-invoice-filter-options', html=False)
         self.assertContains(response, "Selección actual")
         self.assertContains(response, self.activo_laptop.codigo)
         self.assertNotContains(response, self.activo_mouse.codigo)
@@ -1114,6 +1192,44 @@ class ActivoCreateViewTests(TestCase):
         self.assertContains(response, "Empresa")
         self.assertContains(response, "Incluir en depreciaci")
         self.assertContains(response, 'id="id_incluir_en_depreciacion" checked')
+        self.assertContains(response, 'data-provider-search', html=False)
+        self.assertContains(response, 'data-invoice-search', html=False)
+        self.assertContains(response, 'data-provider-results', html=False)
+        self.assertContains(response, 'data-invoice-results', html=False)
+        self.assertContains(response, reverse("activos:facturas-proveedor-json"))
+
+    def test_attributes_json_view_returns_without_name_error(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("activos:atributos-tipo-json", args=[self.tipo_laptop.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["tipo"], self.tipo_laptop.nombre)
+
+    def test_invoice_json_returns_only_provider_invoices(self):
+        proveedor_acme = crear_proveedor("Proveedor Acme", "EXT-ACT-001")
+        proveedor_otro = crear_proveedor("Proveedor Otro", "EXT-ACT-002")
+        factura_acme = crear_factura(proveedor_acme, self.empresa, self.user, "FAC-ACT-001")
+        factura_otro = crear_factura(proveedor_otro, self.empresa, self.user, "FAC-ACT-002")
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse("activos:facturas-proveedor-json"),
+            {"proveedor": proveedor_acme.pk},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        ids = [item["id"] for item in response.json()["facturas"]]
+        self.assertIn(factura_acme.pk, ids)
+        self.assertNotIn(factura_otro.pk, ids)
+
+    def test_invoice_json_requires_provider_selection(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("activos:facturas-proveedor-json"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["facturas"], [])
 
     def test_create_view_allows_non_depreciable_asset(self):
         self.client.force_login(self.user)
