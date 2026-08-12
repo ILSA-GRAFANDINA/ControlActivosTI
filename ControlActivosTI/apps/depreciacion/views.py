@@ -51,7 +51,7 @@ class DepreciacionReporteView(LoginRequiredMixin, ListView):
     FILTER_MULTI_FIELDS = ("estado", "cols")
 
     COLUMNAS_DISPONIBLES = [
-        ("categoria", "Categor?a"),
+        ("categoria", "Categoría"),
         ("estado", "Estado"),
         ("compra", "Fecha de compra"),
         ("fin_vida_util", "Fin de vida útil"),
