@@ -1,0 +1,30 @@
+<tr
+    class="activo-row transition hover:bg-cyan-50 {% if reciente %}bg-cyan-50/40{% endif %} {% if not activo.estado_activo.es_asignable_para_nueva_asignacion %}opacity-60{% endif %}"
+    data-search="{{ activo.codigo|lower }} {{ activo.codigo_sap|default:''|lower }} {{ activo.tipo_activo.nombre|lower }} {{ activo.marca|lower }} {{ activo.modelo|lower }} {{ activo.serie|lower }} {{ activo.caracteristicas_resumen|lower }} {{ activo.estado_activo.nombre|lower }} {{ activo.empresa.nombre|default:''|lower }} {{ activo.proveedor|default:''|lower }} {{ activo.factura_compra.numero_factura|default:''|lower }} {{ activo.observaciones|lower }}"
+    data-codigo="{{ activo.codigo }}"
+    data-id="{{ activo.pk }}"
+    data-tipo="{{ activo.tipo_activo.nombre }}"
+    data-tipo-id="{{ activo.tipo_activo_id }}"
+    data-empresa-id="{{ activo.empresa_id|default:'' }}"
+    data-proveedor-id="{{ activo.proveedor_id|default:'' }}"
+    data-factura-id="{{ activo.factura_compra_id|default:'' }}"
+    data-disponibilidad="{% if activo.estado_activo.nombre|lower == 'asignado' %}asignados{% elif activo.estado_activo.es_asignable_para_nueva_asignacion %}disponibles{% endif %}"
+    data-marca-modelo="{{ activo.marca }} {{ activo.modelo }}"
+    data-serie="{{ activo.serie|default:'S/N' }}"
+    data-especificaciones="{{ activo.caracteristicas_resumen }}"
+    data-estado="{{ activo.estado_activo.nombre }}"
+    data-estado-id="{{ activo.estado_activo_id }}"
+    data-reciente="{{ reciente|yesno:'true,false' }}"
+    data-puede-asignarse="{{ activo.estado_activo.es_asignable_para_nueva_asignacion|yesno:'true,false' }}"
+>
+    <td class="px-4 py-3 text-center">
+        <input type="checkbox" name="activos" value="{{ activo.pk }}" class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" {% if not activo.estado_activo.es_asignable_para_nueva_asignacion %}disabled aria-disabled="true"{% endif %} {% if activo.pk in activos_seleccionados %}checked{% endif %}>
+    </td>
+    <td class="px-4 py-3 font-semibold text-slate-900">{{ activo.codigo }}</td>
+    <td class="px-4 py-3 text-slate-700">{{ activo.tipo_activo.nombre }}</td>
+    <td class="px-4 py-3 text-slate-700">{{ activo.marca }} {{ activo.modelo }}</td>
+    <td class="px-4 py-3 text-slate-700">{{ activo.serie|default:"S/N" }}</td>
+    <td class="px-4 py-3 text-slate-700">{{ activo.codigo_sap|default:"—" }}</td>
+    <td class="px-4 py-3 text-slate-600">{{ activo.caracteristicas_resumen|default:"Sin especificaciones registradas" }}</td>
+    <td class="px-4 py-3"><span class="rounded-full px-3 py-1 text-xs font-semibold {% if activo.estado_activo.es_asignable_para_nueva_asignacion %}bg-emerald-100 text-emerald-700{% else %}bg-rose-100 text-rose-700{% endif %}">{{ activo.estado_activo.nombre }}</span></td>
+</tr>

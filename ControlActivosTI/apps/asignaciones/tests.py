@@ -220,6 +220,40 @@ class AsignacionCreateFormTests(TestCase):
         self.assertContains(response, "Regresar")
         self.assertContains(response, "Estás asignando 4 o más activos a un mismo usuario")
 
+    def test_create_view_separa_cinco_activos_recientes_y_expone_filtros_completos(self):
+        nuevos = []
+        for indice in range(5):
+            nuevos.append(
+                Activo.objects.create(
+                    tipo_activo=self.tipo_activo,
+                    marca="Dell",
+                    modelo=f"Recent {indice}",
+                    serie=f"REC-{indice}",
+                    estado_activo=self.estado_disponible,
+                    empresa=self.empresa,
+                )
+            )
+
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("asignaciones:nueva"))
+
+        self.assertEqual(len(response.context["activos_recientes"]), 5)
+        recientes_ids = {activo.pk for activo in response.context["activos_recientes"]}
+        restantes_ids = set(response.context["activos_disponibles"].values_list("pk", flat=True))
+        self.assertTrue({activo.pk for activo in nuevos}.issubset(recientes_ids))
+        self.assertFalse(recientes_ids & restantes_ids)
+        self.assertTrue(
+            all(
+                activo.estado_activo.es_asignable_para_nueva_asignacion
+                for activo in response.context["activos_recientes"]
+            )
+        )
+        self.assertContains(response, "Últimos activos disponibles agregados")
+        self.assertContains(response, '<details id="activos-recientes" open', html=False)
+        for filtro in ("estado", "disponibilidad", "tipo", "empresa", "factura"):
+            self.assertContains(response, f'data-activo-filter="{filtro}"', html=False)
+        self.assertContains(response, "Proveedor")
+
     def test_create_view_genera_y_permite_descargar_acta_entrega(self):
         media_root = make_test_media_root()
         permisos = Permission.objects.filter(

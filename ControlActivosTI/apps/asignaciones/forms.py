@@ -24,7 +24,13 @@ TEXTAREA_CLASS = (
 
 def get_activos_asignables_queryset():
     queryset = (
-        Activo.objects.select_related("tipo_activo", "estado_activo")
+        Activo.objects.select_related(
+            "tipo_activo",
+            "estado_activo",
+            "empresa",
+            "proveedor",
+            "factura_compra",
+        )
         .filter(activo=True, estado_activo__activo=True)
         .prefetch_related("valores_atributos__atributo", "valores_atributos__valor_opcion")
         .order_by("codigo")

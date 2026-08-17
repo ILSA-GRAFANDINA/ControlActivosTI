@@ -10,7 +10,10 @@ from django.utils.dateparse import parse_date
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
 from apps.actas.services import generar_o_actualizar_acta, generar_o_actualizar_actas_devolucion
+from apps.catalogos.models import Empresa, EstadoActivo, TipoActivo
+from apps.facturas.models import FacturaCompra
 from apps.notificaciones.services import NotificationService
+from apps.proveedores.models import Proveedor
 
 from .forms import (
     AsignacionCreateForm,
@@ -307,15 +310,25 @@ class AsignacionCreateView(LoginRequiredMixin, CreateView):
         form = context["form"]
         activos_seleccionados = form["activos"].value() or []
         activos_disponibles = form.fields["activos"].queryset
-        context["activos_disponibles"] = activos_disponibles
-        context["activos_seleccionados"] = [int(activo_id) for activo_id in activos_seleccionados]
-        context["estados_activo_filtro"] = sorted(
-            {
-                activo.estado_activo.nombre
-                for activo in activos_disponibles
-                if activo.estado_activo_id and activo.estado_activo.activo
-            }
+        activos_recientes = list(
+            activos_disponibles.filter(estado_activo__permite_asignacion=True)
+            .exclude(estado_activo__nombre__icontains="repar")
+            .exclude(estado_activo__nombre__icontains="cuarentena")
+            .order_by("-created_at", "-id")[:5]
         )
+        activos_recientes_ids = [activo.pk for activo in activos_recientes]
+        context["activos_recientes"] = activos_recientes
+        context["activos_disponibles"] = activos_disponibles.exclude(
+            pk__in=activos_recientes_ids
+        )
+        context["activos_seleccionados"] = [int(activo_id) for activo_id in activos_seleccionados]
+        context["estados_activo_filtro"] = EstadoActivo.objects.filter(activo=True).order_by("nombre")
+        context["tipos_activo_filtro"] = TipoActivo.objects.filter(activo=True).order_by("nombre")
+        context["empresas_activo_filtro"] = Empresa.objects.filter(activo=True).order_by("nombre")
+        context["proveedores_activo_filtro"] = Proveedor.objects.order_by("razon_social")
+        context["facturas_activo_filtro"] = FacturaCompra.objects.select_related(
+            "proveedor"
+        ).order_by("-fecha_emision", "-id")
         return context
 
     def form_valid(self, form):
