@@ -12,6 +12,7 @@ from django.forms import modelform_factory
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
+from django.utils import timezone
 from django.views import View
 from django.views.generic import FormView, TemplateView
 
@@ -32,6 +33,7 @@ from apps.catalogos.models import (
 )
 from apps.catalogos.forms import (
     AtributoActivoAdmin2Form,
+    CriterioBusquedaActivoForm,
     OpcionAtributoActivoAdmin2FormSet,
     TipoActivoAtributoAdmin2Form,
 )
@@ -447,6 +449,21 @@ class Admin2HomeView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
                         "meta_label": "Registros",
                         "meta_value": TipoEventoActivo.objects.count(),
                     },
+                    {
+                        "eyebrow": "Búsqueda",
+                        "title": "Criterios de búsqueda de activos",
+                        "description": "Selecciona qué atributos puede consultar el buscador del inventario.",
+                        "url": reverse("admin2-criterios-busqueda-activos"),
+                        "meta_label": "Criterios activos",
+                        "meta_value": TipoActivoAtributo.objects.filter(
+                            activo=True,
+                            filtrable=True,
+                            tipo_activo__activo=True,
+                            atributo__activo=True,
+                        ).exclude(
+                            atributo__tipo_dato=AtributoActivo.TipoDato.TEXTO_PROTEGIDO,
+                        ).count(),
+                    },
                 ],
             },
         ]
@@ -610,6 +627,7 @@ class Admin2ModuleView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
                 {"label": "Catalogos en Django Admin", "url": reverse("admin:catalogos_area_changelist"), "kind": "secondary"},
                 {"label": "Atributos de activos", "url": reverse("admin2-atributos-lista"), "kind": "secondary"},
                 {"label": "Configurar por tipo", "url": reverse("admin2-configuraciones-atributos-lista"), "kind": "secondary"},
+                {"label": "Criterios de busqueda", "url": reverse("admin2-criterios-busqueda-activos"), "kind": "secondary"},
             ],
             "table_title": "Catalogos disponibles",
             "table_columns": ["Catalogo", "Total", "Activos", "Accion"],
@@ -1226,6 +1244,79 @@ class Admin2ConfiguracionAtributoDesactivarView(Admin2AttributeSchemaAccessMixin
             )
             messages.success(request, "El atributo fue quitado del tipo; sus valores historicos se conservaron.")
         return redirect("admin2-configuraciones-atributos-lista")
+
+
+class Admin2CriterioBusquedaActivoView(Admin2AttributeSchemaAccessMixin, FormView):
+    template_name = "admin2/criterios_busqueda_activos.html"
+    form_class = CriterioBusquedaActivoForm
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(self.get_schema_context())
+        context.update({
+            "admin2_page_title": "Criterios de busqueda de activos",
+            "criterios_activos": TipoActivoAtributo.objects.filter(
+                activo=True,
+                filtrable=True,
+                tipo_activo__activo=True,
+                atributo__activo=True,
+            ).exclude(
+                atributo__tipo_dato=AtributoActivo.TipoDato.TEXTO_PROTEGIDO,
+            ).count(),
+            "atributos_protegidos": TipoActivoAtributo.objects.filter(
+                activo=True,
+                tipo_activo__activo=True,
+                atributo__activo=True,
+                atributo__tipo_dato=AtributoActivo.TipoDato.TEXTO_PROTEGIDO,
+            ).select_related("tipo_activo", "atributo"),
+        })
+        return context
+
+    def form_valid(self, form):
+        ids_seleccionados = {
+            configuracion.pk for configuracion in form.cleaned_data["criterios"]
+        }
+        configuraciones = TipoActivoAtributo.objects.filter(
+            activo=True,
+            tipo_activo__activo=True,
+            atributo__activo=True,
+        )
+        ids_anteriores = set(
+            configuraciones.filter(filtrable=True).values_list("pk", flat=True)
+        )
+        habilitados = sorted(ids_seleccionados - ids_anteriores)
+        deshabilitados = sorted(ids_anteriores - ids_seleccionados)
+
+        with transaction.atomic():
+            configuraciones.update(
+                filtrable=False,
+                updated_by=self.request.user,
+                updated_at=timezone.now(),
+            )
+            if ids_seleccionados:
+                configuraciones.filter(pk__in=ids_seleccionados).update(
+                    filtrable=True,
+                    updated_by=self.request.user,
+                    updated_at=timezone.now(),
+                )
+            registrar_evento(
+                entidad="CriterioBusquedaActivo",
+                objeto_id="",
+                accion=RegistroAuditoria.Accion.MODIFICAR,
+                resumen=f"{len(ids_seleccionados)} criterios de busqueda activos",
+                usuario=self.request.user,
+                detalle={
+                    "criterios": sorted(ids_seleccionados),
+                    "habilitados": habilitados,
+                    "deshabilitados": deshabilitados,
+                },
+            )
+
+        messages.success(
+            self.request,
+            "Los criterios de busqueda de activos se actualizaron correctamente.",
+        )
+        return redirect("admin2-criterios-busqueda-activos")
 
 
 class Admin2UsuariosView(Admin2ModuleView):

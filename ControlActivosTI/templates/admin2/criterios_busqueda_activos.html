@@ -1,0 +1,28 @@
+{% extends "admin2/base.html" %}
+{% block admin2_content %}
+<section class="admin2-panel admin2-panel--hero">
+  <div class="admin2-hero admin2-hero--module">
+    <div>
+      <p class="admin2-hero__label">Motor de búsqueda</p>
+      <h2>Criterios de búsqueda de activos</h2>
+      <p class="admin2-hero__copy">Selecciona los atributos cuyos valores se consultarán desde la barra de búsqueda de /activos. La configuración se aplica por tipo de activo.</p>
+      <div class="admin2-actionrow"><a class="admin2-button is-secondary" href="{% url 'admin2-configuraciones-atributos-lista' %}">Atributos por tipo</a><a class="admin2-button is-secondary" href="{% url 'admin2-catalogos' %}">Volver</a></div>
+    </div>
+    <div class="admin2-module-stats"><article class="admin2-module-stats__card"><span>Criterios activos</span><strong>{{ criterios_activos }}</strong></article></div>
+  </div>
+</section>
+<section class="admin2-panel">
+  <div class="admin2-formwrap">
+    <form method="post" class="admin2-form">{% csrf_token %}
+      {% if form.non_field_errors %}<div class="admin2-errorbox">{{ form.non_field_errors }}</div>{% endif %}
+      <div class="admin2-field">
+        <label>{{ form.criterios.label }}</label>
+        <small>{{ form.criterios.help_text }}</small>
+        <div class="admin2-subpanel">{{ form.criterios }}{% for error in form.criterios.errors %}<p class="admin2-error">{{ error }}</p>{% endfor %}</div>
+      </div>
+      {% if atributos_protegidos %}<div class="admin2-warning"><strong>Atributos protegidos excluidos</strong><p>Los valores sensibles no pueden habilitarse como criterios de búsqueda.</p><ul>{% for config in atributos_protegidos %}<li>{{ config.tipo_activo.nombre }} — {{ config.atributo.nombre }}</li>{% endfor %}</ul></div>{% endif %}
+      <div class="admin2-actionrow"><button class="admin2-button is-primary" type="submit">Guardar criterios</button><a class="admin2-button is-secondary" href="{% url 'admin2-catalogos' %}">Cancelar</a></div>
+    </form>
+  </div>
+</section>
+{% endblock %}

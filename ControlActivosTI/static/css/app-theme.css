@@ -1100,6 +1100,15 @@ html.dark .app-content .profile-banner {
     max-width: 100%;
 }
 
+.dashboard-hero-metric-value {
+    max-width: 100%;
+    overflow: hidden;
+    font-size: clamp(1.65rem, 5cqi, 2.25rem);
+    line-height: 1.08;
+    text-overflow: clip;
+    white-space: nowrap;
+}
+
 @container dashboard (min-width: 34rem) {
     .dashboard-hero-metrics,
     .dashboard-stat-grid {
@@ -1109,7 +1118,7 @@ html.dark .app-content .profile-banner {
 
 @container dashboard (min-width: 58rem) {
     .dashboard-hero-grid {
-        grid-template-columns: minmax(0, 1.5fr) minmax(18rem, 1fr) !important;
+        grid-template-columns: minmax(0, 1.2fr) minmax(22rem, 1.15fr) !important;
     }
 
     .dashboard-stat-grid {

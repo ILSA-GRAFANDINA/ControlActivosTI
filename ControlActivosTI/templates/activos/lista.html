@@ -91,7 +91,7 @@
                     type="text"
                     name="q"
                     value="{{ busqueda }}"
-                    placeholder="Buscar por código, SAP, marca, modelo o serie"
+                    placeholder="Buscar por código, SAP, marca, modelo, serie o características"
                     class="w-full rounded-xl border border-slate-300 bg-white py-3 pl-11 pr-4 text-sm text-slate-900 shadow-sm outline-none transition duration-200 placeholder:text-slate-400 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
                 >
             </div>
@@ -281,6 +281,21 @@
             <tbody class="divide-y divide-slate-100">
                 {% for activo in activos %}
                     {% if not tab_tipo_activa %}
+                    {% if agrupar_por_estado %}
+                    {% ifchanged activo.tipo_activo_id activo.estado_activo_id %}
+                        <tr class="bg-slate-50/80">
+                            <td colspan="{{ total_columnas_tabla }}" class="px-4 py-3">
+                                <div class="flex items-center gap-3">
+                                    <span class="h-px flex-1 bg-slate-200"></span>
+                                    <span class="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                        {{ activo.tipo_activo }} ({{ activo.estado_activo }})
+                                    </span>
+                                    <span class="h-px flex-1 bg-slate-200"></span>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endifchanged %}
+                    {% else %}
                     {% ifchanged activo.tipo_activo_id %}
                         <tr class="bg-slate-50/80">
                             <td colspan="{{ total_columnas_tabla }}" class="px-4 py-3">
@@ -294,6 +309,7 @@
                             </td>
                         </tr>
                     {% endifchanged %}
+                    {% endif %}
                     {% endif %}
                     <tr class="align-top text-slate-700">
                         <td class="px-4 py-3 font-semibold text-slate-500">

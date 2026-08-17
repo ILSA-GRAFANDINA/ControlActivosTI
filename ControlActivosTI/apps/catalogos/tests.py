@@ -222,3 +222,85 @@ class TipoActivoAtributoAdminTests(TestCase):
                 accion=RegistroAuditoria.Accion.DESACTIVAR,
             ).exists()
         )
+
+
+class CriteriosBusquedaActivoAdmin2Tests(TestCase):
+    def setUp(self):
+        self.usuario = get_user_model().objects.create_superuser(
+            username="admin-criterios-busqueda",
+            email="criterios@example.com",
+            password="prueba",
+        )
+        self.tipo = TipoActivo.objects.create(nombre="Laptop criterios")
+        self.procesador = AtributoActivo.objects.create(
+            nombre="Procesador criterios",
+            clave="procesador_criterios",
+            tipo_dato=AtributoActivo.TipoDato.TEXTO_CORTO,
+        )
+        self.memoria = AtributoActivo.objects.create(
+            nombre="Memoria criterios",
+            clave="memoria_criterios",
+            tipo_dato=AtributoActivo.TipoDato.ENTERO,
+        )
+        self.secreto = AtributoActivo.objects.create(
+            nombre="Secreto protegido criterios",
+            clave="secreto_protegido_criterios",
+            tipo_dato=AtributoActivo.TipoDato.TEXTO_PROTEGIDO,
+        )
+        self.config_procesador = TipoActivoAtributo.objects.create(
+            tipo_activo=self.tipo,
+            atributo=self.procesador,
+            orden=1,
+            filtrable=True,
+        )
+        self.config_memoria = TipoActivoAtributo.objects.create(
+            tipo_activo=self.tipo,
+            atributo=self.memoria,
+            orden=2,
+            filtrable=False,
+        )
+        self.config_secreto = TipoActivoAtributo.objects.create(
+            tipo_activo=self.tipo,
+            atributo=self.secreto,
+            orden=3,
+            filtrable=True,
+        )
+
+    def test_view_selects_search_criteria_and_excludes_protected_attributes(self):
+        self.client.force_login(self.usuario)
+
+        response = self.client.get(reverse("admin2-criterios-busqueda-activos"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Criterios de búsqueda de activos")
+        self.assertContains(response, "Laptop criterios - Procesador criterios")
+        self.assertContains(response, "Atributos protegidos excluidos")
+
+        response = self.client.post(
+            reverse("admin2-criterios-busqueda-activos"),
+            {"criterios": [self.config_memoria.pk]},
+        )
+
+        self.assertRedirects(response, reverse("admin2-criterios-busqueda-activos"))
+        self.config_procesador.refresh_from_db()
+        self.config_memoria.refresh_from_db()
+        self.config_secreto.refresh_from_db()
+        self.assertFalse(self.config_procesador.filtrable)
+        self.assertTrue(self.config_memoria.filtrable)
+        self.assertFalse(self.config_secreto.filtrable)
+        self.assertTrue(
+            RegistroAuditoria.objects.filter(
+                entidad="CriterioBusquedaActivo",
+                accion=RegistroAuditoria.Accion.MODIFICAR,
+            ).exists()
+        )
+
+    def test_home_exposes_search_criteria_to_the_admin2_search(self):
+        self.client.force_login(self.usuario)
+
+        response = self.client.get(reverse("admin2-inicio"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Criterios de búsqueda de activos")
+        self.assertContains(response, reverse("admin2-criterios-busqueda-activos"))
+        self.assertContains(response, "Selecciona qué atributos puede consultar")

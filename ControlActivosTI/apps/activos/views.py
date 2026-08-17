@@ -1,7 +1,10 @@
+from datetime import datetime
+from decimal import Decimal, InvalidOperation
+
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db import transaction
-from django.db.models import Count, F, Prefetch, Q
+from django.db.models import Case, Count, F, IntegerField, Prefetch, Q, Value, When
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse, QueryDict
 from django.urls import reverse
 from django.utils import timezone
@@ -118,6 +121,58 @@ class ActivoFilterMixin:
 
         busqueda = self.get_filter_value("q")
         if busqueda:
+            tipos_buscables = [
+                tipo
+                for tipo, _nombre in AtributoActivo.TipoDato.choices
+                if tipo != AtributoActivo.TipoDato.TEXTO_PROTEGIDO
+            ]
+            criterio_configurado = Q(
+                valores_atributos__vigente=True,
+                valores_atributos__atributo__activo=True,
+                valores_atributos__atributo__tipo_dato__in=tipos_buscables,
+                valores_atributos__atributo__configuraciones_tipo__filtrable=True,
+                valores_atributos__atributo__configuraciones_tipo__activo=True,
+                valores_atributos__atributo__configuraciones_tipo__tipo_activo_id=F("tipo_activo_id"),
+            )
+            coincidencia_valor = (
+                Q(valores_atributos__valor_texto__icontains=busqueda)
+                | Q(valores_atributos__valor_opcion__nombre__icontains=busqueda)
+                | Q(valores_atributos__valor_original_migracion__icontains=busqueda)
+            )
+
+            try:
+                numero = Decimal(busqueda.replace(",", "."))
+            except InvalidOperation:
+                numero = None
+            if numero is not None and numero.is_finite():
+                if abs(numero) < Decimal("1e14"):
+                    coincidencia_valor |= Q(valores_atributos__valor_decimal=numero)
+                if (
+                    numero == numero.to_integral_value()
+                    and abs(numero) <= Decimal("9223372036854775807")
+                ):
+                    coincidencia_valor |= Q(valores_atributos__valor_entero=int(numero))
+
+            for formato_fecha in ("%Y-%m-%d", "%d/%m/%Y"):
+                try:
+                    fecha = datetime.strptime(busqueda, formato_fecha).date()
+                except ValueError:
+                    continue
+                coincidencia_valor |= Q(valores_atributos__valor_fecha=fecha)
+                break
+
+            booleanos = {
+                "si": True,
+                "sí": True,
+                "true": True,
+                "no": False,
+                "false": False,
+            }
+            if busqueda.casefold() in booleanos:
+                coincidencia_valor |= Q(
+                    valores_atributos__valor_booleano=booleanos[busqueda.casefold()]
+                )
+
             queryset = queryset.filter(
                 Q(codigo__icontains=busqueda)
                 | Q(marca__icontains=busqueda)
@@ -129,19 +184,7 @@ class ActivoFilterMixin:
                 | Q(proveedor__nombre_comercial__icontains=busqueda)
                 | Q(proveedor__identificacion__icontains=busqueda)
                 | Q(factura_compra__numero_factura__icontains=busqueda)
-                | Q(
-                    valores_atributos__vigente=True,
-                    valores_atributos__atributo__configuraciones_tipo__filtrable=True,
-                    valores_atributos__atributo__configuraciones_tipo__activo=True,
-                    valores_atributos__atributo__configuraciones_tipo__tipo_activo_id=F("tipo_activo_id"),
-                    valores_atributos__valor_texto__icontains=busqueda,
-                )
-                | Q(
-                    valores_atributos__vigente=True,
-                    valores_atributos__atributo__configuraciones_tipo__filtrable=True,
-                    valores_atributos__atributo__configuraciones_tipo__tipo_activo_id=F("tipo_activo_id"),
-                    valores_atributos__valor_opcion__nombre__icontains=busqueda,
-                )
+                | (criterio_configurado & coincidencia_valor)
             )
 
         estado_ids = self.get_active_filters()["estado"]
@@ -347,6 +390,26 @@ class ActivoListView(LoginRequiredMixin, ActivoFilterMixin, ListView):
         if self.active_tab_type_id:
             queryset = queryset.filter(tipo_activo_id=self.active_tab_type_id)
 
+        estados_seleccionados = self.get_active_filters()["estado"]
+        self.agrupar_por_estado = len(estados_seleccionados) > 1
+        if self.agrupar_por_estado:
+            orden_interno = (
+                ("-created_at", "-id")
+                if self.get_filter_value("orden") == "recientes"
+                else ("codigo",)
+            )
+            prioridad_disponible = Case(
+                When(estado_activo__nombre__iexact="Disponible", then=Value(0)),
+                default=Value(1),
+                output_field=IntegerField(),
+            )
+            queryset = queryset.order_by(
+                "tipo_activo__nombre",
+                prioridad_disponible,
+                "estado_activo__nombre",
+                *orden_interno,
+            )
+
         return queryset
 
     def get_context_data(self, **kwargs):
@@ -360,6 +423,7 @@ class ActivoListView(LoginRequiredMixin, ActivoFilterMixin, ListView):
         context["total_activos_filtrados"] = len(context.get("activos", []))
         context["exportar_url"] = f"{reverse('activos:exportar')}{self.get_export_querystring()}"
         context["tab_tipo_activa"] = self.active_tab_type_id
+        context["agrupar_por_estado"] = self.agrupar_por_estado
         context["hay_filtros_para_exportar"] = bool(
             context["busqueda"]
             or context["estado_seleccionado"]

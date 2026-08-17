@@ -67,7 +67,7 @@ class TipoActivoAtributoAdmin2Form(forms.ModelForm):
             "tipo_activo", "atributo", "orden", "obligatorio",
             "valor_predeterminado", "texto_ayuda", "unidad",
             "mostrar_detalle", "mostrar_actas", "mostrar_reportes",
-            "filtrable", "activo", "longitud_maxima", "valor_minimo",
+            "activo", "longitud_maxima", "valor_minimo",
             "valor_maximo", "validaciones",
         )
         widgets = {
@@ -107,3 +107,32 @@ class TipoActivoAtributoAdmin2Form(forms.ModelForm):
                 )
                 self.instance.orden = ultimo + 1
         return cleaned
+
+
+class CriterioBusquedaActivoForm(forms.Form):
+    criterios = forms.ModelMultipleChoiceField(
+        queryset=TipoActivoAtributo.objects.none(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        label="Atributos incluidos en la busqueda",
+        help_text=(
+            "La busqueda de /activos consultara el valor de los atributos seleccionados. "
+            "La seleccion se configura de forma independiente para cada tipo de activo."
+        ),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        queryset = (
+            TipoActivoAtributo.objects.filter(
+                activo=True,
+                tipo_activo__activo=True,
+                atributo__activo=True,
+            )
+            .exclude(atributo__tipo_dato=AtributoActivo.TipoDato.TEXTO_PROTEGIDO)
+            .select_related("tipo_activo", "atributo")
+            .order_by("tipo_activo__nombre", "orden", "atributo__nombre")
+        )
+        self.fields["criterios"].queryset = queryset
+        if not self.is_bound:
+            self.initial["criterios"] = queryset.filter(filtrable=True)

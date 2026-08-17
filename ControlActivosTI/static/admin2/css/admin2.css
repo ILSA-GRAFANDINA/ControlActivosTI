@@ -140,6 +140,10 @@ body.admin2-body {
     padding: 20px;
 }
 
+.admin2-sidebar__section > .admin2-sidebar__label {
+    margin-bottom: 14px;
+}
+
 .admin2-sidebar__label,
 .admin2-pagehead__eyebrow,
 .admin2-hero__label,

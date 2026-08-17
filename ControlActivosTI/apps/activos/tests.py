@@ -15,7 +15,18 @@ from django.test import TestCase
 from django.urls import reverse
 
 from apps.asignaciones.models import Asignacion, AsignacionDetalle
-from apps.catalogos.models import Area, Cargo, CentroCosto, Empresa, EstadoActivo, TipoActivo, TipoEventoActivo, Ubicacion
+from apps.catalogos.models import (
+    Area,
+    AtributoActivo,
+    Cargo,
+    CentroCosto,
+    Empresa,
+    EstadoActivo,
+    TipoActivo,
+    TipoActivoAtributo,
+    TipoEventoActivo,
+    Ubicacion,
+)
 from apps.colaboradores.models import Colaborador
 from apps.facturas.models import FacturaCompra
 from apps.proveedores.models import Proveedor
@@ -23,7 +34,7 @@ from openpyxl import load_workbook
 from PIL import Image
 
 from apps.activos.admin import ActivoAdminForm, EventoActivoAdminForm, FotoActivoInlineForm
-from apps.activos.models import Activo, EventoActivo, FotoActivo
+from apps.activos.models import Activo, EventoActivo, FotoActivo, ValorAtributoActivo
 from apps.notificaciones.models import Notificacion
 
 
@@ -592,6 +603,95 @@ class ActivoListViewTests(TestCase):
         self.assertContains(response, "SAP-LST-001")
         self.assertNotContains(response, "MOU-001")
 
+    def test_list_view_searches_values_of_configured_attributes(self):
+        procesador = AtributoActivo.objects.create(
+            nombre="Procesador para busqueda",
+            clave="procesador_busqueda_lista",
+            tipo_dato=AtributoActivo.TipoDato.TEXTO_CORTO,
+        )
+        configuracion = TipoActivoAtributo.objects.create(
+            tipo_activo=self.tipo_laptop,
+            atributo=procesador,
+            orden=1,
+            filtrable=True,
+        )
+        laptop = Activo.objects.get(serie="LAP-001")
+        ValorAtributoActivo.objects.create(
+            activo=laptop,
+            atributo=procesador,
+            tipo_activo_origen=self.tipo_laptop,
+            valor_texto="Intel Core i7 255U",
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("activos:lista"), {"q": "Core i7 255U"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, laptop.codigo)
+        self.assertNotContains(response, "MOU-001")
+
+        configuracion.filtrable = False
+        configuracion.save(update_fields=("filtrable", "updated_at"))
+        response = self.client.get(reverse("activos:lista"), {"q": "Core i7 255U"})
+        self.assertNotContains(response, laptop.codigo)
+
+    def test_list_view_never_searches_protected_attribute_values(self):
+        secreto = AtributoActivo.objects.create(
+            nombre="Secreto de soporte",
+            clave="secreto_soporte_busqueda",
+            tipo_dato=AtributoActivo.TipoDato.TEXTO_PROTEGIDO,
+        )
+        TipoActivoAtributo.objects.create(
+            tipo_activo=self.tipo_laptop,
+            atributo=secreto,
+            orden=1,
+            filtrable=True,
+        )
+        laptop = Activo.objects.get(serie="LAP-001")
+        ValorAtributoActivo.objects.create(
+            activo=laptop,
+            atributo=secreto,
+            tipo_activo_origen=self.tipo_laptop,
+            valor_texto="TOKEN-ULTRASECRETO-987",
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse("activos:lista"),
+            {"q": "TOKEN-ULTRASECRETO-987"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, laptop.codigo)
+
+    def test_list_view_searches_numeric_attribute_values(self):
+        memoria = AtributoActivo.objects.create(
+            nombre="Memoria para busqueda numerica",
+            clave="memoria_busqueda_numerica",
+            tipo_dato=AtributoActivo.TipoDato.ENTERO,
+            unidad="GB",
+        )
+        TipoActivoAtributo.objects.create(
+            tipo_activo=self.tipo_laptop,
+            atributo=memoria,
+            orden=1,
+            filtrable=True,
+        )
+        laptop = Activo.objects.get(serie="LAP-001")
+        ValorAtributoActivo.objects.create(
+            activo=laptop,
+            atributo=memoria,
+            tipo_activo_origen=self.tipo_laptop,
+            valor_entero=32,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("activos:lista"), {"q": "32"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, laptop.codigo)
+        self.assertNotContains(response, "MOU-001")
+
     def test_list_view_hides_deleted_assets_by_default(self):
         self.client.force_login(self.user)
 
@@ -672,6 +772,30 @@ class ActivoListViewTests(TestCase):
         self.assertNotContains(response, "LAP-001")
         self.assertContains(response, "Estado: Asignado")
         self.assertContains(response, "Estado: Dado de baja")
+
+    def test_multiple_states_group_by_type_and_state_with_available_first(self):
+        estado_asignado = EstadoActivo.objects.create(nombre="Asignado", permite_asignacion=False)
+        activo_asignado = Activo.objects.create(
+            tipo_activo=self.tipo_laptop,
+            empresa=self.empresa_acme,
+            marca="Dell",
+            modelo="Asignado",
+            serie="LAP-ESTADO-ASIGNADO",
+            estado_activo=estado_asignado,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse("activos:lista"),
+            {"estado": [estado_asignado.pk, self.estado.pk], "tipo": [self.tipo_laptop.pk]},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        contenido = response.content.decode()
+        self.assertContains(response, "Laptop (Disponible)")
+        self.assertContains(response, "Laptop (Asignado)")
+        self.assertLess(contenido.index("Laptop (Disponible)"), contenido.index("Laptop (Asignado)"))
+        self.assertContains(response, activo_asignado.codigo)
 
     def test_new_filter_panel_does_not_offer_availability_controls(self):
         self.client.force_login(self.user)

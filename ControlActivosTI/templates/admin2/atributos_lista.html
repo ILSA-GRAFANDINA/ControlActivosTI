@@ -1,7 +1,7 @@
 {% extends "admin2/base.html" %}
 {% block admin2_content %}
 <section class="admin2-panel admin2-panel--hero"><div class="admin2-hero admin2-hero--module">
-  <div><p class="admin2-hero__label">Esquema configurable</p><h2>Atributos de activos</h2><p class="admin2-hero__copy">Administra características reutilizables y sus opciones sin modificar los activos históricos.</p><div class="admin2-actionrow"><a class="admin2-button is-primary" href="{% url 'admin2-atributo-crear' %}">Nuevo atributo</a><a class="admin2-button is-secondary" href="{% url 'admin2-configuraciones-atributos-lista' %}">Configurar por tipo</a><a class="admin2-button is-secondary" href="{% url 'admin2-catalogos' %}">Volver</a></div></div>
+  <div><p class="admin2-hero__label">Esquema configurable</p><h2>Atributos de activos</h2><p class="admin2-hero__copy">Administra características reutilizables y sus opciones sin modificar los activos históricos.</p><div class="admin2-actionrow"><a class="admin2-button is-primary" href="{% url 'admin2-atributo-crear' %}">Nuevo atributo</a><a class="admin2-button is-secondary" href="{% url 'admin2-configuraciones-atributos-lista' %}">Configurar por tipo</a><a class="admin2-button is-secondary" href="{% url 'admin2-criterios-busqueda-activos' %}">Criterios de búsqueda</a><a class="admin2-button is-secondary" href="{% url 'admin2-catalogos' %}">Volver</a></div></div>
   <div class="admin2-module-stats"><article class="admin2-module-stats__card"><span>Atributos</span><strong>{{ attribute_count }}</strong></article><article class="admin2-module-stats__card"><span>Vínculos activos</span><strong>{{ configuration_count }}</strong></article></div>
 </div></section>
 <section class="admin2-panel">
