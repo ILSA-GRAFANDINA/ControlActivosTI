@@ -9,72 +9,148 @@
         <h2 class="text-xl font-semibold text-slate-900">¿Qué activo desea usar como base?</h2>
         <p class="mt-1 text-sm text-slate-500">Use la búsqueda y los filtros del inventario para encontrarlo.</p>
     </div>
-    <a href="{{ volver_url }}" class="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Volver</a>
+    <a href="{{ volver_url }}" class="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Volver</a>
 </div>
 
-<form method="get" class="mb-6 space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-    <div class="flex flex-col gap-3 lg:flex-row">
-        <input type="search" name="q" value="{{ busqueda }}" placeholder="Buscar por código, SAP, marca, modelo, serie o atributos" class="min-w-0 flex-1 rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
-        <button type="submit" class="rounded-xl bg-cyan-600 px-6 py-3 text-sm font-semibold text-white hover:bg-cyan-700">Buscar</button>
-        <a href="{% url 'activos:seleccionar-base' %}?reset=1" class="rounded-xl border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-700 hover:bg-slate-50">Limpiar</a>
-    </div>
-    <details class="rounded-xl border border-slate-200 bg-slate-50 p-4" {% if cantidad_filtros_activos %}open{% endif %}>
-        <summary class="cursor-pointer text-sm font-semibold text-slate-700">Filtros avanzados{% if cantidad_filtros_activos %} ({{ cantidad_filtros_activos }}){% endif %}</summary>
-        <div class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <label class="text-sm font-semibold text-slate-700">Estado
-                <select name="estado" multiple class="mt-2 h-32 w-full rounded-xl border border-slate-300 bg-white p-3 text-sm">
-                    {% for estado in estados_activo %}<option value="{{ estado.pk }}" {% if estado.pk|stringformat:"s" in estados_seleccionados %}selected{% endif %}>{{ estado.nombre }}</option>{% endfor %}
-                </select>
-            </label>
-            <label class="text-sm font-semibold text-slate-700">Tipo de activo
-                <select name="tipo" multiple class="mt-2 h-32 w-full rounded-xl border border-slate-300 bg-white p-3 text-sm">
-                    {% for tipo in tipos_activo %}<option value="{{ tipo.pk }}" {% if tipo.pk|stringformat:"s" in tipos_seleccionados %}selected{% endif %}>{{ tipo.nombre }}</option>{% endfor %}
-                </select>
-            </label>
-            <label class="text-sm font-semibold text-slate-700">Empresa
-                <select name="empresa" multiple class="mt-2 h-32 w-full rounded-xl border border-slate-300 bg-white p-3 text-sm">
-                    {% for empresa in empresas_activo %}<option value="{{ empresa.pk }}" {% if empresa.pk|stringformat:"s" in empresas_seleccionadas %}selected{% endif %}>{{ empresa.nombre }}</option>{% endfor %}
-                </select>
-            </label>
-            <label class="text-sm font-semibold text-slate-700">Proveedor
-                <select name="proveedor" multiple class="mt-2 h-32 w-full rounded-xl border border-slate-300 bg-white p-3 text-sm">
-                    {% for proveedor in proveedores %}<option value="{{ proveedor.pk }}" {% if proveedor.pk|stringformat:"s" in proveedores_seleccionados %}selected{% endif %}>{{ proveedor }}</option>{% endfor %}
-                </select>
-            </label>
-            <label class="text-sm font-semibold text-slate-700">Factura
-                <select name="factura" multiple class="mt-2 h-32 w-full rounded-xl border border-slate-300 bg-white p-3 text-sm">
-                    <option value="sin_factura" {% if 'sin_factura' in facturas_seleccionadas %}selected{% endif %}>Sin factura</option>
-                    {% for factura in facturas_compra %}<option value="{{ factura.pk }}" {% if factura.pk|stringformat:"s" in facturas_seleccionadas %}selected{% endif %}>{{ factura.numero_factura }} — {{ factura.proveedor }}</option>{% endfor %}
-                </select>
-            </label>
-            <div class="space-y-3 text-sm font-semibold text-slate-700">
-                <p>Disponibilidad y vista</p>
-                <label class="flex items-center gap-2 font-normal"><input type="checkbox" name="disponibilidad" value="disponibles" {% if 'disponibles' in disponibilidades_seleccionadas %}checked{% endif %}> Disponibles</label>
-                <label class="flex items-center gap-2 font-normal"><input type="checkbox" name="disponibilidad" value="asignados" {% if 'asignados' in disponibilidades_seleccionadas %}checked{% endif %}> Asignados</label>
-                <label class="flex items-center gap-2 font-normal"><input type="checkbox" name="mostrar_eliminados" value="1" {% if mostrar_eliminados %}checked{% endif %}> Mostrar eliminados</label>
-                <label class="block font-normal">Orden
-                    <select name="orden" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2"><option value="">Tipo y código</option><option value="recientes" {% if orden_seleccionado == 'recientes' %}selected{% endif %}>Más recientes</option></select>
-                </label>
+<div class="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+    <form method="get" class="space-y-4" data-scroll-to-results data-compact-filters data-asset-filters data-facturas-proveedor-url="{% url 'activos:facturas-proveedor-json' %}">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
+            <div class="relative min-w-0 flex-1">
+                <label for="filtro-busqueda-base" class="sr-only">Buscar activos</label>
+                <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 3.44 9.79l2.64 2.64a.75.75 0 1 0 1.06-1.06l-2.64-2.64A5.5 5.5 0 0 0 9 3.5ZM5 9a4 4 0 1 1 8 0 4 4 0 0 1-8 0Z" clip-rule="evenodd" /></svg>
+                </span>
+                <input id="filtro-busqueda-base" type="text" name="q" value="{{ busqueda }}" placeholder="Buscar por código, SAP, marca, modelo, serie o características" class="w-full rounded-xl border border-slate-300 bg-white py-3 pl-11 pr-4 text-sm text-slate-900 shadow-sm outline-none transition duration-200 placeholder:text-slate-400 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
             </div>
-        </div>
-        <button type="submit" class="mt-4 rounded-xl bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white">Aplicar filtros</button>
-    </details>
-</form>
+            <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700">Buscar</button>
 
-<div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <details class="group relative" data-filter-popover>
+                <summary class="inline-flex w-full cursor-pointer list-none items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-cyan-400 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-cyan-100 lg:w-auto">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M2.75 4.5a.75.75 0 0 1 .75-.75h13a.75.75 0 0 1 0 1.5h-13a.75.75 0 0 1-.75-.75ZM5.75 10a.75.75 0 0 1 .75-.75h7a.75.75 0 0 1 0 1.5h-7a.75.75 0 0 1-.75-.75ZM8.75 15.5a.75.75 0 0 1 .75-.75h1a.75.75 0 0 1 0 1.5h-1a.75.75 0 0 1-.75-.75Z" /></svg>
+                    <span>Filtros</span>
+                    <span data-filter-count class="inline-flex min-w-5 items-center justify-center rounded-full bg-cyan-100 px-1.5 py-0.5 text-[11px] font-bold text-cyan-700 {% if not cantidad_filtros_activos %}hidden{% endif %}">{{ cantidad_filtros_activos }}</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400 transition group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08Z" clip-rule="evenodd" /></svg>
+                </summary>
+
+                <div class="asset-filter-popover absolute right-0 z-30 mt-2 w-[min(92vw,40rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 sm:px-5">
+                        <div><p class="text-sm font-semibold text-slate-900">Filtrar activos</p><p class="mt-0.5 text-xs text-slate-500">Combina uno o varios criterios.</p></div>
+                        <div class="asset-filter-header-actions flex items-center gap-3">
+                            <div class="asset-filter-actions flex items-center gap-2 rounded-2xl bg-slate-50 p-1">
+                                <a href="{% url 'activos:seleccionar-base' %}?reset=1" class="asset-filter-reset rounded-xl border border-transparent px-3 py-2 text-xs font-semibold text-slate-700 transition">Restablecer</a>
+                                <button type="submit" class="asset-filter-apply rounded-xl bg-cyan-600 px-5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-cyan-700">Aplicar filtros</button>
+                            </div>
+                            <button type="button" data-filter-close class="asset-filter-close inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition" aria-label="Cerrar filtros"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M4.47 4.47a.75.75 0 0 1 1.06 0L10 8.94l4.47-4.47a.75.75 0 1 1 1.06 1.06L11.06 10l4.47 4.47a.75.75 0 0 1-1.06 1.06L10 11.06l-4.47 4.47a.75.75 0 0 1-1.06-1.06L8.94 10 4.47 5.53a.75.75 0 0 1 0-1.06Z" /></svg></button>
+                        </div>
+                    </div>
+                    <div class="asset-filter-selection border-b border-slate-200 px-4 py-3 sm:px-5">
+                        <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Selección actual</p>
+                        <div class="flex min-h-7 flex-wrap items-center gap-2" data-live-filter-summary aria-live="polite"></div>
+                    </div>
+                    <div class="grid h-[18rem] grid-cols-[8.5rem_minmax(0,1fr)] sm:grid-cols-[11rem_minmax(0,1fr)]">
+                        <nav class="asset-filter-nav space-y-1 border-r border-slate-200 p-2 sm:p-3" aria-label="Categorías de filtros">
+                            <button type="button" data-filter-tab="estado" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition">Estado</button>
+                            <button type="button" data-filter-tab="tipo" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition">Tipo</button>
+                            <button type="button" data-filter-tab="empresa" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition">Empresa</button>
+                            <button type="button" data-filter-tab="compra" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition">Compra</button>
+                            <button type="button" data-filter-tab="vista" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition">Vista</button>
+                        </nav>
+                        <div class="h-[18rem] overflow-y-auto p-3 sm:p-4">
+                            <section data-filter-panel="estado" class="space-y-5">
+                                <fieldset><legend class="mb-1 text-sm font-semibold text-slate-900">Estado operativo</legend><p class="mb-3 text-xs text-slate-500">Selecciona todos los estados que quieras incluir.</p><div class="space-y-1">{% for estado in estados_activo %}<label class="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" name="estado" value="{{ estado.pk }}" data-filter-prefix="Estado" class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" {% if estado.pk|stringformat:"s" in estados_seleccionados %}checked{% endif %}><span>{{ estado.nombre }}</span></label>{% endfor %}</div></fieldset>
+                                <fieldset><legend class="mb-2 text-sm font-semibold text-slate-900">Disponibilidad</legend><div class="space-y-1"><label class="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" name="disponibilidad" value="disponibles" data-filter-label="Disponibles" class="h-4 w-4 rounded border-slate-300 text-cyan-600" {% if 'disponibles' in disponibilidades_seleccionadas %}checked{% endif %}><span>Disponibles</span></label><label class="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" name="disponibilidad" value="asignados" data-filter-label="Asignados" class="h-4 w-4 rounded border-slate-300 text-cyan-600" {% if 'asignados' in disponibilidades_seleccionadas %}checked{% endif %}><span>Asignados</span></label></div></fieldset>
+                            </section>
+                            <section data-filter-panel="tipo" class="hidden space-y-3"><h3 class="text-sm font-semibold text-slate-900">Tipo de activo</h3><p class="text-xs text-slate-500">Puedes seleccionar varios tipos.</p><div class="space-y-1">{% for tipo in tipos_activo %}<label class="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" name="tipo" value="{{ tipo.pk }}" data-filter-prefix="Tipo" class="h-4 w-4 rounded border-slate-300 text-cyan-600" {% if tipo.pk|stringformat:"s" in tipos_seleccionados %}checked{% endif %}><span>{{ tipo.nombre }}</span></label>{% endfor %}</div></section>
+                            <section data-filter-panel="empresa" class="hidden space-y-3"><h3 class="text-sm font-semibold text-slate-900">Empresa</h3><p class="text-xs text-slate-500">Sin selección se incluyen todas las empresas.</p><div class="space-y-1">{% for empresa in empresas_activo %}<label class="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" name="empresa" value="{{ empresa.pk }}" data-filter-prefix="Empresa" class="h-4 w-4 rounded border-slate-300 text-cyan-600" {% if empresa.pk|stringformat:"s" in empresas_seleccionadas %}checked{% endif %}><span>{{ empresa.nombre }}</span></label>{% endfor %}</div></section>
+                            <section data-filter-panel="compra" class="hidden space-y-5">
+                                <fieldset><legend class="mb-2 text-sm font-semibold text-slate-900">Proveedor</legend><input type="search" data-filter-option-search="proveedor" placeholder="Buscar proveedor" class="mb-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"><div class="max-h-40 space-y-1 overflow-y-auto rounded-xl border border-slate-200 p-2" data-provider-filter-options>{% for proveedor in proveedores %}<label class="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" name="proveedor" value="{{ proveedor.pk }}" data-filter-prefix="Proveedor" class="h-4 w-4 rounded border-slate-300 text-cyan-600" {% if proveedor.pk|stringformat:"s" in proveedores_seleccionados %}checked{% endif %}><span>{{ proveedor }}</span></label>{% empty %}<p class="px-2 py-1 text-xs text-slate-400">No hay proveedores registrados.</p>{% endfor %}</div></fieldset>
+                                <fieldset data-invoice-filter-fieldset><legend class="mb-2 text-sm font-semibold text-slate-900">Factura</legend><input type="search" data-filter-option-search="factura" placeholder="Selecciona un proveedor para buscar facturas" class="mb-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"><div class="max-h-40 space-y-1 overflow-y-auto rounded-xl border border-slate-200 p-2" data-invoice-filter-options data-selected-facturas="{% for factura_id in facturas_seleccionadas %}{{ factura_id }}{% if not forloop.last %},{% endif %}{% endfor %}"><p class="px-2 py-1 text-xs text-slate-400">Selecciona un proveedor para ver sus facturas.</p></div></fieldset>
+                            </section>
+                            <section data-filter-panel="vista" class="hidden space-y-5"><div><label for="filtro-orden-base" class="mb-2 block text-sm font-semibold text-slate-900">Ordenar por</label><select id="filtro-orden-base" name="orden" data-filter-select-label="Orden" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"><option value="">Tipo y código</option><option value="recientes" {% if orden_seleccionado == 'recientes' %}selected{% endif %}>Más recientes primero</option></select></div><label class="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-semibold text-slate-700"><input type="checkbox" name="mostrar_eliminados" value="1" data-filter-label="Incluye eliminados" class="h-4 w-4 rounded border-slate-300 text-cyan-600" {% if mostrar_eliminados %}checked{% endif %}><span>Mostrar activos eliminados</span></label></section>
+                        </div>
+                    </div>
+                </div>
+            </details>
+        </div>
+
+        {% if busqueda or estados_seleccionados or disponibilidades_seleccionadas or tipos_seleccionados or empresas_seleccionadas or proveedores_seleccionados or facturas_seleccionadas or orden_seleccionado or mostrar_eliminados %}
+        <div class="flex flex-wrap items-center gap-2" aria-label="Filtros activos">
+            {% if busqueda %}<button type="button" data-remove-filter="q" class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700"><span>Búsqueda: {{ busqueda }}</span><span>×</span></button>{% endif %}
+            {% for estado in estados_activo %}{% if estado.pk|stringformat:"s" in estados_seleccionados %}<button type="button" data-remove-filter="estado" data-remove-value="{{ estado.pk }}" class="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-xs font-medium text-cyan-700"><span>Estado: {{ estado.nombre }}</span><span>×</span></button>{% endif %}{% endfor %}
+            {% if 'disponibles' in disponibilidades_seleccionadas %}<button type="button" data-remove-filter="disponibilidad" data-remove-value="disponibles" class="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700"><span>Disponibles</span><span>×</span></button>{% endif %}
+            {% if 'asignados' in disponibilidades_seleccionadas %}<button type="button" data-remove-filter="disponibilidad" data-remove-value="asignados" class="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-xs font-medium text-cyan-700"><span>Asignados</span><span>×</span></button>{% endif %}
+            {% for tipo in tipos_activo %}{% if tipo.pk|stringformat:"s" in tipos_seleccionados %}<button type="button" data-remove-filter="tipo" data-remove-value="{{ tipo.pk }}" class="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700"><span>Tipo: {{ tipo.nombre }}</span><span>×</span></button>{% endif %}{% endfor %}
+            {% for empresa in empresas_activo %}{% if empresa.pk|stringformat:"s" in empresas_seleccionadas %}<button type="button" data-remove-filter="empresa" data-remove-value="{{ empresa.pk }}" class="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-medium text-violet-700"><span>Empresa: {{ empresa.nombre }}</span><span>×</span></button>{% endif %}{% endfor %}
+            <a href="{% url 'activos:seleccionar-base' %}?reset=1" class="text-xs font-semibold text-slate-500 hover:text-slate-700">Limpiar todos</a>
+        </div>
+        {% endif %}
+    </form>
+</div>
+
+<div id="resultados" class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
     <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-slate-200 text-sm">
             <thead class="bg-slate-50 text-left text-slate-600"><tr><th class="px-4 py-3">Código</th><th class="px-4 py-3">Tipo</th><th class="px-4 py-3">Marca / modelo</th><th class="px-4 py-3">Serie</th><th class="px-4 py-3">Estado</th><th class="px-4 py-3 text-right">Acción</th></tr></thead>
             <tbody class="divide-y divide-slate-100">
-                {% for activo in activos %}
-                <tr class="text-slate-700">
-                    <td class="px-4 py-3 font-semibold text-slate-900">{{ activo.codigo }}</td><td class="px-4 py-3">{{ activo.tipo_activo }}</td><td class="px-4 py-3">{{ activo.marca }} {{ activo.modelo }}</td><td class="px-4 py-3">{{ activo.serie }}</td><td class="px-4 py-3">{{ activo.estado_activo }}</td>
-                    <td class="px-4 py-3 text-right"><a href="{% url 'activos:nuevo' %}?basado_en={{ activo.pk }}" class="inline-flex rounded-xl bg-violet-600 px-4 py-2 text-xs font-semibold text-white hover:bg-violet-700">Usar como base</a></td>
-                </tr>
-                {% empty %}<tr><td colspan="6" class="px-4 py-10 text-center text-slate-500">No se encontraron activos con estos filtros.</td></tr>{% endfor %}
+                {% for activo in activos %}<tr class="text-slate-700"><td class="px-4 py-3 font-semibold text-slate-900">{{ activo.codigo }}</td><td class="px-4 py-3">{{ activo.tipo_activo }}</td><td class="px-4 py-3">{{ activo.marca }} {{ activo.modelo }}</td><td class="px-4 py-3">{{ activo.serie }}</td><td class="px-4 py-3">{{ activo.estado_activo }}</td><td class="px-4 py-3 text-right"><a href="{% url 'activos:nuevo' %}?basado_en={{ activo.pk }}" class="inline-flex rounded-xl bg-violet-600 px-4 py-2 text-xs font-semibold text-white hover:bg-violet-700">Usar como base</a></td></tr>{% empty %}<tr><td colspan="6" class="px-4 py-10 text-center text-slate-500">No se encontraron activos con estos filtros.</td></tr>{% endfor %}
             </tbody>
         </table>
     </div>
     {% if is_paginated %}<div class="flex items-center justify-center gap-3 border-t border-slate-200 p-4 text-sm">{% if page_obj.has_previous %}<a class="font-semibold text-cyan-700" href="?{{ pagination_prefix }}page={{ page_obj.previous_page_number }}">Anterior</a>{% endif %}<span>Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>{% if page_obj.has_next %}<a class="font-semibold text-cyan-700" href="?{{ pagination_prefix }}page={{ page_obj.next_page_number }}">Siguiente</a>{% endif %}</div>{% endif %}
 </div>
+
+<script>
+    (() => {
+        const form = document.querySelector("[data-asset-filters]");
+        if (!form) return;
+        const popover = form.querySelector("[data-filter-popover]");
+        const tabs = Array.from(form.querySelectorAll("[data-filter-tab]"));
+        const panels = Array.from(form.querySelectorAll("[data-filter-panel]"));
+        const summary = form.querySelector("[data-live-filter-summary]");
+        const countBadge = form.querySelector("[data-filter-count]");
+        const providerGroup = form.querySelector("[data-provider-filter-options]");
+        const invoiceGroup = form.querySelector("[data-invoice-filter-options]");
+        const invoiceFieldset = form.querySelector("[data-invoice-filter-fieldset]");
+        const invoiceSearch = form.querySelector("[data-filter-option-search='factura']");
+
+        const activateTab = (name) => {
+            tabs.forEach((tab) => { const active = tab.dataset.filterTab === name; tab.classList.toggle("bg-white", active); tab.classList.toggle("text-cyan-700", active); tab.classList.toggle("shadow-sm", active); tab.classList.toggle("text-slate-600", !active); });
+            panels.forEach((panel) => panel.classList.toggle("hidden", panel.dataset.filterPanel !== name));
+        };
+        tabs.forEach((tab) => tab.addEventListener("click", () => activateTab(tab.dataset.filterTab)));
+        activateTab("estado");
+
+        const selectedControls = () => {
+            const selected = Array.from(form.querySelectorAll("[data-filter-label], [data-filter-prefix]")).filter((control) => control.checked).map((control) => ({ control, label: control.dataset.filterLabel || `${control.dataset.filterPrefix}: ${control.closest("label").querySelector("span").textContent.trim()}` }));
+            if (form.elements.q?.value.trim()) selected.unshift({ control: form.elements.q, label: `Búsqueda: ${form.elements.q.value.trim()}` });
+            form.querySelectorAll("[data-filter-select-label]").forEach((select) => { if (select.value) selected.push({ control: select, label: `${select.dataset.filterSelectLabel}: ${select.selectedOptions[0].textContent.trim()}` }); });
+            return selected;
+        };
+        const refreshSummary = () => {
+            const selected = selectedControls(); summary.replaceChildren();
+            if (!selected.length) { const empty = document.createElement("span"); empty.className = "text-xs text-slate-400"; empty.textContent = "Ningún filtro seleccionado"; summary.append(empty); }
+            else selected.forEach(({ control, label }) => { const chip = document.createElement("button"); chip.type = "button"; chip.className = "asset-filter-chip inline-flex items-center gap-1.5 rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-xs font-medium text-cyan-700"; chip.innerHTML = "<span></span><span>×</span>"; chip.firstElementChild.textContent = label; chip.addEventListener("click", () => { if (["checkbox", "radio"].includes(control.type)) control.checked = false; else control.value = ""; refreshSummary(); }); summary.append(chip); });
+            countBadge.textContent = selected.length; countBadge.classList.toggle("hidden", selected.length === 0);
+        };
+
+        const filterLabels = (group, term) => group?.querySelectorAll("label").forEach((label) => label.classList.toggle("hidden", term.trim() && !label.textContent.toLowerCase().includes(term.trim().toLowerCase())));
+        form.querySelector("[data-filter-option-search='proveedor']")?.addEventListener("input", (event) => filterLabels(providerGroup, event.target.value));
+        invoiceSearch?.addEventListener("input", (event) => filterLabels(invoiceGroup, event.target.value));
+        const providerIds = () => Array.from(form.querySelectorAll("input[name='proveedor']:checked")).map((input) => input.value);
+        const invoiceCheckbox = (value, label, checked) => { const item = document.createElement("label"); item.className = "flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-sm text-slate-700 hover:bg-slate-50"; const input = document.createElement("input"); input.type = "checkbox"; input.name = "factura"; input.value = value; input.dataset.filterPrefix = "Factura"; input.className = "h-4 w-4 rounded border-slate-300 text-cyan-600"; input.checked = checked; const span = document.createElement("span"); span.textContent = label; item.append(input, span); return item; };
+        const refreshInvoices = async () => {
+            const providers = providerIds(); const selected = (invoiceGroup.dataset.selectedFacturas || "").split(",").filter(Boolean); invoiceGroup.replaceChildren(); const disabled = !providers.length; invoiceFieldset.classList.toggle("opacity-60", disabled); invoiceFieldset.classList.toggle("pointer-events-none", disabled); invoiceSearch.disabled = disabled;
+            if (disabled) { invoiceGroup.innerHTML = '<p class="px-2 py-1 text-xs text-slate-400">Selecciona un proveedor para ver sus facturas.</p>'; refreshSummary(); return; }
+            invoiceGroup.append(invoiceCheckbox("sin_factura", "Sin registrar", selected.includes("sin_factura"))); const url = new URL(form.dataset.facturasProveedorUrl, window.location.origin); providers.forEach((id) => url.searchParams.append("proveedor", id)); selected.filter((id) => /^\d+$/.test(id)).forEach((id) => url.searchParams.append("factura", id));
+            try { const response = await fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } }); if (!response.ok) throw new Error(); const data = await response.json(); data.facturas.forEach((factura) => invoiceGroup.append(invoiceCheckbox(String(factura.id), factura.label, selected.includes(String(factura.id))))); } catch { invoiceGroup.insertAdjacentHTML("beforeend", '<p class="px-2 py-1 text-xs text-rose-500">No se pudieron cargar las facturas.</p>'); } refreshSummary();
+        };
+        form.addEventListener("input", refreshSummary);
+        form.addEventListener("change", (event) => { if (event.target.name === "proveedor") { invoiceGroup.dataset.selectedFacturas = ""; refreshInvoices(); } if (event.target.name === "factura") invoiceGroup.dataset.selectedFacturas = Array.from(form.querySelectorAll("input[name='factura']:checked")).map((input) => input.value).join(","); refreshSummary(); });
+        form.querySelector("[data-filter-close]")?.addEventListener("click", () => popover.removeAttribute("open"));
+        document.addEventListener("click", (event) => { if (popover.open && !popover.contains(event.target)) popover.removeAttribute("open"); });
+        document.addEventListener("keydown", (event) => { if (event.key === "Escape") popover.removeAttribute("open"); });
+        form.querySelectorAll("[data-remove-filter]").forEach((button) => button.addEventListener("click", () => { Array.from(form.elements).filter((control) => control.name === button.dataset.removeFilter).forEach((control) => { if (control.type === "checkbox") { if (!button.dataset.removeValue || control.value === button.dataset.removeValue) control.checked = false; } else control.value = ""; }); form.requestSubmit(); }));
+        refreshInvoices(); refreshSummary();
+    })();
+</script>
 {% endblock %}

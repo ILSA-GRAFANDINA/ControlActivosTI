@@ -105,6 +105,10 @@ class ActivoCopyFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.base.codigo)
         self.assertContains(response, f"?basado_en={self.base.pk}")
+        self.assertContains(response, "data-asset-filters", html=False)
+        self.assertContains(response, "data-filter-popover", html=False)
+        self.assertContains(response, 'data-filter-tab="estado"', html=False)
+        self.assertContains(response, "data-live-filter-summary", html=False)
         self.assertEqual(list(response.context["activos"]), [self.base])
 
     def test_formulario_precarga_datos_bloquea_tipo_y_no_precarga_fotos(self):
