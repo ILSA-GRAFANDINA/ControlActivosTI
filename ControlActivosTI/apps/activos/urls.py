@@ -2,6 +2,7 @@ from django.urls import path
 
 from .views import (
     ActivoCreateView,
+    ActivoBaseSelectView,
     ActivoDetailView,
     ActivoExportView,
     ActivoListView,
@@ -16,6 +17,7 @@ urlpatterns = [
     path("", ActivoListView.as_view(), name="lista"),
     path("exportar/", ActivoExportView.as_view(), name="exportar"),
     path("nuevo/", ActivoCreateView.as_view(), name="nuevo"),
+    path("nuevo/seleccionar-base/", ActivoBaseSelectView.as_view(), name="seleccionar-base"),
     path(
         "atributos/tipo/<int:tipo_id>/",
         TipoActivoAtributosJsonView.as_view(),

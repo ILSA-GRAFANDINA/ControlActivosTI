@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Nuevo activo - ControlActivosTI{% endblock %}
+{% block page_title %}Nuevo activo{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-4xl">
+    <div class="mb-6 flex items-center justify-between gap-4">
+        <div>
+            <h2 class="text-xl font-semibold text-slate-900">¿Cómo desea crear el activo?</h2>
+            <p class="mt-1 text-sm text-slate-500">Puede comenzar con una ficha vacía o reutilizar los datos de un activo existente.</p>
+        </div>
+        <a href="{{ volver_url }}" class="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancelar</a>
+    </div>
+
+    <div class="grid gap-5 md:grid-cols-2">
+        <a href="{{ crear_desde_cero_url }}" class="group rounded-2xl border border-slate-200 bg-white p-7 shadow-sm transition hover:border-cyan-300 hover:shadow-md">
+            <span class="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-50 text-2xl text-cyan-700">＋</span>
+            <h3 class="mt-5 text-lg font-semibold text-slate-900">Empezar desde 0</h3>
+            <p class="mt-2 text-sm leading-6 text-slate-500">Abra el formulario normal y complete todos los datos del nuevo activo.</p>
+            <span class="mt-5 inline-flex text-sm font-semibold text-cyan-700">Continuar →</span>
+        </a>
+
+        <a href="{{ seleccionar_base_url }}" class="group rounded-2xl border border-violet-200 bg-violet-50/50 p-7 shadow-sm transition hover:border-violet-400 hover:shadow-md">
+            <span class="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-violet-100 text-2xl text-violet-700">⧉</span>
+            <h3 class="mt-5 text-lg font-semibold text-slate-900">Basarse en uno ya creado</h3>
+            <p class="mt-2 text-sm leading-6 text-slate-500">Busque una ficha existente, copie sus datos y ajuste únicamente lo necesario. Las fotos no se copian.</p>
+            <span class="mt-5 inline-flex text-sm font-semibold text-violet-700">Buscar activo →</span>
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -288,21 +288,21 @@ class AsignacionCreateFormTests(TestCase):
                         "observaciones_entrega": "Entrega inicial",
                         "activos": [self.activo_disponible.pk],
                     },
-                    follow=True,
                 )
 
-                self.assertEqual(response.status_code, 200)
                 asignacion = Asignacion.objects.get(colaborador=self.colaborador)
                 acta = asignacion.acta_entrega
                 self.assertIsNotNone(acta)
                 self.assertTrue(acta.emitida)
                 self.assertTrue(acta.archivo)
                 self.assertTrue(default_storage.exists(acta.archivo.name))
-                self.assertContains(response, "Acta entrega")
-
-                descarga = self.client.get(
-                    reverse("actas:descargar_por_asignacion", args=[asignacion.pk, "ENTREGA"])
+                descarga_url = reverse(
+                    "actas:descargar_por_asignacion",
+                    args=[asignacion.pk, "ENTREGA"],
                 )
+                self.assertRedirects(response, descarga_url, fetch_redirect_response=False)
+
+                descarga = self.client.get(descarga_url)
 
                 self.assertEqual(descarga.status_code, 200)
                 self.assertIn("spreadsheetml.sheet", descarga["Content-Type"])

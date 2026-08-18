@@ -1308,7 +1308,7 @@ class ActivoCreateViewTests(TestCase):
     def test_create_view_renders_form(self):
         self.client.force_login(self.user)
 
-        response = self.client.get(reverse("activos:nuevo"))
+        response = self.client.get(reverse("activos:nuevo"), {"modo": "cero"})
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Nuevo activo")
@@ -1321,6 +1321,34 @@ class ActivoCreateViewTests(TestCase):
         self.assertContains(response, 'data-provider-results', html=False)
         self.assertContains(response, 'data-invoice-results', html=False)
         self.assertContains(response, reverse("activos:facturas-proveedor-json"))
+        self.assertContains(response, 'data-draft-enabled="true"', html=False)
+        self.assertContains(response, 'data-draft-restore="true"', html=False)
+        self.assertContains(
+            response,
+            f'control-activos:nuevo-activo:v1:usuario-{self.user.pk}',
+            html=False,
+        )
+        self.assertContains(response, "Borrador automatico activo")
+        self.assertContains(response, 'type="password" autocomplete="new-password" data-draft-sensitive', html=False)
+
+    def test_invalid_create_keeps_autosave_but_does_not_overwrite_bound_values(self):
+        self.client.force_login(self.user)
+        data = self._datos_base()
+        data["tipo_activo"] = ""
+        data.update(
+            {
+                "fotos-TOTAL_FORMS": "2",
+                "fotos-INITIAL_FORMS": "0",
+                "fotos-MIN_NUM_FORMS": "0",
+                "fotos-MAX_NUM_FORMS": "5",
+            }
+        )
+
+        response = self.client.post(reverse("activos:nuevo"), data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-draft-enabled="true"', html=False)
+        self.assertContains(response, 'data-draft-restore="false"', html=False)
 
     def test_attributes_json_view_returns_without_name_error(self):
         self.client.force_login(self.user)
@@ -1413,6 +1441,8 @@ class ActivoCreateViewTests(TestCase):
         self.assertContains(response, "Motivo del cambio de tipo")
         self.assertContains(response, f'data-original-type-id="{self.tipo_laptop.pk}"')
         self.assertContains(response, "asset-type-change-toggle")
+        self.assertContains(response, 'data-draft-enabled="false"', html=False)
+        self.assertNotContains(response, "Borrador automatico activo")
         contenido = response.content.decode()
         self.assertLess(contenido.index("Fotos del activo"), contenido.index("Cambio del tipo de activo"))
         self.assertLess(contenido.index("Cambio del tipo de activo"), contenido.index("Guardar cambios"))

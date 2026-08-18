@@ -14,10 +14,31 @@
     </a>
 </div>
 
-<form method="post" action="{{ form_action_url }}" enctype="multipart/form-data" class="space-y-6" data-activo-form data-facturas-proveedor-url="{% url 'activos:facturas-proveedor-json' %}">
+<form method="post" action="{{ form_action_url }}" enctype="multipart/form-data" class="space-y-6" data-activo-form data-facturas-proveedor-url="{% url 'activos:facturas-proveedor-json' %}" data-draft-enabled="{% if borrador_activo_habilitado %}true{% else %}false{% endif %}" data-draft-restore="{% if restaurar_borrador_activo %}true{% else %}false{% endif %}" data-draft-key="control-activos:nuevo-activo:v1:usuario-{{ request.user.pk }}">
     {% csrf_token %}
     {% if es_edicion %}
         <input type="hidden" name="activo_id" value="{{ activo_edicion_id }}">
+    {% endif %}
+    {% if es_copia %}
+        <input type="hidden" name="activo_base_id" value="{{ activo_base.pk }}">
+        <div class="rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-900">
+            <p class="font-semibold">Basado en {{ activo_base.codigo }} — {{ activo_base.marca }} {{ activo_base.modelo }}</p>
+            <p class="mt-1 text-xs text-violet-700">Se copiaron los datos de la ficha y sus atributos. El tipo está bloqueado y las fotos no se copiarán.</p>
+        </div>
+    {% endif %}
+
+    {% if borrador_activo_habilitado %}
+    <div class="rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm text-cyan-900" data-draft-panel>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <p class="font-semibold">Borrador automatico activo</p>
+                <p class="mt-1 text-xs text-cyan-700" data-draft-status>Los cambios se guardaran en este navegador. Las imagenes y los valores protegidos no se pueden conservar.</p>
+            </div>
+            <button type="button" class="rounded-lg border border-cyan-300 bg-white px-3 py-2 text-xs font-semibold text-cyan-800 transition hover:bg-cyan-100" data-discard-draft>
+                Descartar borrador
+            </button>
+        </div>
+    </div>
     {% endif %}
 
     {% if form.non_field_errors or formset.non_form_errors %}
@@ -41,6 +62,7 @@
             <div class="min-w-0">
                 <label class="mb-2 block text-sm font-semibold text-slate-700">Tipo de activo</label>
                 {{ form.tipo_activo }}
+                {% if form.tipo_activo.help_text %}<p class="mt-2 text-xs text-slate-500">{{ form.tipo_activo.help_text }}</p>{% endif %}
                 {% if form.tipo_activo.errors %}<p class="mt-2 text-sm text-red-600">{{ form.tipo_activo.errors|join:", " }}</p>{% endif %}
             </div>
             <div class="min-w-0">
@@ -361,6 +383,13 @@
         const providerResults = form.querySelector("[data-provider-results]");
         const invoiceResults = form.querySelector("[data-invoice-results]");
         const invoicesEndpoint = form.dataset.facturasProveedorUrl;
+        const draftEnabled = form.dataset.draftEnabled === "true";
+        const draftRestoreEnabled = form.dataset.draftRestore === "true";
+        const draftKey = form.dataset.draftKey;
+        const draftStatus = form.querySelector("[data-draft-status]");
+        const discardDraftButton = form.querySelector("[data-discard-draft]");
+        let draftSaveTimer = null;
+        let draftSubmitted = false;
 
         const optionMatches = (option, term) => !term || option.textContent.toLowerCase().includes(term);
 
@@ -451,10 +480,12 @@
             syncSearchText(invoiceSelect, invoiceSearch);
         };
 
-        const refreshInvoicesForProvider = async ({ keepSelected = false } = {}) => {
+        const refreshInvoicesForProvider = async ({ keepSelected = false, selectedValue: requestedValue } = {}) => {
             if (!providerSelect || !invoiceSelect || !invoicesEndpoint) return;
             const providerId = providerSelect.value;
-            const selectedValue = keepSelected ? invoiceSelect.value : "";
+            const selectedValue = requestedValue === undefined
+                ? (keepSelected ? invoiceSelect.value : "")
+                : String(requestedValue || "");
             if (!providerId) {
                 rebuildInvoiceOptions([], "");
                 setInvoiceDisabledState(true);
@@ -551,6 +582,7 @@
             const name = `atributo__${attribute.clave}`;
             const common = `name="${escapeHtml(name)}" id="id_${escapeHtml(name)}" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm" ${attribute.obligatorio ? "required" : ""}`;
             if (attribute.tipo === "texto_largo") return `<textarea ${common} rows="4">${escapeHtml(attribute.valor_predeterminado || "")}</textarea>`;
+            if (attribute.tipo === "texto_protegido") return `<input ${common} type="password" autocomplete="new-password" data-draft-sensitive value="">`;
             if (attribute.tipo === "fecha") return `<input ${common} type="date" value="${escapeHtml(attribute.valor_predeterminado || "")}">`;
             if (attribute.tipo === "entero" || attribute.tipo === "decimal") {
                 const step = attribute.tipo === "entero" ? "1" : "any";
@@ -563,14 +595,25 @@
             return `<input ${common} type="text" ${attribute.longitud_maxima ? `maxlength="${attribute.longitud_maxima}"` : ""} value="${escapeHtml(attribute.valor_predeterminado || "")}">`;
         };
         const loadDynamicAttributes = async () => {
-            if (!dynamicSection || !dynamicFields || !selectTipo || !selectTipo.value) return;
-            const template = dynamicSection.dataset.endpointTemplate;
-            const response = await fetch(template.replace("/0/", `/${selectTipo.value}/`), {headers: {"X-Requested-With": "XMLHttpRequest"}});
-            if (!response.ok) return;
-            const payload = await response.json();
-            techFields.forEach((field) => field.remove());
-            dynamicFields.innerHTML = payload.atributos.map((attribute) => `<div><label class="mb-2 block text-sm font-semibold text-slate-700">${escapeHtml(attribute.nombre)}${attribute.obligatorio ? ' <span class="text-red-600">*</span>' : ""}</label><div class="flex items-center gap-2"><div class="min-w-0 flex-1">${inputForAttribute(attribute)}</div>${attribute.unidad ? `<span class="text-sm font-semibold text-slate-500">${escapeHtml(attribute.unidad)}</span>` : ""}</div>${attribute.ayuda ? `<p class="mt-2 text-xs text-slate-500">${escapeHtml(attribute.ayuda)}</p>` : ""}</div>`).join("");
-            if (noDynamicMessage) noDynamicMessage.classList.toggle("hidden", payload.atributos.length > 0);
+            if (!dynamicSection || !dynamicFields || !selectTipo || !selectTipo.value) return false;
+            try {
+                const template = dynamicSection.dataset.endpointTemplate;
+                const response = await fetch(template.replace("/0/", `/${selectTipo.value}/`), {headers: {"X-Requested-With": "XMLHttpRequest"}});
+                if (!response.ok) return false;
+                const payload = await response.json();
+                const connectedTechFields = techFields.filter((field) => field.isConnected);
+                if (!payload.atributos.length && connectedTechFields.length) {
+                    toggleTechFields();
+                    if (noDynamicMessage) noDynamicMessage.classList.add("hidden");
+                    return true;
+                }
+                techFields.forEach((field) => field.remove());
+                dynamicFields.innerHTML = payload.atributos.map((attribute) => `<div data-dynamic-field="${escapeHtml(attribute.clave)}"><label class="mb-2 block text-sm font-semibold text-slate-700">${escapeHtml(attribute.nombre)}${attribute.obligatorio ? ' <span class="text-red-600">*</span>' : ""}</label><div class="flex items-center gap-2"><div class="min-w-0 flex-1">${inputForAttribute(attribute)}</div>${attribute.unidad ? `<span class="text-sm font-semibold text-slate-500">${escapeHtml(attribute.unidad)}</span>` : ""}</div>${attribute.ayuda ? `<p class="mt-2 text-xs text-slate-500">${escapeHtml(attribute.ayuda)}</p>` : ""}</div>`).join("");
+                if (noDynamicMessage) noDynamicMessage.classList.toggle("hidden", payload.atributos.length > 0);
+                return true;
+            } catch (error) {
+                return false;
+            }
         };
 
         const paintPhotoStatus = (card, state, message) => {
@@ -675,28 +718,134 @@
             Array.from(photoFormsContainer.children).forEach((card) => wirePhotoCard(card));
         }
 
+        const appendPhotoForm = () => {
+            if (!photoTemplate || !photoFormsContainer) return false;
+            const currentCount = photoFormsContainer.querySelectorAll("[data-photo-card]").length;
+            if (currentCount >= maxForms) return false;
+            const html = photoTemplate.innerHTML
+                .replace(/__prefix__/g, String(currentCount))
+                .replace(/__index__/g, String(currentCount + 1));
+            const wrapper = document.createElement("div");
+            wrapper.innerHTML = html.trim();
+            const card = wrapper.firstElementChild;
+            if (!card) return false;
+            photoFormsContainer.appendChild(card);
+            refreshPhotoCards();
+            return true;
+        };
+
         if (addPhotoButton && photoTemplate && photoFormsContainer) {
-            addPhotoButton.addEventListener("click", () => {
-                const currentCount = photoFormsContainer.querySelectorAll("[data-photo-card]").length;
-                if (currentCount >= maxForms) {
-                    return;
-                }
-
-                const index = currentCount;
-                const html = photoTemplate.innerHTML
-                    .replace(/__prefix__/g, String(index))
-                    .replace(/__index__/g, String(index + 1));
-                const wrapper = document.createElement("div");
-                wrapper.innerHTML = html.trim();
-                const card = wrapper.firstElementChild;
-                if (!card) {
-                    return;
-                }
-
-                photoFormsContainer.appendChild(card);
-                refreshPhotoCards();
-            });
+            addPhotoButton.addEventListener("click", appendPhotoForm);
         }
+
+        const isDraftField = (field) => {
+            if (!field.name || field.disabled) return false;
+            if (["csrfmiddlewaretoken", "activo_id"].includes(field.name)) return false;
+            if (/^fotos-(TOTAL|INITIAL|MIN_NUM|MAX_NUM)_FORMS$/.test(field.name)) return false;
+            if (/^fotos-\d+-(id|DELETE)$/.test(field.name)) return false;
+            return !["file", "password", "submit", "button"].includes((field.type || "").toLowerCase())
+                && !field.hasAttribute("data-draft-sensitive");
+        };
+
+        const readDraft = () => {
+            if (!draftEnabled || !draftKey) return null;
+            try {
+                const parsed = JSON.parse(window.localStorage.getItem(draftKey));
+                return parsed && parsed.version === 1 && parsed.fields ? parsed : null;
+            } catch (error) {
+                return null;
+            }
+        };
+
+        const collectDraftFields = () => {
+            const fields = {};
+            form.querySelectorAll("input[name], select[name], textarea[name]").forEach((field) => {
+                if (!isDraftField(field)) return;
+                if (field.type === "checkbox" || field.type === "radio") {
+                    fields[field.name] = Boolean(field.checked);
+                } else if (field.multiple) {
+                    fields[field.name] = Array.from(field.selectedOptions).map((option) => option.value);
+                } else {
+                    fields[field.name] = field.value;
+                }
+            });
+            return fields;
+        };
+
+        const formatDraftTime = (timestamp) => {
+            try {
+                return new Intl.DateTimeFormat("es-EC", { hour: "2-digit", minute: "2-digit" }).format(new Date(timestamp));
+            } catch (error) {
+                return "ahora";
+            }
+        };
+
+        const saveDraft = () => {
+            if (!draftEnabled || !draftKey || draftSubmitted) return;
+            const draft = { version: 1, updatedAt: new Date().toISOString(), fields: collectDraftFields() };
+            try {
+                window.localStorage.setItem(draftKey, JSON.stringify(draft));
+                if (draftStatus) draftStatus.textContent = `Borrador guardado a las ${formatDraftTime(draft.updatedAt)}. Las imagenes y los valores protegidos no se conservan.`;
+            } catch (error) {
+                if (draftStatus) draftStatus.textContent = "No fue posible guardar el borrador en este navegador.";
+            }
+        };
+
+        const scheduleDraftSave = () => {
+            if (!draftEnabled) return;
+            window.clearTimeout(draftSaveTimer);
+            draftSaveTimer = window.setTimeout(saveDraft, 250);
+        };
+
+        const restoreDraftFields = (fields, predicate = () => true) => {
+            Object.entries(fields || {}).forEach(([name, value]) => {
+                if (!predicate(name)) return;
+                const field = Array.from(form.elements).find((candidate) => candidate.name === name);
+                if (!field || !isDraftField(field)) return;
+                if (field.type === "checkbox" || field.type === "radio") {
+                    field.checked = Boolean(value);
+                } else if (field.multiple && Array.isArray(value)) {
+                    Array.from(field.options).forEach((option) => { option.selected = value.includes(option.value); });
+                } else if (field.tagName === "SELECT") {
+                    const normalized = String(value ?? "");
+                    if (Array.from(field.options).some((option) => option.value === normalized)) field.value = normalized;
+                } else {
+                    field.value = String(value ?? "");
+                }
+            });
+        };
+
+        const ensureDraftPhotoForms = (fields) => {
+            const indexes = Object.keys(fields || {})
+                .map((name) => name.match(/^fotos-(\d+)-/))
+                .filter(Boolean)
+                .map((match) => Number(match[1]));
+            const requiredCount = indexes.length ? Math.min(maxForms, Math.max(...indexes) + 1) : 0;
+            while (photoFormsContainer && photoFormsContainer.querySelectorAll("[data-photo-card]").length < requiredCount) {
+                if (!appendPhotoForm()) break;
+            }
+        };
+
+        const restoreDraft = async () => {
+            const draft = draftRestoreEnabled ? readDraft() : null;
+            if (!draft) {
+                if (!draftRestoreEnabled) saveDraft();
+                return;
+            }
+            ensureDraftPhotoForms(draft.fields);
+            restoreDraftFields(draft.fields, (name) => !name.startsWith("atributo__") && name !== "factura_compra");
+            toggleTechFields();
+            await Promise.all([
+                loadDynamicAttributes(),
+                refreshInvoicesForProvider({ selectedValue: draft.fields.factura_compra || "" }),
+            ]);
+            restoreDraftFields(draft.fields);
+            syncSearchText(providerSelect, providerSearch);
+            syncSearchText(invoiceSelect, invoiceSearch);
+            syncChangeTypeDetails();
+            refreshPhotoCards();
+            if (draftStatus) draftStatus.textContent = `Borrador restaurado (guardado a las ${formatDraftTime(draft.updatedAt)}). El formulario ya incluye los campos administrativos actuales.`;
+        };
 
         toggleTechFields();
         syncChangeTypeDetails();
@@ -704,14 +853,43 @@
             changeTypeDetails.addEventListener("toggle", updateChangeTypeToggleLabel);
         }
         if (selectTipo) {
-            selectTipo.addEventListener("change", () => {
+            selectTipo.addEventListener("change", async () => {
                 toggleTechFields();
-                loadDynamicAttributes();
+                await loadDynamicAttributes();
+                const currentDraft = readDraft();
+                if (currentDraft) {
+                    restoreDraftFields(currentDraft.fields, (name) => name.startsWith("atributo__"));
+                }
                 syncChangeTypeDetails();
             });
         }
 
         refreshPhotoCards();
+        if (draftEnabled) {
+            form.addEventListener("input", scheduleDraftSave);
+            form.addEventListener("change", scheduleDraftSave);
+            form.addEventListener("submit", () => {
+                draftSubmitted = true;
+                window.clearTimeout(draftSaveTimer);
+                try {
+                    window.localStorage.removeItem(draftKey);
+                } catch (error) {
+                    // El envio del formulario no debe bloquearse si el almacenamiento no esta disponible.
+                }
+            });
+            window.addEventListener("beforeunload", saveDraft);
+            discardDraftButton?.addEventListener("click", () => {
+                if (!window.confirm("Se eliminaran los datos guardados de este nuevo activo. ¿Continuar?")) return;
+                window.removeEventListener("beforeunload", saveDraft);
+                try {
+                    window.localStorage.removeItem(draftKey);
+                } catch (error) {
+                    // La recarga igualmente devuelve el formulario a su estado inicial.
+                }
+                window.location.assign(form.action);
+            });
+            restoreDraft();
+        }
     })();
 </script>
 {% endblock %}

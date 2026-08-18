@@ -73,6 +73,8 @@ class ActivoAdminForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         permitir_cambio_vigencia = kwargs.pop("permitir_cambio_vigencia", True)
         self.usuario = kwargs.pop("usuario", None)
+        self.activo_base = kwargs.pop("activo_base", None)
+        bloquear_tipo = kwargs.pop("bloquear_tipo", False)
         super().__init__(*args, **kwargs)
         self.configuraciones_dinamicas = []
         self.nombres_campos_dinamicos = []
@@ -170,7 +172,7 @@ class ActivoAdminForm(forms.ModelForm):
             estado_actual_id = (
                 self.instance.estado_activo_id
                 if self.instance and self.instance.pk
-                else None
+                else getattr(self.activo_base, "estado_activo_id", None)
             )
             estados = EstadoActivo.objects.filter(activo=True)
             if estado_actual_id:
@@ -183,14 +185,29 @@ class ActivoAdminForm(forms.ModelForm):
             )
 
         if "tipo_activo" in self.fields:
-            tipo_actual_id = self.instance.tipo_activo_id if self.instance and self.instance.pk else None
+            tipo_actual_id = (
+                self.instance.tipo_activo_id
+                if self.instance and self.instance.pk
+                else getattr(self.activo_base, "tipo_activo_id", None)
+            )
             filtro_tipo = Q(activo=True)
             if tipo_actual_id:
                 filtro_tipo |= Q(pk=tipo_actual_id)
             self.fields["tipo_activo"].queryset = TipoActivo.objects.filter(filtro_tipo).order_by("nombre")
+            if bloquear_tipo:
+                # `disabled` tambien hace que Django ignore cualquier valor
+                # manipulado en el POST y conserve el tipo del activo base.
+                self.fields["tipo_activo"].disabled = True
+                self.fields["tipo_activo"].help_text = (
+                    "El tipo se conserva porque este activo se esta creando a partir de otro."
+                )
 
         if "proveedor" in self.fields:
-            proveedor_actual_id = self.instance.proveedor_id if self.instance and self.instance.pk else None
+            proveedor_actual_id = (
+                self.instance.proveedor_id
+                if self.instance and self.instance.pk
+                else getattr(self.activo_base, "proveedor_id", None)
+            )
             filtro = Q(activo=True)
             if proveedor_actual_id:
                 filtro |= Q(pk=proveedor_actual_id)
@@ -199,9 +216,21 @@ class ActivoAdminForm(forms.ModelForm):
             self.fields["proveedor"].help_text = "Opcional. En altas solo se muestran proveedores activos."
 
         if "factura_compra" in self.fields:
-            factura_actual_id = self.instance.factura_compra_id if self.instance and self.instance.pk else None
-            proveedor_id = self.data.get("proveedor") or getattr(self.instance, "proveedor_id", None)
-            empresa_id = self.data.get("empresa") or getattr(self.instance, "empresa_id", None)
+            factura_actual_id = (
+                self.instance.factura_compra_id
+                if self.instance and self.instance.pk
+                else getattr(self.activo_base, "factura_compra_id", None)
+            )
+            proveedor_id = (
+                self.data.get("proveedor")
+                or getattr(self.instance, "proveedor_id", None)
+                or getattr(self.activo_base, "proveedor_id", None)
+            )
+            empresa_id = (
+                self.data.get("empresa")
+                or getattr(self.instance, "empresa_id", None)
+                or getattr(self.activo_base, "empresa_id", None)
+            )
             filtro_factura = Q(activa=True)
             if factura_actual_id:
                 filtro_factura |= Q(pk=factura_actual_id)
@@ -218,6 +247,8 @@ class ActivoAdminForm(forms.ModelForm):
             self.fields.pop("activo", None)
 
         tipo_id = self.data.get("tipo_activo") if self.is_bound else None
+        if bloquear_tipo and self.activo_base:
+            tipo_id = self.activo_base.tipo_activo_id
         if not str(tipo_id or "").isdigit() and self.instance and self.instance.tipo_activo_id:
             tipo_id = self.instance.tipo_activo_id
         if str(tipo_id or "").isdigit():
@@ -240,9 +271,10 @@ class ActivoAdminForm(forms.ModelForm):
         return fecha
 
     def _valor_inicial(self, atributo):
-        if not self.instance or not self.instance.pk:
+        activo_origen = self.instance if self.instance and self.instance.pk else self.activo_base
+        if not activo_origen:
             return None
-        valor = self.instance.valores_atributos.filter(atributo=atributo, vigente=True).first()
+        valor = activo_origen.valores_atributos.filter(atributo=atributo, vigente=True).first()
         if not valor:
             return None
         if atributo.tipo_dato == AtributoActivo.TipoDato.TEXTO_PROTEGIDO:
@@ -250,9 +282,10 @@ class ActivoAdminForm(forms.ModelForm):
         return valor.valor_opcion_id if atributo.tipo_dato == AtributoActivo.TipoDato.LISTA else valor.valor
 
     def _tiene_valor_protegido(self, atributo):
-        if not self.instance or not self.instance.pk:
+        activo_origen = self.instance if self.instance and self.instance.pk else self.activo_base
+        if not activo_origen:
             return False
-        return self.instance.valores_atributos.filter(
+        return activo_origen.valores_atributos.filter(
             atributo=atributo,
             vigente=True,
             valor_texto__gt="",
@@ -407,13 +440,21 @@ class ActivoAdminForm(forms.ModelForm):
             cleaned_data["codigo_sap"] = None
 
         proveedor = cleaned_data.get("proveedor")
-        proveedor_actual_id = self.instance.proveedor_id if self.instance and self.instance.pk else None
+        proveedor_actual_id = (
+            self.instance.proveedor_id
+            if self.instance and self.instance.pk
+            else getattr(self.activo_base, "proveedor_id", None)
+        )
         if proveedor and not proveedor.activo and proveedor.pk != proveedor_actual_id:
             self.add_error("proveedor", "El proveedor seleccionado esta inactivo.")
 
         factura = cleaned_data.get("factura_compra")
         empresa = cleaned_data.get("empresa")
-        factura_actual_id = self.instance.factura_compra_id if self.instance and self.instance.pk else None
+        factura_actual_id = (
+            self.instance.factura_compra_id
+            if self.instance and self.instance.pk
+            else getattr(self.activo_base, "factura_compra_id", None)
+        )
         if factura:
             if not factura.activa and factura.pk != factura_actual_id:
                 self.add_error("factura_compra", "La factura seleccionada esta archivada.")

@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db import transaction
 from django.db.models import Case, Count, F, IntegerField, Prefetch, Q, Value, When
+from django.forms.models import model_to_dict
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse, QueryDict
 from django.urls import reverse
 from django.utils import timezone
@@ -524,6 +525,8 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
     context_object_name = "activo"
     edit_param_name = "editar"
     edit_pk_field_name = "activo_id"
+    copy_param_name = "basado_en"
+    copy_pk_field_name = "activo_base_id"
 
     def _get_activo_en_edicion(self):
         raw_pk = (
@@ -541,10 +544,43 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
             .first()
         )
 
+    def _get_activo_base(self):
+        if getattr(self, "activo_en_edicion", None):
+            return None
+        raw_pk = (
+            self.request.POST.get(self.copy_pk_field_name)
+            or self.request.GET.get(self.copy_param_name)
+            or ""
+        ).strip()
+        if not raw_pk.isdigit():
+            return None
+        return (
+            Activo.objects.select_related(
+                "tipo_activo", "estado_activo", "empresa", "proveedor", "factura_compra"
+            )
+            .prefetch_related("valores_atributos__atributo", "valores_atributos__valor_opcion")
+            .filter(pk=raw_pk)
+            .first()
+        )
+
     def dispatch(self, request, *args, **kwargs):
         self.activo_en_edicion = self._get_activo_en_edicion()
+        self.activo_base = self._get_activo_base()
         self.object = None
         return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        if not self.activo_en_edicion and not self.activo_base and request.GET.get("modo") != "cero":
+            return render(
+                request,
+                "activos/nuevo_opcion.html",
+                {
+                    "crear_desde_cero_url": f"{reverse('activos:nuevo')}?modo=cero",
+                    "seleccionar_base_url": reverse("activos:seleccionar-base"),
+                    "volver_url": reverse("activos:lista"),
+                },
+            )
+        return super().get(request, *args, **kwargs)
 
     def _get_activo_contextual(self):
         return self.object or getattr(self, "activo_en_edicion", None)
@@ -556,6 +592,16 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
         activo_en_edicion = getattr(self, "activo_en_edicion", None)
         if activo_en_edicion and kwargs.get("instance") is None:
             kwargs["instance"] = activo_en_edicion
+        activo_base = getattr(self, "activo_base", None)
+        if activo_base and not activo_en_edicion:
+            campos = [
+                campo.name
+                for campo in Activo._meta.fields
+                if campo.editable and campo.name not in {"activo"}
+            ]
+            kwargs["initial"] = model_to_dict(activo_base, fields=campos)
+            kwargs["activo_base"] = activo_base
+            kwargs["bloquear_tipo"] = True
         return kwargs
 
     def get_formset(self, data=None, files=None):
@@ -579,11 +625,20 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
         context.setdefault("formset", self.get_formset())
         activo_contextual = self._get_activo_contextual()
         context["es_edicion"] = bool(activo_contextual)
-        context["titulo_formulario"] = "Editar activo" if activo_contextual else "Nuevo activo"
+        activo_base = getattr(self, "activo_base", None)
+        context["es_copia"] = bool(activo_base and not activo_contextual)
+        context["activo_base"] = activo_base
+        context["titulo_formulario"] = (
+            "Editar activo" if activo_contextual else "Nuevo activo basado en otro" if activo_base else "Nuevo activo"
+        )
         context["subtitulo_formulario"] = (
             "Actualiza la ficha del equipo y, si quieres, sus imagenes asociadas."
             if activo_contextual
-            else "Registra la ficha del equipo y, si quieres, sus imagenes iniciales."
+            else (
+                f"Revisa los datos copiados de {activo_base.codigo}. Las fotos no se copiaran."
+                if activo_base
+                else "Registra la ficha del equipo y, si quieres, sus imagenes iniciales."
+            )
         )
         context["texto_submit"] = "Guardar cambios" if activo_contextual else "Guardar activo"
         context["etiqueta_codigo"] = "Codigo automatico"
@@ -595,10 +650,16 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
         context["form_action_url"] = (
             f"{reverse('activos:nuevo')}?{self.edit_param_name}={activo_contextual.pk}"
             if activo_contextual
-            else reverse("activos:nuevo")
+            else (
+                f"{reverse('activos:nuevo')}?{self.copy_param_name}={activo_base.pk}"
+                if activo_base
+                else reverse("activos:nuevo")
+            )
         )
         context["activo_edicion_id"] = activo_contextual.pk if activo_contextual else None
         context["activo_edicion_tipo_id"] = activo_contextual.tipo_activo_id if activo_contextual else None
+        context["borrador_activo_habilitado"] = not activo_contextual and not activo_base
+        context["restaurar_borrador_activo"] = not activo_contextual and not activo_base and self.request.method == "GET"
         return context
 
     def post(self, request, *args, **kwargs):
@@ -630,6 +691,24 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
         }
         with transaction.atomic():
             self.object = form.save()
+            # Los valores protegidos no se muestran ni se descifran. Al copiar,
+            # se replica directamente el valor cifrado antes de procesar el
+            # resto de atributos; si el usuario escribio uno nuevo, el servicio
+            # habitual lo reemplazara a continuacion.
+            if not es_edicion and self.activo_base:
+                for valor in self.activo_base.valores_atributos.filter(
+                    vigente=True,
+                    atributo__tipo_dato=AtributoActivo.TipoDato.TEXTO_PROTEGIDO,
+                ):
+                    ValorAtributoActivo.objects.create(
+                        activo=self.object,
+                        atributo=valor.atributo,
+                        tipo_activo_origen=self.object.tipo_activo,
+                        valor_texto=valor.valor_texto,
+                        vigente=True,
+                        created_by=self.request.user,
+                        updated_by=self.request.user,
+                    )
             guardar_valores_atributos(
                 self.object,
                 form.valores_atributos_limpios(),
@@ -673,6 +752,28 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
 
     def get_success_url(self):
         return reverse("activos:detalle", args=[self.object.pk])
+
+
+class ActivoBaseSelectView(LoginRequiredMixin, ActivoFilterMixin, ListView):
+    model = Activo
+    template_name = "activos/seleccionar_base.html"
+    context_object_name = "activos"
+    paginate_by = 25
+    FILTER_SESSION_KEY = "activos_filtros_copia"
+    persist_filter_state = False
+
+    def get_queryset(self):
+        return self.get_filtered_queryset()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(self.get_filter_context())
+        context["volver_url"] = reverse("activos:nuevo")
+        pagination_params = self.request.GET.copy()
+        pagination_params.pop("page", None)
+        encoded_params = pagination_params.urlencode()
+        context["pagination_prefix"] = f"{encoded_params}&" if encoded_params else ""
+        return context
 
 
 class TipoActivoAtributosJsonView(LoginRequiredMixin, View):

@@ -353,8 +353,14 @@ class AsignacionCreateView(LoginRequiredMixin, CreateView):
                 self.request,
                 "La asignación fue creada correctamente, pero el acta no pudo generarse todavía.",
             )
+            return HttpResponseRedirect(self.get_success_url())
 
-        return HttpResponseRedirect(self.get_success_url())
+        return HttpResponseRedirect(
+            reverse(
+                "actas:descargar_por_asignacion",
+                args=[self.object.pk, "ENTREGA"],
+            )
+        )
 
 
 class AsignacionDevolucionView(LoginRequiredMixin, UpdateView):
