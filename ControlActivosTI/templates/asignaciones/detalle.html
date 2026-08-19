@@ -11,7 +11,7 @@
         </a>
 
         <div class="flex flex-wrap gap-2">
-            {% if asignacion.acta_entrega %}
+            {% if asignacion.acta_entrega and perms.actas.view_actaentrega and perms.asignaciones.view_asignacion %}
                 <a href="{% url 'actas:descargar_por_asignacion' asignacion.pk 'ENTREGA' %}" data-confirmar-acta data-tipo-acta="entrega" class="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700">
                     Acta entrega
                 </a>

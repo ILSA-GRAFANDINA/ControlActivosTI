@@ -300,7 +300,8 @@ class AsignacionCreateFormTests(TestCase):
                     "actas:descargar_por_asignacion",
                     args=[asignacion.pk, "ENTREGA"],
                 )
-                self.assertRedirects(response, descarga_url, fetch_redirect_response=False)
+                detalle_url = reverse("asignaciones:detalle", args=[asignacion.pk])
+                self.assertRedirects(response, detalle_url)
 
                 descarga = self.client.get(descarga_url)
 

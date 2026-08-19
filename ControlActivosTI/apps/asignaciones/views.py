@@ -355,12 +355,7 @@ class AsignacionCreateView(LoginRequiredMixin, CreateView):
             )
             return HttpResponseRedirect(self.get_success_url())
 
-        return HttpResponseRedirect(
-            reverse(
-                "actas:descargar_por_asignacion",
-                args=[self.object.pk, "ENTREGA"],
-            )
-        )
+        return HttpResponseRedirect(reverse("asignaciones:detalle", args=[self.object.pk]))
 
 
 class AsignacionDevolucionView(LoginRequiredMixin, UpdateView):
