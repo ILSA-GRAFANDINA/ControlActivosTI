@@ -85,7 +85,7 @@ class ActivoCopyFlowTests(TestCase):
             "fotos-TOTAL_FORMS": "2",
             "fotos-INITIAL_FORMS": "0",
             "fotos-MIN_NUM_FORMS": "0",
-            "fotos-MAX_NUM_FORMS": "5",
+            "fotos-MAX_NUM_FORMS": "8",
         }
 
     def test_nuevo_primero_muestra_las_dos_formas_de_creacion(self):

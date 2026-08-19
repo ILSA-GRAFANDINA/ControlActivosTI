@@ -30,7 +30,7 @@ FILE_INPUT_CLASS = (
     "file:bg-cyan-600 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white "
     "hover:file:bg-cyan-700"
 )
-FOTO_ACTIVO_MAX_FORMS = 5
+FOTO_ACTIVO_MAX_FORMS = 8
 FOTO_ACTIVO_INITIAL_FORMS = 2
 FOTO_ACTIVO_ALLOWED_EXTENSIONS = ("jpg", "jpeg", "png", "webp")
 
@@ -596,5 +596,6 @@ FotoActivoCreateFormSet = modelformset_factory(
     fields=("imagen", "descripcion", "orden"),
     extra=FOTO_ACTIVO_INITIAL_FORMS,
     max_num=FOTO_ACTIVO_MAX_FORMS,
+    validate_max=True,
     can_delete=False,
 )

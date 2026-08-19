@@ -34,6 +34,7 @@ from openpyxl import load_workbook
 from PIL import Image
 
 from apps.activos.admin import ActivoAdminForm, EventoActivoAdminForm, FotoActivoInlineForm
+from apps.activos.forms import FotoActivoCreateFormSet
 from apps.activos.models import Activo, EventoActivo, FotoActivo, ValorAtributoActivo
 from apps.notificaciones.models import Notificacion
 
@@ -297,6 +298,21 @@ class FotoActivoInlineFormTests(TestCase):
 
         self.assertTrue(form.is_valid(), form.errors)
         self.assertEqual(form.cleaned_data["imagen"], foto.imagen)
+
+    def test_formset_rechaza_mas_de_ocho_fotos(self):
+        formset = FotoActivoCreateFormSet(
+            data={
+                "fotos-TOTAL_FORMS": "9",
+                "fotos-INITIAL_FORMS": "0",
+                "fotos-MIN_NUM_FORMS": "0",
+                "fotos-MAX_NUM_FORMS": "8",
+            },
+            queryset=FotoActivo.objects.none(),
+            prefix="fotos",
+        )
+
+        self.assertFalse(formset.is_valid())
+        self.assertTrue(formset.non_form_errors())
 
 
 class FotoActivoOptimizadaTests(TestCase):
@@ -1285,7 +1301,7 @@ class ActivoCreateViewTests(TestCase):
                 "fotos-TOTAL_FORMS": "5",
                 "fotos-INITIAL_FORMS": "0",
                 "fotos-MIN_NUM_FORMS": "0",
-                "fotos-MAX_NUM_FORMS": "5",
+                "fotos-MAX_NUM_FORMS": "8",
                 "fotos-0-imagen": make_test_image_file("foto-frontal.jpg"),
                 "fotos-0-descripcion": "Foto frontal",
                 "fotos-0-orden": "1",
@@ -1340,7 +1356,7 @@ class ActivoCreateViewTests(TestCase):
                 "fotos-TOTAL_FORMS": "2",
                 "fotos-INITIAL_FORMS": "0",
                 "fotos-MIN_NUM_FORMS": "0",
-                "fotos-MAX_NUM_FORMS": "5",
+                "fotos-MAX_NUM_FORMS": "8",
             }
         )
 
@@ -1394,7 +1410,7 @@ class ActivoCreateViewTests(TestCase):
                 "fotos-TOTAL_FORMS": "2",
                 "fotos-INITIAL_FORMS": "0",
                 "fotos-MIN_NUM_FORMS": "0",
-                "fotos-MAX_NUM_FORMS": "5",
+                "fotos-MAX_NUM_FORMS": "8",
             }
         )
 
@@ -1470,7 +1486,7 @@ class ActivoCreateViewTests(TestCase):
                 "fotos-TOTAL_FORMS": "3",
                 "fotos-INITIAL_FORMS": "1",
                 "fotos-MIN_NUM_FORMS": "0",
-                "fotos-MAX_NUM_FORMS": "5",
+                "fotos-MAX_NUM_FORMS": "8",
                 "fotos-0-id": str(activo.fotos.first().pk),
                 "fotos-0-imagen": "",
                 "fotos-0-descripcion": "Foto inicial actualizada",

@@ -686,8 +686,8 @@ class FotoActivo(models.Model):
         if self.pk:
             fotos_existentes = fotos_existentes.exclude(pk=self.pk)
 
-        if fotos_existentes.count() >= 5:
-            raise ValidationError("Un activo no puede tener más de 5 fotos.")
+        if fotos_existentes.count() >= 8:
+            raise ValidationError("Un activo no puede tener más de 8 fotos.")
 
         if self.orden is not None:
             if fotos_existentes.filter(orden=self.orden).exists():

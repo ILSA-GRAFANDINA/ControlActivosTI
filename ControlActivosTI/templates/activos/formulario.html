@@ -224,19 +224,34 @@
                     2 visibles por defecto
                 </span>
                 <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                    Maximo 5 fotos
+                    Maximo 8 fotos
                 </span>
             </div>
         </div>
 
         {{ formset.management_form }}
 
+        <div
+            class="mt-6 rounded-2xl border-2 border-dashed border-cyan-200 bg-cyan-50/50 px-5 py-6 text-center transition"
+            data-photo-dropzone
+        >
+            <input id="photo-bulk-input" type="file" accept="image/*,.jpg,.jpeg,.png,.webp" multiple class="sr-only" data-photo-bulk-input>
+            <label for="photo-bulk-input" class="inline-flex cursor-pointer items-center justify-center rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700">
+                Subir imagen/imagenes
+            </label>
+            <p class="mt-3 text-sm text-slate-600" data-photo-dropzone-text>Tambien puedes arrastrar las fotos aqui.</p>
+        </div>
+
         <div class="mt-6 grid gap-4 lg:grid-cols-2" data-photo-forms>
             {% for foto_form in formset %}
-                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-photo-card>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-photo-card draggable="true">
                     {{ foto_form.id }}
-                    <div class="flex items-center justify-between gap-3">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
                         <p class="text-sm font-semibold text-slate-900" data-photo-title>Foto {{ forloop.counter }}</p>
+                        <div class="flex items-center gap-2">
+                            <button type="button" class="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-100" data-photo-move="up">Subir</button>
+                            <button type="button" class="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-100" data-photo-move="down">Bajar</button>
+                        </div>
                         <span class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500" data-photo-status-badge>
                             <span data-photo-status-icon aria-hidden="true">○</span>
                             <span data-photo-status-text>Sin imagen</span>
@@ -253,8 +268,7 @@
                             {{ foto_form.descripcion }}
                             {% if foto_form.descripcion.errors %}<p class="mt-2 text-sm text-red-600">{{ foto_form.descripcion.errors|join:", " }}</p>{% endif %}
                         </div>
-                        <div>
-                            <label class="mb-2 block text-sm font-semibold text-slate-700">Orden</label>
+                        <div class="hidden">
                             {{ foto_form.orden }}
                             {% if foto_form.orden.errors %}<p class="mt-2 text-sm text-red-600">{{ foto_form.orden.errors|join:", " }}</p>{% endif %}
                         </div>
@@ -264,10 +278,14 @@
         </div>
 
         <template id="photo-empty-form-template">
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-photo-card>
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-photo-card draggable="true">
                 {{ formset.empty_form.id }}
-                <div class="flex items-center justify-between gap-3">
+                <div class="flex flex-wrap items-center justify-between gap-3">
                     <p class="text-sm font-semibold text-slate-900" data-photo-title>Foto __index__</p>
+                    <div class="flex items-center gap-2">
+                        <button type="button" class="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-100" data-photo-move="up">Subir</button>
+                        <button type="button" class="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-100" data-photo-move="down">Bajar</button>
+                    </div>
                     <span class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500" data-photo-status-badge>
                         <span data-photo-status-icon aria-hidden="true">○</span>
                         <span data-photo-status-text>Sin imagen</span>
@@ -282,8 +300,7 @@
                         <label class="mb-2 block text-sm font-semibold text-slate-700" for="{{ formset.empty_form.descripcion.id_for_label }}">Descripcion</label>
                         {{ formset.empty_form.descripcion }}
                     </div>
-                    <div>
-                        <label class="mb-2 block text-sm font-semibold text-slate-700" for="{{ formset.empty_form.orden.id_for_label }}">Orden</label>
+                    <div class="hidden">
                         {{ formset.empty_form.orden }}
                     </div>
                 </div>
@@ -362,7 +379,7 @@
             return;
         }
 
-        const maxForms = 5;
+        const maxForms = 8;
         const selectTipo = form.querySelector("#id_tipo_activo");
         const techFields = Array.from(form.querySelectorAll("[data-activo-tech-field]"));
         const dynamicSection = form.querySelector("[data-dynamic-attributes]");
@@ -372,6 +389,9 @@
         const addPhotoButton = form.querySelector("[data-add-photo-form]");
         const photoTemplate = document.getElementById("photo-empty-form-template");
         const totalFormsInput = form.querySelector("#id_fotos-TOTAL_FORMS");
+        const photoDropzone = form.querySelector("[data-photo-dropzone]");
+        const photoBulkInput = form.querySelector("[data-photo-bulk-input]");
+        const photoDropzoneText = form.querySelector("[data-photo-dropzone-text]");
         const changeTypeDetails = form.querySelector("[data-change-type-details]");
         const changeTypeToggle = form.querySelector("[data-change-type-toggle]");
         const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/jpg"];
@@ -640,36 +660,86 @@
             }
         };
 
+        const isAllowedPhotoFile = (file) => {
+            const mimeType = (file?.type || "").toLowerCase();
+            const fileName = (file?.name || "").toLowerCase();
+            const extensionOk = [".jpg", ".jpeg", ".png", ".webp", ".gif"].some((ext) => fileName.endsWith(ext));
+            return allowedTypes.includes(mimeType) || extensionOk;
+        };
+
+        const setPhotoInputFile = (input, file) => {
+            if (!input || !file || !window.DataTransfer) return false;
+            const transfer = new DataTransfer();
+            transfer.items.add(file);
+            input.files = transfer.files;
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+            return true;
+        };
+
+        const cardHasExistingPhoto = (card) => Boolean(card.querySelector('input[type="hidden"][name$="-id"]')?.value);
+        const cardHasSelectedPhoto = (card) => Boolean(card.querySelector('input[type="file"]')?.files?.length);
+        let draggedPhotoCard = null;
+
         const wirePhotoCard = (card) => {
             const input = card.querySelector('input[type="file"]');
-            if (!input || input.dataset.wired === "true") {
-                return;
+            if (input && input.dataset.wired !== "true") {
+                input.dataset.wired = "true";
+                input.accept = "image/*,.jpg,.jpeg,.png,.webp";
+
+                const updateStatus = () => {
+                    const file = input.files && input.files[0];
+                    if (!file) {
+                        paintPhotoStatus(card, cardHasExistingPhoto(card) ? "ok" : "idle", cardHasExistingPhoto(card) ? "Imagen cargada" : "Sin imagen");
+                        return;
+                    }
+
+                    if (isAllowedPhotoFile(file)) {
+                        paintPhotoStatus(card, "ok", file.name || "Imagen lista");
+                        return;
+                    }
+
+                    input.value = "";
+                    paintPhotoStatus(card, "error", "Solo imagenes");
+                };
+
+                input.addEventListener("change", updateStatus);
+                updateStatus();
             }
 
-            input.dataset.wired = "true";
-            input.accept = "image/*,.jpg,.jpeg,.png,.webp";
-
-            const updateStatus = () => {
-                const file = input.files && input.files[0];
-                if (!file) {
-                    paintPhotoStatus(card, "idle", "Sin imagen");
-                    return;
-                }
-
-                const mimeType = (file.type || "").toLowerCase();
-                const fileName = (file.name || "").toLowerCase();
-                const extensionOk = [".jpg", ".jpeg", ".png", ".webp", ".gif"].some((ext) => fileName.endsWith(ext));
-                if (allowedTypes.includes(mimeType) || extensionOk) {
-                    paintPhotoStatus(card, "ok", "Imagen lista");
-                    return;
-                }
-
-                input.value = "";
-                paintPhotoStatus(card, "error", "Solo imagenes");
-            };
-
-            input.addEventListener("change", updateStatus);
-            updateStatus();
+            if (card.dataset.sortWired === "true") return;
+            card.dataset.sortWired = "true";
+            card.addEventListener("dragstart", (event) => {
+                draggedPhotoCard = card;
+                event.dataTransfer.effectAllowed = "move";
+                card.classList.add("opacity-60");
+            });
+            card.addEventListener("dragend", () => {
+                draggedPhotoCard = null;
+                card.classList.remove("opacity-60");
+            });
+            card.addEventListener("dragover", (event) => {
+                if (!draggedPhotoCard || draggedPhotoCard === card) return;
+                event.preventDefault();
+            });
+            card.addEventListener("drop", (event) => {
+                if (!draggedPhotoCard || draggedPhotoCard === card || !photoFormsContainer) return;
+                event.preventDefault();
+                const rect = card.getBoundingClientRect();
+                const insertAfter = event.clientY > rect.top + rect.height / 2;
+                photoFormsContainer.insertBefore(draggedPhotoCard, insertAfter ? card.nextSibling : card);
+                refreshPhotoCards();
+            });
+            card.querySelectorAll("[data-photo-move]").forEach((button) => {
+                button.addEventListener("click", () => {
+                    const direction = button.dataset.photoMove;
+                    if (direction === "up" && card.previousElementSibling) {
+                        photoFormsContainer.insertBefore(card, card.previousElementSibling);
+                    } else if (direction === "down" && card.nextElementSibling) {
+                        photoFormsContainer.insertBefore(card.nextElementSibling, card);
+                    }
+                    refreshPhotoCards();
+                });
+            });
         };
 
         const refreshPhotoCards = () => {
@@ -683,6 +753,19 @@
                 if (title) {
                     title.textContent = `Foto ${index + 1}`;
                 }
+
+                const orderInput = card.querySelector('[name$="-orden"]');
+                if (orderInput) {
+                    orderInput.value = String(index + 1);
+                }
+
+                card.querySelectorAll("[data-photo-move]").forEach((button) => {
+                    const disabled = (button.dataset.photoMove === "up" && index === 0)
+                        || (button.dataset.photoMove === "down" && index === cards.length - 1);
+                    button.disabled = disabled;
+                    button.classList.toggle("opacity-50", disabled);
+                    button.classList.toggle("cursor-not-allowed", disabled);
+                });
 
                 card.querySelectorAll("[name], [id], [for]").forEach((field) => {
                     const name = field.getAttribute("name");
@@ -731,11 +814,81 @@
             if (!card) return false;
             photoFormsContainer.appendChild(card);
             refreshPhotoCards();
-            return true;
+            return card;
         };
 
         if (addPhotoButton && photoTemplate && photoFormsContainer) {
             addPhotoButton.addEventListener("click", appendPhotoForm);
+        }
+
+        const availablePhotoCard = () => {
+            if (!photoFormsContainer) return null;
+            return Array.from(photoFormsContainer.querySelectorAll("[data-photo-card]"))
+                .find((card) => !cardHasExistingPhoto(card) && !cardHasSelectedPhoto(card));
+        };
+
+        const handleBulkPhotoFiles = (fileList) => {
+            const files = Array.from(fileList || []);
+            if (!files.length) return;
+            let added = 0;
+            let skipped = 0;
+
+            files.forEach((file) => {
+                if (!isAllowedPhotoFile(file)) {
+                    skipped += 1;
+                    return;
+                }
+
+                let card = availablePhotoCard();
+                if (!card) {
+                    card = appendPhotoForm();
+                }
+                if (!card) {
+                    skipped += 1;
+                    return;
+                }
+
+                const input = card.querySelector('input[type="file"]');
+                if (setPhotoInputFile(input, file)) {
+                    added += 1;
+                } else {
+                    skipped += 1;
+                }
+            });
+
+            refreshPhotoCards();
+            if (photoDropzoneText) {
+                if (skipped) {
+                    photoDropzoneText.textContent = `${added} imagen(es) listas. ${skipped} no se agregaron por formato o limite.`;
+                } else {
+                    photoDropzoneText.textContent = `${added} imagen(es) listas para guardar.`;
+                }
+            }
+            if (photoBulkInput) {
+                photoBulkInput.value = "";
+            }
+        };
+
+        if (photoBulkInput) {
+            photoBulkInput.addEventListener("change", () => handleBulkPhotoFiles(photoBulkInput.files));
+        }
+
+        if (photoDropzone) {
+            ["dragenter", "dragover"].forEach((eventName) => {
+                photoDropzone.addEventListener(eventName, (event) => {
+                    event.preventDefault();
+                    photoDropzone.classList.add("border-cyan-500", "bg-cyan-100");
+                });
+            });
+            ["dragleave", "drop"].forEach((eventName) => {
+                photoDropzone.addEventListener(eventName, (event) => {
+                    event.preventDefault();
+                    photoDropzone.classList.remove("border-cyan-500", "bg-cyan-100");
+                });
+            });
+            photoDropzone.addEventListener("drop", (event) => {
+                handleBulkPhotoFiles(event.dataTransfer.files);
+            });
         }
 
         const isDraftField = (field) => {
@@ -865,6 +1018,7 @@
         }
 
         refreshPhotoCards();
+        form.addEventListener("submit", refreshPhotoCards);
         if (draftEnabled) {
             form.addEventListener("input", scheduleDraftSave);
             form.addEventListener("change", scheduleDraftSave);
