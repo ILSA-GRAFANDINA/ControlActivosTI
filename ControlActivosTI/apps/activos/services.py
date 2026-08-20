@@ -20,6 +20,8 @@ EXPORT_HEADERS = [
     "Valor de Compra",
     "Estado del activo",
     "Activo en inventario",
+    "Modalidad de tenencia",
+    "Proveedor propietario",
     "Observaciones",
     "Creado el",
     "Actualizado el",
@@ -46,6 +48,8 @@ def _activo_to_row(activo):
         activo.valor,
         activo.estado_activo.nombre if activo.estado_activo_id else "",
         "Si" if activo.activo else "No",
+        activo.get_modalidad_tenencia_display(),
+        str(activo.proveedor_propietario) if activo.proveedor_propietario_id else "",
         activo.observaciones,
         activo.created_at.replace(tzinfo=None) if activo.created_at else None,
         activo.updated_at.replace(tzinfo=None) if activo.updated_at else None,
@@ -102,8 +106,8 @@ def build_activos_export_workbook(activos):
     for row in worksheet.iter_rows(min_row=2, max_row=worksheet.max_row):
         row[12].number_format = "dd/mm/yyyy"
         row[13].number_format = '#,##0.00'
-        row[17].number_format = "dd/mm/yyyy hh:mm"
-        row[18].number_format = "dd/mm/yyyy hh:mm"
+        row[19].number_format = "dd/mm/yyyy hh:mm"
+        row[20].number_format = "dd/mm/yyyy hh:mm"
 
     for index, header in enumerate(encabezados, start=1):
         max_length = len(header)

@@ -101,6 +101,17 @@
                 {% if form.factura_compra.help_text %}<p class="mt-2 text-xs text-slate-500">{{ form.factura_compra.help_text }}</p>{% endif %}
                 {% if form.factura_compra.errors %}<p class="mt-2 text-sm text-red-600">{{ form.factura_compra.errors|join:", " }}</p>{% endif %}
             </div>
+            <div>
+                <label class="mb-2 block text-sm font-semibold text-slate-700">Modalidad de tenencia</label>
+                {{ form.modalidad_tenencia }}
+                {% if form.modalidad_tenencia.errors %}<p class="mt-2 text-sm text-red-600">{{ form.modalidad_tenencia.errors|join:", " }}</p>{% endif %}
+            </div>
+            <div>
+                <label class="mb-2 block text-sm font-semibold text-slate-700">Proveedor propietario</label>
+                {{ form.proveedor_propietario }}
+                {% if form.proveedor_propietario.help_text %}<p class="mt-2 text-xs text-slate-500">{{ form.proveedor_propietario.help_text }}</p>{% endif %}
+                {% if form.proveedor_propietario.errors %}<p class="mt-2 text-sm text-red-600">{{ form.proveedor_propietario.errors|join:", " }}</p>{% endif %}
+            </div>
             <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                 <label class="flex cursor-pointer items-start gap-3 text-sm font-semibold text-slate-700" for="{{ form.activo.id_for_label }}">
                     {{ form.activo }}
@@ -264,6 +275,16 @@
                         </span>
                     </div>
                     <div class="mt-4 space-y-4">
+                        {% if foto_form.instance.pk and foto_form.instance.imagen %}
+                        <div class="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                            <a href="{{ foto_form.instance.imagen_original_url }}" target="_blank" rel="noopener" class="block">
+                                <img src="{{ foto_form.instance.imagen_thumb_url }}" alt="Imagen actual de la foto {{ forloop.counter }}" class="h-36 w-full object-cover">
+                            </a>
+                            <div class="border-t border-slate-200 px-3 py-2 text-xs text-slate-500">
+                                Imagen actual
+                            </div>
+                        </div>
+                        {% endif %}
                         <div>
                             <label class="mb-2 block text-sm font-semibold text-slate-700">Imagen</label>
                             {{ foto_form.imagen }}

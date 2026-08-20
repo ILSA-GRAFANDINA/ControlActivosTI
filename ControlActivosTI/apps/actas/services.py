@@ -129,6 +129,20 @@ def _valor_excel(valor):
         return _texto(valor, default="")
 
 
+def _observaciones_acta_activo(activo, observaciones_base=""):
+    partes = []
+    titularidad = getattr(activo, "observacion_titularidad_acta", "")
+    if titularidad:
+        partes.append(titularidad)
+        observaciones_activo = _texto(getattr(activo, "observaciones", ""), default="")
+        if observaciones_activo:
+            partes.append(f"Observaciones: {observaciones_activo}")
+    observaciones_base = _texto(observaciones_base, default="")
+    if observaciones_base:
+        partes.append(observaciones_base)
+    return "\n".join(partes) or None
+
+
 def _buscar_fila_por_texto(ws, texto):
     texto = texto.lower()
     for row in ws.iter_rows():
@@ -450,6 +464,7 @@ def construir_hoja_acta_entrega(asignacion):
         asignacion.detalles.select_related(
             "activo__tipo_activo",
             "activo__estado_activo",
+            "activo__proveedor_propietario",
         ).prefetch_related(
             "activo__valores_atributos__atributo",
             "activo__valores_atributos__valor_opcion",
@@ -476,7 +491,7 @@ def construir_hoja_acta_entrega(asignacion):
         ws.cell(indice, 6).number_format = '$#,##0.00'
         ws.cell(indice, 7).value = None
         ws.cell(indice, 8).value = detalle.caracteristicas_acta if detalle.caracteristicas_acta != "-" else ""
-        ws.cell(indice, 9).value = None
+        ws.cell(indice, 9).value = _observaciones_acta_activo(detalle.activo)
         _ajustar_alto_fila_activo(ws, indice)
 
     _llenar_firmas_entrega(ws, asignacion)
@@ -522,6 +537,7 @@ def construir_filas_recepcion(devolucion):
     detalles = devolucion.detalles.select_related(
         "detalle_asignacion__activo__tipo_activo",
         "detalle_asignacion__activo__estado_activo",
+        "detalle_asignacion__activo__proveedor_propietario",
         "devolucion",
     ).prefetch_related(
         "detalle_asignacion__activo__valores_atributos__atributo",
@@ -534,7 +550,10 @@ def construir_filas_recepcion(devolucion):
             "marca": _texto(item.detalle_asignacion.activo.marca, default=""),
             "valor": _valor_excel(item.detalle_asignacion.activo.valor),
             "caracteristicas": _caracteristicas_recepcion(item.detalle_asignacion),
-            "observaciones": _observaciones_recepcion(item),
+            "observaciones": _observaciones_acta_activo(
+                item.detalle_asignacion.activo,
+                _observaciones_recepcion(item),
+            ),
         }
         for item in detalles
     ]

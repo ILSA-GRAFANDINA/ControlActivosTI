@@ -10,6 +10,7 @@ from django.urls import reverse
 from apps.activos.models import Activo
 from apps.catalogos.models import EstadoActivo, TipoActivo
 from apps.notificaciones.models import Notificacion
+from apps.proveedores.models import Proveedor
 
 from apps.depreciacion.models import (
     ConfiguracionAlertasDepreciacion,
@@ -34,6 +35,13 @@ class DepreciacionAutomaticaTests(TestCase):
         )
         self.baja = EstadoActivo.objects.create(
             nombre="Dado de baja", permite_asignacion=False
+        )
+        self.proveedor = Proveedor.objects.create(
+            tipo_proveedor=Proveedor.TipoProveedor.EMPRESA,
+            tipo_identificacion=Proveedor.TipoIdentificacion.EXTRANJERA,
+            identificacion="RENT-DEP-001",
+            razon_social="Proveedor Renting",
+            pais="Ecuador",
         )
 
     def activo(self, **kwargs):
@@ -101,6 +109,23 @@ class DepreciacionAutomaticaTests(TestCase):
         self.assertEqual(resultado.estado, "No depreciable")
         self.assertEqual(resultado.depreciacion_acumulada, 0)
         self.assertIsNone(resultado.proxima_alerta)
+
+    def test_activo_arrendado_no_se_incluye_en_depreciacion(self):
+        arrendado = self.activo(
+            modalidad_tenencia=Activo.ModalidadTenencia.ARRENDADO,
+            proveedor_propietario=self.proveedor,
+        )
+        propio = self.activo(serie="DEP-PROPIO")
+
+        resultado = DepreciationService.calcular(arrendado, date(2025, 1, 31))
+        self.assertEqual(resultado.estado, "No depreciable")
+        self.assertFalse(resultado.configurado)
+
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse("depreciacion:reporte"))
+
+        self.assertContains(response, propio.codigo)
+        self.assertNotContains(response, arrendado.codigo)
 
     def test_detalle_muestra_depreciacion_sin_configuracion_manual(self):
         activo = self.activo()

@@ -2,6 +2,7 @@ from datetime import date
 from io import BytesIO
 from pathlib import Path
 import shutil
+import tempfile
 import uuid
 import xml.etree.ElementTree as ET
 from zipfile import ZipFile
@@ -33,12 +34,11 @@ from apps.asignaciones.models import (
 )
 from apps.catalogos.models import Area, Cargo, CentroCosto, Empresa, EstadoActivo, TipoActivo, Ubicacion
 from apps.colaboradores.models import Colaborador
+from apps.proveedores.models import Proveedor
 
 
 def make_test_media_root():
-    media_root = Path.cwd() / "test-media" / uuid.uuid4().hex
-    media_root.mkdir(parents=True, exist_ok=True)
-    return media_root
+    return Path(tempfile.mkdtemp(prefix=f"{uuid.uuid4().hex}-"))
 
 
 class ActaEntregaExcelTests(TestCase):
@@ -67,6 +67,13 @@ class ActaEntregaExcelTests(TestCase):
         self.estado_disponible = EstadoActivo.objects.create(
             nombre="Disponible",
             permite_asignacion=True,
+        )
+        self.proveedor_propietario = Proveedor.objects.create(
+            tipo_proveedor=Proveedor.TipoProveedor.EMPRESA,
+            tipo_identificacion=Proveedor.TipoIdentificacion.EXTRANJERA,
+            identificacion="RENT-ACTA-001",
+            razon_social="Proveedor XYZ",
+            pais="Ecuador",
         )
         EstadoActivo.objects.create(nombre="Asignado", permite_asignacion=False)
         self.colaborador = Colaborador.objects.create(
@@ -104,6 +111,12 @@ class ActaEntregaExcelTests(TestCase):
             sistema_operativo=kwargs.get("sistema_operativo", "Windows 11"),
             valor=kwargs.get("valor", "1200.50"),
             estado_activo=self.estado_disponible,
+            observaciones=kwargs.get("observaciones", ""),
+            modalidad_tenencia=kwargs.get(
+                "modalidad_tenencia",
+                Activo.ModalidadTenencia.PROPIO,
+            ),
+            proveedor_propietario=kwargs.get("proveedor_propietario"),
         )
         return AsignacionDetalle.objects.create(
             asignacion=self.asignacion,
@@ -166,6 +179,25 @@ class ActaEntregaExcelTests(TestCase):
                 ws.row_dimensions[fila].height,
                 plantilla.row_dimensions[fila].height,
             )
+
+    def test_delivery_acta_for_rented_asset_adds_titularity_observation(self):
+        self.crear_detalle(
+            modalidad_tenencia=Activo.ModalidadTenencia.ARRENDADO,
+            proveedor_propietario=self.proveedor_propietario,
+            observaciones="Impresora incluye mantenimiento y suministro de toner.",
+        )
+
+        _acta, workbook = self.cargar_workbook_generado()
+        observaciones = workbook.active["I14"].value
+
+        self.assertIn(
+            "Titularidad: Activo arrendado, propiedad de Proveedor XYZ.",
+            observaciones,
+        )
+        self.assertIn(
+            "Observaciones: Impresora incluye mantenimiento y suministro de toner.",
+            observaciones,
+        )
 
     def test_expands_asset_rows_when_assignment_has_more_than_template_capacity(self):
         for orden in range(1, 8):
@@ -302,6 +334,27 @@ class ActaRecepcionExcelTests(ActaEntregaExcelTests):
         xfs = list(ET.fromstring(estilos).find(f"{xmlns}cellXfs"))
         estilo_e22 = xfs[int(celda_e22.get("s"))]
         self.assertIn(b"xfComplement", ET.tostring(estilo_e22))
+
+    def test_reception_acta_for_rented_asset_keeps_return_observations(self):
+        detalle = self.crear_detalle(
+            modalidad_tenencia=Activo.ModalidadTenencia.ARRENDADO,
+            proveedor_propietario=self.proveedor_propietario,
+            observaciones="Impresora incluye mantenimiento y suministro de toner.",
+        )
+        devolucion = self.crear_devolucion([(detalle, "Carcasa rayada")])
+
+        _acta, workbook = self.generar_recepcion(devolucion)
+        observaciones = workbook.active["I14"].value
+
+        self.assertIn(
+            "Titularidad: Activo arrendado, propiedad de Proveedor XYZ.",
+            observaciones,
+        )
+        self.assertIn(
+            "Observaciones: Impresora incluye mantenimiento y suministro de toner.",
+            observaciones,
+        )
+        self.assertIn("Carcasa rayada | Recepcion general", observaciones)
 
     def test_generates_grafandina_reception_from_f_ti_05(self):
         self.empresa.nombre = "GRAFANDINA"

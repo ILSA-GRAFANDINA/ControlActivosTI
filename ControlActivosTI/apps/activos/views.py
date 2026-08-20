@@ -43,6 +43,8 @@ class ActivoFilterMixin:
         "empresa",
         "ubicacion_fisica",
         "proveedor",
+        "modalidad_tenencia",
+        "proveedor_propietario",
         "factura",
     )
     TAB_PARAM = "tab_tipo"
@@ -64,6 +66,12 @@ class ActivoFilterMixin:
             values = [str(value).strip() for value in source.getlist(field)]
             if field == "disponibilidad":
                 values = [value for value in values if value in {"disponibles", "asignados"}]
+            elif field == "modalidad_tenencia":
+                values = [
+                    value
+                    for value in values
+                    if value in Activo.ModalidadTenencia.values
+                ]
             elif field == "factura":
                 values = [value for value in values if value.isdigit() or value == "sin_factura"]
             else:
@@ -118,6 +126,7 @@ class ActivoFilterMixin:
                 "empresa",
                 "ubicacion_fisica",
                 "proveedor",
+                "proveedor_propietario",
                 "factura_compra",
             )
             .prefetch_related(
@@ -193,6 +202,9 @@ class ActivoFilterMixin:
                 | Q(proveedor__razon_social__icontains=busqueda)
                 | Q(proveedor__nombre_comercial__icontains=busqueda)
                 | Q(proveedor__identificacion__icontains=busqueda)
+                | Q(proveedor_propietario__razon_social__icontains=busqueda)
+                | Q(proveedor_propietario__nombre_comercial__icontains=busqueda)
+                | Q(proveedor_propietario__identificacion__icontains=busqueda)
                 | Q(factura_compra__numero_factura__icontains=busqueda)
                 | (criterio_configurado & coincidencia_valor)
             )
@@ -230,6 +242,14 @@ class ActivoFilterMixin:
         if proveedor_ids:
             queryset = queryset.filter(proveedor_id__in=proveedor_ids)
 
+        modalidades = self.get_active_filters()["modalidad_tenencia"]
+        if modalidades:
+            queryset = queryset.filter(modalidad_tenencia__in=modalidades)
+
+        proveedor_propietario_ids = self.get_active_filters()["proveedor_propietario"]
+        if proveedor_propietario_ids:
+            queryset = queryset.filter(proveedor_propietario_id__in=proveedor_propietario_ids)
+
         facturas = self.get_active_filters()["factura"]
         if facturas:
             factura_ids = [value for value in facturas if value.isdigit()]
@@ -261,6 +281,10 @@ class ActivoFilterMixin:
             "ubicaciones_fisicas_seleccionadas": filtros["ubicacion_fisica"],
             "proveedor_seleccionado": filtros["proveedor"][0] if filtros["proveedor"] else "",
             "proveedores_seleccionados": filtros["proveedor"],
+            "modalidad_tenencia_seleccionada": filtros["modalidad_tenencia"][0] if filtros["modalidad_tenencia"] else "",
+            "modalidades_tenencia_seleccionadas": filtros["modalidad_tenencia"],
+            "proveedor_propietario_seleccionado": filtros["proveedor_propietario"][0] if filtros["proveedor_propietario"] else "",
+            "proveedores_propietarios_seleccionados": filtros["proveedor_propietario"],
             "factura_seleccionada": filtros["factura"][0] if filtros["factura"] else "",
             "facturas_seleccionadas": filtros["factura"],
             "orden_seleccionado": filtros["orden"],
@@ -274,6 +298,8 @@ class ActivoFilterMixin:
             "empresas_activo": Empresa.objects.filter(activo=True).order_by("nombre"),
             "ubicaciones_fisicas_activo": UbicacionFisicaActivo.objects.filter(activo=True).order_by("nombre"),
             "proveedores": Proveedor.objects.order_by("razon_social"),
+            "modalidades_tenencia": Activo.ModalidadTenencia.choices,
+            "proveedores_propietarios": Proveedor.objects.order_by("razon_social"),
             "facturas_compra": FacturaCompra.objects.select_related("proveedor").order_by("-fecha_emision"),
         }
 
@@ -366,6 +392,8 @@ class ActivoListView(LoginRequiredMixin, ActivoFilterMixin, ListView):
         ("empresa", "Empresa"),
         ("ubicacion_fisica", "Ubicacion fisica"),
         ("proveedor", "Proveedor"),
+        ("modalidad_tenencia", "Tenencia"),
+        ("proveedor_propietario", "Proveedor propietario"),
         ("factura", "Factura"),
         ("marca", "Marca"),
         ("modelo", "Modelo"),
@@ -451,6 +479,8 @@ class ActivoListView(LoginRequiredMixin, ActivoFilterMixin, ListView):
             or context["empresa_seleccionada"]
             or context["ubicacion_fisica_seleccionada"]
             or context["proveedor_seleccionado"]
+            or context["modalidad_tenencia_seleccionada"]
+            or context["proveedor_propietario_seleccionado"]
             or context["factura_seleccionada"]
             or context["orden_seleccionado"]
             or context["mostrar_eliminados"]
@@ -561,9 +591,10 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
                 "tipo_activo",
                 "estado_activo",
                 "empresa",
-                "ubicacion_fisica",
-                "proveedor",
-                "factura_compra",
+                  "ubicacion_fisica",
+                  "proveedor",
+                  "proveedor_propietario",
+                  "factura_compra",
             )
             .prefetch_related("fotos")
             .filter(pk=raw_pk)
@@ -585,9 +616,10 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
                 "tipo_activo",
                 "estado_activo",
                 "empresa",
-                "ubicacion_fisica",
-                "proveedor",
-                "factura_compra",
+                  "ubicacion_fisica",
+                  "proveedor",
+                  "proveedor_propietario",
+                  "factura_compra",
             )
             .prefetch_related("valores_atributos__atributo", "valores_atributos__valor_opcion")
             .filter(pk=raw_pk)
@@ -900,9 +932,10 @@ class ActivoDetailView(LoginRequiredMixin, DetailView):
                 "tipo_activo",
                 "estado_activo",
                 "empresa",
-                "ubicacion_fisica",
-                "proveedor",
-                "factura_compra",
+                  "ubicacion_fisica",
+                  "proveedor",
+                  "proveedor_propietario",
+                  "factura_compra",
                 "factura_compra__proveedor",
                 "factura_compra__empresa",
             )

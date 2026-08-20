@@ -60,7 +60,10 @@ class DepreciationService:
         configuracion = cls.configuracion()
         costo = activo.valor
         inicio = activo.fecha_compra
-        if not activo.incluir_en_depreciacion:
+        if (
+            getattr(activo, "modalidad_tenencia", None) == "ARRENDADO"
+            or not activo.incluir_en_depreciacion
+        ):
             return ResultadoDepreciacion(
                 estado="No depreciable",
                 costo_adquisicion=costo,
@@ -137,7 +140,12 @@ class DepreciationService:
 
     @classmethod
     def calcular_proxima_alerta(cls, activo, fecha=None):
-        if not activo.incluir_en_depreciacion or activo.valor is None or activo.fecha_compra is None:
+        if (
+            getattr(activo, "modalidad_tenencia", None) == "ARRENDADO"
+            or not activo.incluir_en_depreciacion
+            or activo.valor is None
+            or activo.fecha_compra is None
+        ):
             return None
         fecha = fecha or timezone.localdate()
         configuracion = cls.configuracion()
@@ -157,7 +165,12 @@ class DepreciationService:
 
     @classmethod
     def eventos_vencidos(cls, activo, fecha):
-        if not activo.incluir_en_depreciacion or activo.valor is None or activo.fecha_compra is None:
+        if (
+            getattr(activo, "modalidad_tenencia", None) == "ARRENDADO"
+            or not activo.incluir_en_depreciacion
+            or activo.valor is None
+            or activo.fecha_compra is None
+        ):
             return []
         configuracion = cls.configuracion()
         fin = activo.fecha_compra + relativedelta(months=VIDA_UTIL_MESES)

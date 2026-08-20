@@ -67,7 +67,13 @@ class ProtectedImageView(LoginRequiredMixin, View):
         context = super().get_context_data(**kwargs)
 
         activos_vigentes = Activo.objects.filter(activo=True)
+        activos_propios_vigentes = activos_vigentes.filter(
+            modalidad_tenencia=Activo.ModalidadTenencia.PROPIO
+        )
         total_activos = activos_vigentes.count()
+        total_activos_arrendados = activos_vigentes.filter(
+            modalidad_tenencia=Activo.ModalidadTenencia.ARRENDADO
+        ).count()
         total_colaboradores = Colaborador.objects.count()
         total_colaboradores_activos = Colaborador.objects.filter(
             estado=Colaborador.EstadoColaborador.ACTIVO
@@ -77,7 +83,7 @@ class ProtectedImageView(LoginRequiredMixin, View):
         ).count()
         activos_disponibles = activos_vigentes.filter(ESTADO_ASIGNABLE_Q).count()
         activos_asignados = activos_vigentes.filter(ESTADO_ASIGNADO_Q).count()
-        valor_total_activos = activos_vigentes.aggregate(total=Sum("valor")).get("total") or 0
+        valor_total_activos = activos_propios_vigentes.aggregate(total=Sum("valor")).get("total") or 0
 
         activos_por_estado = list(
             activos_vigentes.values("estado_activo_id", "estado_activo__nombre")
@@ -156,6 +162,7 @@ class ProtectedImageView(LoginRequiredMixin, View):
         context.update(
             {
                 "total_activos": total_activos,
+                "total_activos_arrendados": total_activos_arrendados,
                 "total_colaboradores": total_colaboradores,
                 "total_colaboradores_activos": total_colaboradores_activos,
                 "asignaciones_activas": asignaciones_activas,

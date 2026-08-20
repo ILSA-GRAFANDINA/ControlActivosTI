@@ -81,6 +81,10 @@ def ruta_foto_activo(instance, filename):
 
 
 class Activo(models.Model):
+    class ModalidadTenencia(models.TextChoices):
+        PROPIO = "PROPIO", "Propio"
+        ARRENDADO = "ARRENDADO", "Arrendado"
+
     codigo = models.CharField(
         max_length=20,
         unique=True,
@@ -121,6 +125,22 @@ class Activo(models.Model):
         null=True,
         blank=True,
         help_text="Factura de compra asociada al activo.",
+    )
+    modalidad_tenencia = models.CharField(
+        "Modalidad de tenencia",
+        max_length=12,
+        choices=ModalidadTenencia.choices,
+        default=ModalidadTenencia.PROPIO,
+        db_index=True,
+    )
+    proveedor_propietario = models.ForeignKey(
+        "proveedores.Proveedor",
+        on_delete=models.PROTECT,
+        related_name="activos_en_arrendamiento",
+        null=True,
+        blank=True,
+        verbose_name="Proveedor propietario",
+        help_text="Proveedor titular del activo cuando la modalidad es arrendada.",
     )
     marca = models.CharField(max_length=80)
     modelo = models.CharField(max_length=80)
@@ -179,6 +199,23 @@ class Activo(models.Model):
 
     def __str__(self):
         return f"{self.codigo} - {self.marca} {self.modelo}"
+
+    @property
+    def es_arrendado(self):
+        return self.modalidad_tenencia == self.ModalidadTenencia.ARRENDADO
+
+    @property
+    def etiqueta_tenencia(self):
+        if not self.es_arrendado:
+            return self.get_modalidad_tenencia_display()
+        propietario = str(self.proveedor_propietario) if self.proveedor_propietario_id else "proveedor no definido"
+        return f"Arrendado · Propiedad de {propietario}"
+
+    @property
+    def observacion_titularidad_acta(self):
+        if not self.es_arrendado or not self.proveedor_propietario_id:
+            return ""
+        return f"Titularidad: Activo arrendado, propiedad de {self.proveedor_propietario}."
 
     @property
     def caracteristicas_resumen(self):
@@ -272,10 +309,15 @@ class Activo(models.Model):
 
     def clean(self):
         super().clean()
+        errores = {}
+
+        if self.es_arrendado and not self.proveedor_propietario_id:
+            errores["proveedor_propietario"] = (
+                "El proveedor propietario es obligatorio para activos arrendados."
+            )
 
         if self.factura_compra_id:
             factura = self.factura_compra
-            errores = {}
             if self.proveedor_id and self.proveedor_id != factura.proveedor_id:
                 errores["factura_compra"] = "La factura pertenece a un proveedor diferente al del activo."
             if self.empresa_id and self.empresa_id != factura.empresa_id:
@@ -288,13 +330,14 @@ class Activo(models.Model):
                     ).first()
                 if factura_anterior_id != factura.pk:
                     errores["factura_compra"] = "La factura seleccionada esta archivada."
-            if errores:
-                raise ValidationError(errores)
 
         if self.codigo_sap:
             self.codigo_sap = self.codigo_sap.strip().upper()
         else:
             self.codigo_sap = None
+
+        if errores:
+            raise ValidationError(errores)
 
     def _generar_codigo(self):
         prefijo = self._obtener_prefijo_tipo()

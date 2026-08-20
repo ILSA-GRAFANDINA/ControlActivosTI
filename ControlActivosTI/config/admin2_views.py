@@ -702,7 +702,10 @@ class Admin2ModuleView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
 
     def build_reportes_payload(self):
         activos_vigentes = Activo.objects.filter(activo=True)
-        valor_total = activos_vigentes.aggregate(total=Sum("valor")).get("total") or 0
+        activos_propios = activos_vigentes.filter(
+            modalidad_tenencia=Activo.ModalidadTenencia.PROPIO
+        )
+        valor_total = activos_propios.aggregate(total=Sum("valor")).get("total") or 0
         activos_por_estado = (
             activos_vigentes.values("estado_activo__nombre")
             .annotate(total=Count("id"))

@@ -87,6 +87,8 @@ class ActivoAdminForm(forms.ModelForm):
             "ubicacion_fisica": "Ubicacion fisica",
             "proveedor": "Proveedor de adquisicion",
             "factura_compra": "Factura de compra",
+            "modalidad_tenencia": "Modalidad de tenencia",
+            "proveedor_propietario": "Proveedor propietario",
             "marca": "Marca",
             "modelo": "Modelo",
             "serie": "Serie / identificador unico",
@@ -231,6 +233,23 @@ class ActivoAdminForm(forms.ModelForm):
             self.fields["proveedor"].queryset = Proveedor.objects.filter(filtro).order_by("razon_social")
             self.fields["proveedor"].required = False
             self.fields["proveedor"].help_text = "Opcional. En altas solo se muestran proveedores activos."
+
+        if "proveedor_propietario" in self.fields:
+            propietario_actual_id = (
+                self.instance.proveedor_propietario_id
+                if self.instance and self.instance.pk
+                else getattr(self.activo_base, "proveedor_propietario_id", None)
+            )
+            filtro = Q(activo=True)
+            if propietario_actual_id:
+                filtro |= Q(pk=propietario_actual_id)
+            self.fields["proveedor_propietario"].queryset = Proveedor.objects.filter(filtro).order_by("razon_social")
+            self.fields["proveedor_propietario"].required = False
+            self.fields["proveedor_propietario"].help_text = "Obligatorio solo para activos arrendados."
+
+        if "modalidad_tenencia" in self.fields:
+            self.fields["modalidad_tenencia"].required = False
+            self.fields["modalidad_tenencia"].initial = Activo.ModalidadTenencia.PROPIO
 
         if "factura_compra" in self.fields:
             factura_actual_id = (
@@ -465,6 +484,32 @@ class ActivoAdminForm(forms.ModelForm):
         if proveedor and not proveedor.activo and proveedor.pk != proveedor_actual_id:
             self.add_error("proveedor", "El proveedor seleccionado esta inactivo.")
 
+        modalidad_tenencia = (
+            cleaned_data.get("modalidad_tenencia")
+            or Activo.ModalidadTenencia.PROPIO
+        )
+        cleaned_data["modalidad_tenencia"] = modalidad_tenencia
+        proveedor_propietario = cleaned_data.get("proveedor_propietario")
+        propietario_actual_id = (
+            self.instance.proveedor_propietario_id
+            if self.instance and self.instance.pk
+            else getattr(self.activo_base, "proveedor_propietario_id", None)
+        )
+        if (
+            modalidad_tenencia == Activo.ModalidadTenencia.ARRENDADO
+            and not proveedor_propietario
+        ):
+            self.add_error(
+                "proveedor_propietario",
+                "El proveedor propietario es obligatorio para activos arrendados.",
+            )
+        if (
+            proveedor_propietario
+            and not proveedor_propietario.activo
+            and proveedor_propietario.pk != propietario_actual_id
+        ):
+            self.add_error("proveedor_propietario", "El proveedor propietario seleccionado esta inactivo.")
+
         factura = cleaned_data.get("factura_compra")
         empresa = cleaned_data.get("empresa")
         factura_actual_id = (
@@ -512,6 +557,8 @@ class FotoActivoInlineForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if "imagen" in self.fields:
+            self.fields["imagen"].required = False
         for nombre_campo in self.fields:
             widget = self.fields[nombre_campo].widget
             input_type = _widget_input_type(widget)

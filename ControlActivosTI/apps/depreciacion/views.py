@@ -275,7 +275,8 @@ class DepreciacionReporteView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         filtros = self.get_active_filters()
         qs = Activo.objects.select_related("tipo_activo", "estado_activo").filter(
-            incluir_en_depreciacion=True
+            incluir_en_depreciacion=True,
+            modalidad_tenencia=Activo.ModalidadTenencia.PROPIO,
         )
         q = filtros["q"]
         if q:

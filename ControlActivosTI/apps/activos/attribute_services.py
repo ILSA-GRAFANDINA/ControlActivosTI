@@ -255,6 +255,14 @@ def instantanea_activo(activo):
         "modelo": activo.modelo,
         "serie": activo.serie,
         "valor": str(activo.valor) if activo.valor is not None else None,
+        "modalidad_tenencia": activo.modalidad_tenencia,
+        "modalidad_tenencia_display": activo.get_modalidad_tenencia_display(),
+        "proveedor_propietario": (
+            str(activo.proveedor_propietario)
+            if activo.proveedor_propietario_id
+            else None
+        ),
+        "observaciones": activo.observaciones,
         "atributos": [
             {
                 "clave": config.atributo.clave,

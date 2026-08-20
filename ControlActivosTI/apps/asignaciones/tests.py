@@ -29,6 +29,7 @@ from apps.catalogos.models import (
     Ubicacion,
 )
 from apps.colaboradores.models import Colaborador
+from apps.proveedores.models import Proveedor
 
 from apps.asignaciones.forms import AsignacionCreateForm
 from apps.asignaciones.models import Asignacion, AsignacionDetalle, Devolucion
@@ -75,6 +76,13 @@ class AsignacionCreateFormTests(TestCase):
         self.estado_reparacion = EstadoActivo.objects.create(
             nombre="Reparacion",
             permite_asignacion=True,
+        )
+        self.proveedor_propietario = Proveedor.objects.create(
+            tipo_proveedor=Proveedor.TipoProveedor.EMPRESA,
+            tipo_identificacion=Proveedor.TipoIdentificacion.EXTRANJERA,
+            identificacion="RENT-ASG-001",
+            razon_social="Proveedor Renting",
+            pais="Ecuador",
         )
         self.colaborador = Colaborador.objects.create(
             nombres="Ana",
@@ -157,6 +165,21 @@ class AsignacionCreateFormTests(TestCase):
         self.assertIn('data-search="', rendered)
         self.assertIn('data-codigo-sap="SAP-ASG-001"', rendered)
         self.assertNotIn("SAP:", rendered)
+
+    def test_activo_arrendado_aparece_en_inventario_asignable(self):
+        arrendado = Activo.objects.create(
+            tipo_activo=self.tipo_activo,
+            marca="Ricoh",
+            modelo="IM C300",
+            serie="ARR-ASG-001",
+            estado_activo=self.estado_disponible,
+            modalidad_tenencia=Activo.ModalidadTenencia.ARRENDADO,
+            proveedor_propietario=self.proveedor_propietario,
+        )
+
+        form = AsignacionCreateForm()
+
+        self.assertIn(arrendado, form.fields["activos"].queryset)
 
     def test_form_exposes_collaborator_search_metadata(self):
         form = AsignacionCreateForm()

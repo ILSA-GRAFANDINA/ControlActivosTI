@@ -3,6 +3,7 @@ from decimal import Decimal
 from io import BytesIO
 from pathlib import Path
 import shutil
+import tempfile
 import uuid
 
 from django.contrib.auth import get_user_model
@@ -37,6 +38,7 @@ from PIL import Image
 from apps.activos.admin import ActivoAdminForm, EventoActivoAdminForm, FotoActivoInlineForm
 from apps.activos.forms import FotoActivoCreateFormSet
 from apps.activos.models import Activo, EventoActivo, FotoActivo, ValorAtributoActivo
+from apps.depreciacion.services import DepreciationService
 from apps.notificaciones.models import Notificacion
 
 
@@ -80,9 +82,7 @@ def crear_factura(proveedor, empresa, usuario, numero):
 
 
 def make_test_media_root():
-    media_root = Path.cwd() / "test-media" / uuid.uuid4().hex
-    media_root.mkdir(parents=True, exist_ok=True)
-    return media_root
+    return Path(tempfile.mkdtemp(prefix=f"{uuid.uuid4().hex}-"))
 
 
 class ActivoAdminFormTests(TestCase):
@@ -93,6 +93,7 @@ class ActivoAdminFormTests(TestCase):
         self.tipo_pc = TipoActivo.objects.create(nombre="PC")
         self.empresa = Empresa.objects.create(nombre="Empresa Test")
         self.ubicacion_fisica = UbicacionFisicaActivo.objects.create(nombre="Administracion")
+        self.proveedor_propietario = crear_proveedor("Proveedor Leasing", "LEASE-001")
 
     def _data_base(self, tipo_activo):
         return {
@@ -111,6 +112,8 @@ class ActivoAdminFormTests(TestCase):
             "valor": "",
             "estado_activo": self.estado.pk,
             "activo": "on",
+            "modalidad_tenencia": Activo.ModalidadTenencia.PROPIO,
+            "proveedor_propietario": "",
             "observaciones": "",
         }
 
@@ -185,6 +188,70 @@ class ActivoAdminFormTests(TestCase):
         self.assertEqual(activo.valor, Decimal("10482.00"))
         self.assertEqual(form.fields["valor"].label, "Valor de Compra")
         self.assertIn("10,482.00", form.fields["valor"].help_text)
+
+    def test_activo_nuevo_es_propio_por_defecto(self):
+        activo = Activo.objects.create(
+            tipo_activo=self.tipo_mouse,
+            marca="Logitech",
+            modelo="M185",
+            serie="TEN-PROPIO-001",
+            estado_activo=self.estado,
+        )
+
+        self.assertEqual(activo.modalidad_tenencia, Activo.ModalidadTenencia.PROPIO)
+        self.assertIsNone(activo.proveedor_propietario)
+
+    def test_activo_arrendado_exige_proveedor_propietario_en_formulario(self):
+        data = self._data_base(self.tipo_mouse)
+        data["modalidad_tenencia"] = Activo.ModalidadTenencia.ARRENDADO
+        data["proveedor_propietario"] = ""
+
+        form = ActivoAdminForm(data=data)
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("proveedor_propietario", form.errors)
+
+    def test_activo_propio_permite_proveedor_propietario_vacio(self):
+        data = self._data_base(self.tipo_mouse)
+        data["modalidad_tenencia"] = Activo.ModalidadTenencia.PROPIO
+        data["proveedor_propietario"] = ""
+
+        form = ActivoAdminForm(data=data)
+
+        self.assertTrue(form.is_valid(), form.errors)
+        activo = form.save()
+        self.assertIsNone(activo.proveedor_propietario)
+
+    def test_activo_arrendado_exige_proveedor_propietario_en_modelo(self):
+        activo = Activo(
+            tipo_activo=self.tipo_mouse,
+            marca="HP",
+            modelo="LaserJet",
+            serie="TEN-ARR-SIN-PROV",
+            estado_activo=self.estado,
+            modalidad_tenencia=Activo.ModalidadTenencia.ARRENDADO,
+        )
+
+        with self.assertRaises(ValidationError):
+            activo.full_clean()
+
+    def test_activo_arrendado_no_deprecia_aunque_este_marcado_depreciable(self):
+        activo = Activo.objects.create(
+            tipo_activo=self.tipo_mouse,
+            marca="HP",
+            modelo="LaserJet",
+            serie="TEN-ARR-DEP",
+            estado_activo=self.estado,
+            fecha_compra=date(2024, 1, 1),
+            valor=Decimal("900.00"),
+            modalidad_tenencia=Activo.ModalidadTenencia.ARRENDADO,
+            proveedor_propietario=self.proveedor_propietario,
+        )
+
+        calculo = DepreciationService.calcular(activo, date(2025, 1, 1))
+
+        self.assertEqual(calculo.estado, "No depreciable")
+        self.assertFalse(calculo.configurado)
 
     def test_estado_dado_de_baja_se_ofrece_pero_no_es_asignable(self):
         estado_baja = EstadoActivo.objects.create(
@@ -273,6 +340,10 @@ class ActivoCodigoTests(TestCase):
 
 
 class FotoActivoInlineFormTests(TestCase):
+    def test_imagen_no_es_obligatoria_en_el_form_inline(self):
+        form = FotoActivoInlineForm()
+        self.assertFalse(form.fields["imagen"].required)
+
     def test_conserva_imagen_existente_si_no_se_sube_otra(self):
         estado = EstadoActivo.objects.create(nombre="Disponible", permite_asignacion=True)
         tipo_mouse = TipoActivo.objects.create(nombre="Mouse")
@@ -1480,6 +1551,7 @@ class ActivoCreateViewTests(TestCase):
         self.assertContains(response, "SAP-EDIT-001")
         self.assertContains(response, 'value="2025-05-07"')
         self.assertContains(response, "Foto 1")
+        self.assertContains(response, "Imagen actual")
         self.assertContains(response, "Al guardar un cambio de tipo, el sistema hará lo siguiente:")
         self.assertContains(response, "Motivo del cambio de tipo")
         self.assertContains(response, f'data-original-type-id="{self.tipo_laptop.pk}"')
@@ -1699,6 +1771,7 @@ class DashboardInventarioTests(TestCase):
         self.user = User.objects.create_user(username="dashboard", password="testpass123")
         self.estado = EstadoActivo.objects.create(nombre="Disponible", permite_asignacion=True)
         self.tipo = TipoActivo.objects.create(nombre="Laptop")
+        self.proveedor = crear_proveedor("Renting Print", "RENT-001")
 
     def test_dashboard_excludes_inactive_assets_from_value_and_totals(self):
         Activo.objects.create(
@@ -1721,12 +1794,25 @@ class DashboardInventarioTests(TestCase):
             estado_activo=self.estado,
             activo=False,
         )
+        Activo.objects.create(
+            tipo_activo=self.tipo,
+            marca="Ricoh",
+            modelo="IM C300",
+            serie="DASH-003",
+            codigo_sap="SAP-DASH-003",
+            valor=5000,
+            estado_activo=self.estado,
+            activo=True,
+            modalidad_tenencia=Activo.ModalidadTenencia.ARRENDADO,
+            proveedor_propietario=self.proveedor,
+        )
 
         self.client.force_login(self.user)
         response = self.client.get(reverse("dashboard-inicio"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context["total_activos"], 1)
+        self.assertEqual(response.context["total_activos"], 2)
+        self.assertEqual(response.context["total_activos_arrendados"], 1)
         self.assertEqual(response.context["valor_total_activos"], 1000)
 
 

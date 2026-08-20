@@ -43,6 +43,7 @@ class Command(BaseCommand):
             try:
                 if (
                     not activo.activo
+                    or activo.modalidad_tenencia == Activo.ModalidadTenencia.ARRENDADO
                     or not activo.incluir_en_depreciacion
                     or activo_fuera_de_servicio(activo)
                     or activo.valor is None

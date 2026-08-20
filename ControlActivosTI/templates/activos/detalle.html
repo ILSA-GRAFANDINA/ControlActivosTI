@@ -48,6 +48,11 @@
                     Sin asignación activa
                 </span>
             {% endif %}
+            {% if activo.es_arrendado %}
+                <span class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+                    {{ activo.etiqueta_tenencia }}
+                </span>
+            {% endif %}
         </div>
     </div>
 
@@ -92,6 +97,14 @@
                         <p class="mt-1 text-xs text-slate-500">{{ activo.factura_compra.fecha_emision|date:"d/m/Y" }} · {{ activo.factura_compra.proveedor }}</p>
                         {% if perms.facturas.download_facturacompra %}<a target="_blank" rel="noopener" href="{% url 'facturas:documento' activo.factura_compra_id %}" class="mt-1 inline-block text-xs font-semibold text-violet-700">Ver PDF autorizado</a>{% endif %}
                     {% else %}<p class="font-medium text-slate-500">Factura no registrada</p>{% endif %}
+                </div>
+                <div>
+                    <p class="text-sm text-slate-500">Modalidad de tenencia</p>
+                    <p class="font-medium text-slate-900">{{ activo.get_modalidad_tenencia_display }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-slate-500">Proveedor propietario</p>
+                    {% if activo.proveedor_propietario %}{% if perms.proveedores.view_proveedor %}<a href="{% url 'proveedores:detalle' activo.proveedor_propietario.pk %}" class="font-medium text-cyan-700 hover:underline">{{ activo.proveedor_propietario }}</a>{% else %}<span class="font-medium text-slate-900">{{ activo.proveedor_propietario }}</span>{% endif %}{% if not activo.proveedor_propietario.activo %}<span class="ml-2 rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600">Inactivo</span>{% endif %}{% else %}<p class="font-medium text-slate-900">-</p>{% endif %}
                 </div>
                 <div>
                     <p class="text-sm text-slate-500">Modelo</p>
