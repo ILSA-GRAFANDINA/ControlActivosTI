@@ -1272,6 +1272,7 @@ class ActivoCreateViewTests(TestCase):
         self.estado = EstadoActivo.objects.create(nombre="Disponible", permite_asignacion=True)
         self.tipo_laptop = TipoActivo.objects.create(nombre="Laptop")
         self.empresa = Empresa.objects.create(nombre="Acme")
+        self.ubicacion_fisica = UbicacionFisicaActivo.objects.create(nombre="Administracion")
 
     def tearDown(self):
         self.override_media.disable()
@@ -1351,6 +1352,27 @@ class ActivoCreateViewTests(TestCase):
         )
         self.assertContains(response, "Borrador automatico activo")
         self.assertContains(response, 'type="password" autocomplete="new-password" data-draft-sensitive', html=False)
+
+    def test_copy_view_defaults_estado_to_disponible(self):
+        estado_asignado = EstadoActivo.objects.create(nombre="Asignado", permite_asignacion=False)
+        activo_base = Activo.objects.create(
+            tipo_activo=self.tipo_laptop,
+            empresa=self.empresa,
+            ubicacion_fisica=self.ubicacion_fisica,
+            marca="Dell",
+            modelo="Latitude 5440",
+            serie="LAP-BASE-001",
+            codigo_sap="SAP-BASE-001",
+            estado_activo=estado_asignado,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("activos:nuevo"), {"basado_en": activo_base.pk})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["form"].initial["estado_activo"], self.estado.pk)
+        self.assertContains(response, f'<option value="{self.estado.pk}" selected>')
+        self.assertNotContains(response, f'<option value="{estado_asignado.pk}" selected>')
 
     def test_invalid_create_keeps_autosave_but_does_not_overwrite_bound_values(self):
         self.client.force_login(self.user)

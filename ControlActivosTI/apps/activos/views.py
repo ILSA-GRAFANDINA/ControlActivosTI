@@ -630,7 +630,15 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
                 for campo in Activo._meta.fields
                 if campo.editable and campo.name not in {"activo"}
             ]
-            kwargs["initial"] = model_to_dict(activo_base, fields=campos)
+            initial = model_to_dict(activo_base, fields=campos)
+            estado_disponible_id = (
+                EstadoActivo.objects.filter(activo=True, nombre__iexact="Disponible")
+                .values_list("pk", flat=True)
+                .first()
+            )
+            if estado_disponible_id:
+                initial["estado_activo"] = estado_disponible_id
+            kwargs["initial"] = initial
             kwargs["activo_base"] = activo_base
             kwargs["bloquear_tipo"] = True
         return kwargs
