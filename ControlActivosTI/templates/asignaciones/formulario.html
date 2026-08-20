@@ -61,7 +61,6 @@
                         </div>
                         <div class="grid max-h-[28rem] gap-4 overflow-y-auto sm:grid-cols-2 lg:grid-cols-3">
                             <fieldset><legend class="mb-1 text-sm font-semibold text-slate-800">Filtrar por estado</legend><p class="mb-2 text-xs text-slate-500">Todos los estados se muestran cuando no hay selección.</p><div class="max-h-40 space-y-1 overflow-y-auto rounded-xl border border-slate-200 p-2">{% for estado in estados_activo_filtro %}<label class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" value="{{ estado.pk }}" data-activo-filter="estado" class="rounded border-slate-300 text-cyan-600"><span>{{ estado.nombre }}</span></label>{% endfor %}</div></fieldset>
-                            <fieldset><legend class="mb-2 text-sm font-semibold text-slate-800">Disponibilidad</legend><div class="space-y-1 rounded-xl border border-slate-200 p-2"><label class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-700"><input type="checkbox" value="disponibles" data-activo-filter="disponibilidad" checked class="rounded border-slate-300 text-cyan-600"><span>Disponibles</span></label><label class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-700"><input type="checkbox" value="asignados" data-activo-filter="disponibilidad" class="rounded border-slate-300 text-cyan-600"><span>Asignados</span></label></div></fieldset>
                             <fieldset><legend class="mb-2 text-sm font-semibold text-slate-800">Tipo</legend><div class="max-h-40 space-y-1 overflow-y-auto rounded-xl border border-slate-200 p-2">{% for tipo in tipos_activo_filtro %}<label class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" value="{{ tipo.pk }}" data-activo-filter="tipo" class="rounded border-slate-300 text-cyan-600"><span>{{ tipo.nombre }}</span></label>{% endfor %}</div></fieldset>
                             <fieldset><legend class="mb-2 text-sm font-semibold text-slate-800">Empresa</legend><div class="max-h-40 space-y-1 overflow-y-auto rounded-xl border border-slate-200 p-2">{% for empresa in empresas_activo_filtro %}<label class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" value="{{ empresa.pk }}" data-activo-filter="empresa" class="rounded border-slate-300 text-cyan-600"><span>{{ empresa.nombre }}</span></label>{% endfor %}</div></fieldset>
                             <fieldset><legend class="mb-2 text-sm font-semibold text-slate-800">Proveedor</legend><div class="max-h-40 space-y-1 overflow-y-auto rounded-xl border border-slate-200 p-2">{% for proveedor in proveedores_activo_filtro %}<label class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" value="{{ proveedor.pk }}" data-activo-filter="proveedor" class="rounded border-slate-300 text-cyan-600"><span>{{ proveedor }}</span></label>{% empty %}<p class="text-xs text-slate-400">No hay proveedores.</p>{% endfor %}</div></fieldset>
@@ -105,7 +104,7 @@
                 </details>
             {% endif %}
 
-            <div class="flex items-center justify-between gap-3"><h3 class="text-sm font-semibold text-slate-700">Todos los demás activos</h3><span class="text-xs text-slate-500">Los filtros se aplican a esta lista</span></div>
+            <div class="flex items-center justify-between gap-3"><h3 class="text-sm font-semibold text-slate-700">Todos los demás activos</h3><span class="text-xs text-slate-500">Mostrando hasta 10 activos por página</span></div>
 
             <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                 <div class="overflow-x-auto">
@@ -124,53 +123,7 @@
                         </thead>
                         <tbody id="tabla-activos-body" class="divide-y divide-slate-200">
                             {% for activo in activos_disponibles %}
-                                <tr
-                                    class="activo-row transition hover:bg-cyan-50 {% if not activo.estado_activo.es_asignable_para_nueva_asignacion %}opacity-60{% endif %}"
-                                    data-search="{{ activo.codigo|lower }} {{ activo.codigo_sap|default:''|lower }} {{ activo.tipo_activo.nombre|lower }} {{ activo.marca|lower }} {{ activo.modelo|lower }} {{ activo.serie|lower }} {{ activo.caracteristicas_resumen|lower }} {{ activo.estado_activo.nombre|lower }} {{ activo.empresa.nombre|default:''|lower }} {{ activo.proveedor|default:''|lower }} {{ activo.factura_compra.numero_factura|default:''|lower }} {{ activo.observaciones|lower }}"
-                                    data-codigo="{{ activo.codigo }}"
-                                    data-id="{{ activo.pk }}"
-                                    data-tipo="{{ activo.tipo_activo.nombre }}"
-                                    data-tipo-id="{{ activo.tipo_activo_id }}"
-                                    data-empresa-id="{{ activo.empresa_id|default:'' }}"
-                                    data-proveedor-id="{{ activo.proveedor_id|default:'' }}"
-                                    data-factura-id="{{ activo.factura_compra_id|default:'' }}"
-                                    data-disponibilidad="{% if activo.estado_activo.nombre|lower == 'asignado' %}asignados{% elif activo.estado_activo.es_asignable_para_nueva_asignacion %}disponibles{% endif %}"
-                                    data-marca-modelo="{{ activo.marca }} {{ activo.modelo }}"
-                                    data-serie="{{ activo.serie|default:'S/N' }}"
-                                    data-especificaciones="{{ activo.caracteristicas_resumen }}"
-                                    data-estado="{{ activo.estado_activo.nombre }}"
-                                    data-estado-id="{{ activo.estado_activo_id }}"
-                                    data-reciente="false"
-                                    data-puede-asignarse="{{ activo.estado_activo.es_asignable_para_nueva_asignacion|yesno:'true,false' }}"
-                                >
-                                    <td class="px-4 py-3 text-center">
-                                        <input
-                                            type="checkbox"
-                                            name="activos"
-                                            value="{{ activo.pk }}"
-                                            class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
-                                            {% if not activo.estado_activo.es_asignable_para_nueva_asignacion %}disabled aria-disabled="true"{% endif %}
-                                            {% if activo.pk in activos_seleccionados %}checked{% endif %}
-                                        >
-                                    </td>
-                                    <td class="px-4 py-3 font-semibold text-slate-900">{{ activo.codigo }}</td>
-                                    <td class="px-4 py-3 text-slate-700">{{ activo.tipo_activo.nombre }}</td>
-                                    <td class="px-4 py-3 text-slate-700">{{ activo.marca }} {{ activo.modelo }}</td>
-                                    <td class="px-4 py-3 text-slate-700">{{ activo.serie|default:"S/N" }}</td>
-                                    <td class="px-4 py-3 text-slate-700">{{ activo.codigo_sap|default:"—" }}</td>
-                                    <td class="px-4 py-3 text-slate-600">
-                                        <div class="space-y-1">
-                                            {% if activo.caracteristicas_resumen %}<div>{{ activo.caracteristicas_resumen }}</div>{% else %}
-                                                <div>Sin especificaciones registradas</div>
-                                            {% endif %}
-                                        </div>
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <span class="rounded-full px-3 py-1 text-xs font-semibold {% if activo.estado_activo.es_asignable_para_nueva_asignacion %}bg-emerald-100 text-emerald-700{% else %}bg-rose-100 text-rose-700{% endif %}">
-                                            {{ activo.estado_activo.nombre }}
-                                        </span>
-                                    </td>
-                                </tr>
+                                {% include "asignaciones/includes/fila_activo.html" with reciente=False %}
                             {% empty %}
                                 <tr>
                                     <td colspan="8" class="px-4 py-8 text-center text-slate-500">
@@ -182,6 +135,39 @@
                     </table>
                 </div>
             </div>
+
+            {% if activos_paginator.count %}
+                <div class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+                    <p>
+                        Mostrando {{ activos_page_obj.start_index }} a {{ activos_page_obj.end_index }} de {{ activos_paginator.count }} activos restantes
+                    </p>
+                    {% if activos_is_paginated %}
+                        <nav class="flex flex-wrap items-center gap-2" aria-label="Paginación de activos">
+                            {% if activos_page_obj.has_previous %}
+                                <a href="?{% if activos_query_string %}{{ activos_query_string }}&{% endif %}activos_page={{ activos_page_obj.previous_page_number }}" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Anterior</a>
+                            {% else %}
+                                <span class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-400">Anterior</span>
+                            {% endif %}
+
+                            {% for numero in activos_page_numbers %}
+                                {% if numero == activos_paginator.ELLIPSIS %}
+                                    <span class="px-2 text-slate-400">{{ numero }}</span>
+                                {% elif numero == activos_page_obj.number %}
+                                    <span class="rounded-xl bg-cyan-600 px-3 py-2 text-sm font-semibold text-white">{{ numero }}</span>
+                                {% else %}
+                                    <a href="?{% if activos_query_string %}{{ activos_query_string }}&{% endif %}activos_page={{ numero }}" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">{{ numero }}</a>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if activos_page_obj.has_next %}
+                                <a href="?{% if activos_query_string %}{{ activos_query_string }}&{% endif %}activos_page={{ activos_page_obj.next_page_number }}" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Siguiente</a>
+                            {% else %}
+                                <span class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-400">Siguiente</span>
+                            {% endif %}
+                        </nav>
+                    {% endif %}
+                </div>
+            {% endif %}
 
             <p id="activos-sin-resultados" class="hidden rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
                 No hay activos que coincidan con el filtro actual.
@@ -833,7 +819,7 @@
         window.addEventListener("scroll", posicionarPanelFiltros, true);
         restablecerFiltros?.addEventListener("click", () => {
             controlesFiltro.forEach((control) => {
-                control.checked = control.dataset.activoFilter === "disponibilidad" && control.value === "disponibles";
+                control.checked = false;
             });
             filtro.value = "";
             if (ordenActivos) ordenActivos.value = "codigo";

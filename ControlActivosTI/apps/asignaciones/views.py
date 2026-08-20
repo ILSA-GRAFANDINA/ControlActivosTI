@@ -2,6 +2,7 @@ import logging
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q
 from django.http import HttpResponseRedirect, QueryDict
@@ -304,23 +305,44 @@ class AsignacionCreateView(LoginRequiredMixin, CreateView):
     form_class = AsignacionCreateForm
     template_name = "asignaciones/formulario.html"
     success_url = reverse_lazy("asignaciones:lista")
+    ACTIVOS_RECIENTES_LIMIT = 5
+    ACTIVOS_POR_PAGINA = 10
+
+    def build_activos_page_querystring(self):
+        params = self.request.GET.copy()
+        params.pop("activos_page", None)
+        return params.urlencode()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         form = context["form"]
         activos_seleccionados = form["activos"].value() or []
         activos_disponibles = form.fields["activos"].queryset
-        activos_recientes = list(
+        activos_asignables = (
             activos_disponibles.filter(estado_activo__permite_asignacion=True)
             .exclude(estado_activo__nombre__icontains="repar")
             .exclude(estado_activo__nombre__icontains="cuarentena")
-            .order_by("-created_at", "-id")[:5]
+        )
+        activos_recientes = list(
+            activos_asignables.order_by("-created_at", "-id")[: self.ACTIVOS_RECIENTES_LIMIT]
         )
         activos_recientes_ids = [activo.pk for activo in activos_recientes]
-        context["activos_recientes"] = activos_recientes
-        context["activos_disponibles"] = activos_disponibles.exclude(
+        activos_restantes = activos_asignables.exclude(
             pk__in=activos_recientes_ids
         )
+        activos_paginator = Paginator(activos_restantes, self.ACTIVOS_POR_PAGINA)
+        activos_page_obj = activos_paginator.get_page(self.request.GET.get("activos_page"))
+        context["activos_recientes"] = activos_recientes
+        context["activos_disponibles"] = activos_page_obj.object_list
+        context["activos_paginator"] = activos_paginator
+        context["activos_page_obj"] = activos_page_obj
+        context["activos_is_paginated"] = activos_page_obj.has_other_pages()
+        context["activos_page_numbers"] = activos_paginator.get_elided_page_range(
+            number=activos_page_obj.number,
+            on_each_side=1,
+            on_ends=1,
+        )
+        context["activos_query_string"] = self.build_activos_page_querystring()
         context["activos_seleccionados"] = [int(activo_id) for activo_id in activos_seleccionados]
         context["estados_activo_filtro"] = EstadoActivo.objects.filter(activo=True).order_by("nombre")
         context["tipos_activo_filtro"] = TipoActivo.objects.filter(activo=True).order_by("nombre")
