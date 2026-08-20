@@ -18,6 +18,7 @@ from apps.catalogos.models import (
     EstadoActivo,
     TipoActivo,
     Ubicacion,
+    UbicacionFisicaActivo,
 )
 from apps.colaboradores.models import Colaborador
 from apps.proveedores.models import Proveedor
@@ -217,11 +218,14 @@ class RelevantFlowTests(NotificationBaseTests):
         self.asignado = EstadoActivo.objects.create(
             nombre="Asignado", permite_asignacion=False
         )
+        self.ubicacion_inicial = UbicacionFisicaActivo.objects.create(nombre="Administracion")
+        self.ubicacion_nueva = UbicacionFisicaActivo.objects.create(nombre="Produccion")
 
     def asset_data(self, activo=None):
         data = {
             "tipo_activo": self.tipo.pk,
             "empresa": self.empresa.pk,
+            "ubicacion_fisica": self.ubicacion_inicial.pk,
             "marca": activo.marca if activo else "Dell",
             "modelo": activo.modelo if activo else "Latitude 5420",
             "serie": activo.serie if activo else "SER-001",
@@ -269,6 +273,27 @@ class RelevantFlowTests(NotificationBaseTests):
                 f"{reverse('activos:nuevo')}?editar={activo.pk}", changed
             )
         self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            Notificacion.objects.filter(tipo=Notificacion.Tipo.ACTIVO_CAMBIADO).count(), 1
+        )
+
+    def test_editing_physical_location_generates_change_notification(self):
+        self.client.force_login(self.user)
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(reverse("activos:nuevo"), self.asset_data())
+        self.assertEqual(response.status_code, 302)
+        activo = Activo.objects.get(serie="SER-001")
+
+        changed = self.asset_data(activo)
+        changed["ubicacion_fisica"] = self.ubicacion_nueva.pk
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                f"{reverse('activos:nuevo')}?editar={activo.pk}", changed
+            )
+
+        self.assertEqual(response.status_code, 302)
+        activo.refresh_from_db()
+        self.assertEqual(activo.ubicacion_fisica, self.ubicacion_nueva)
         self.assertEqual(
             Notificacion.objects.filter(tipo=Notificacion.Tipo.ACTIVO_CAMBIADO).count(), 1
         )

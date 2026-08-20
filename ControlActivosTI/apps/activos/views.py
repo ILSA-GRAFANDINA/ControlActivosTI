@@ -746,6 +746,13 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
     def forms_valid(self, form, formset):
         es_edicion = bool(self.activo_en_edicion)
         tipo_anterior_id = self.activo_en_edicion.tipo_activo_id if self.activo_en_edicion else None
+        def _resumir_cambio(valor):
+            if valor in (None, ""):
+                return ""
+            if hasattr(valor, "pk"):
+                return str(valor)
+            return str(valor)
+
         campos_relevantes = set(form.changed_data) & {
             "marca",
             "modelo",
@@ -758,7 +765,10 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
             "factura_compra",
         }
         cambios_relevantes = {
-            campo: (form.initial.get(campo), form.cleaned_data.get(campo))
+            campo: (
+                _resumir_cambio(form.initial.get(campo)),
+                _resumir_cambio(form.cleaned_data.get(campo)),
+            )
             for campo in campos_relevantes
         }
         with transaction.atomic():
@@ -801,6 +811,8 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
                 )
             fotos = formset.save(commit=False)
             for foto in fotos:
+                if not foto.pk and not foto.imagen:
+                    continue
                 foto.activo = self.object
                 foto.save()
             if es_edicion:

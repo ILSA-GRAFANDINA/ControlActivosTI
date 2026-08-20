@@ -1611,6 +1611,72 @@ class ActivoCreateViewTests(TestCase):
         self.assertEqual(activo.fotos.count(), 2)
         self.assertTrue(response.url.endswith(reverse("activos:detalle", args=[activo.pk])))
 
+    def test_edit_mode_allows_physical_location_change_with_empty_extra_photo_form(self):
+        ubicacion_nueva = UbicacionFisicaActivo.objects.create(nombre="Produccion")
+        activo = Activo.objects.create(
+            tipo_activo=self.tipo_laptop,
+            empresa=self.empresa,
+            ubicacion_fisica=self.ubicacion_fisica,
+            marca="Lenovo",
+            modelo="ThinkPad T14",
+            serie="LAP-901",
+            codigo_sap="SAP-EDIT-003",
+            cpu="Intel Core i5",
+            ram="8 GB",
+            disco="256 GB SSD",
+            sistema_operativo="Windows 10",
+            fecha_compra=date(2025, 5, 7),
+            valor=990.00,
+            estado_activo=self.estado,
+            activo=True,
+            observaciones="Equipo base para pruebas.",
+        )
+        FotoActivo.objects.create(
+            activo=activo,
+            imagen=make_test_image_file("foto-inicial.jpg"),
+            descripcion="Foto inicial",
+            orden=1,
+        )
+
+        self.client.force_login(self.user)
+        data = self._datos_base()
+        data.update(
+            {
+                "activo_id": str(activo.pk),
+                "ubicacion_fisica": ubicacion_nueva.pk,
+                "tipo_activo": self.tipo_laptop.pk,
+                "marca": "Lenovo",
+                "modelo": "ThinkPad T14",
+                "serie": "LAP-901",
+                "codigo_sap": "SAP-EDIT-003",
+                "cpu": "Intel Core i5",
+                "ram": "8 GB",
+                "disco": "256 GB SSD",
+                "sistema_operativo": "Windows 10",
+                "fecha_compra": "2025-05-07",
+                "valor": "990.00",
+                "estado_activo": self.estado.pk,
+                "activo": "on",
+                "observaciones": "Equipo base para pruebas.",
+                "fotos-TOTAL_FORMS": "2",
+                "fotos-INITIAL_FORMS": "1",
+                "fotos-MIN_NUM_FORMS": "0",
+                "fotos-MAX_NUM_FORMS": "8",
+                "fotos-0-id": str(activo.fotos.first().pk),
+                "fotos-0-imagen": "",
+                "fotos-0-descripcion": "Foto inicial",
+                "fotos-0-orden": "1",
+            }
+        )
+
+        response = self.client.post(f"{reverse('activos:nuevo')}?editar={activo.pk}", data)
+
+        self.assertEqual(response.status_code, 302)
+        activo.refresh_from_db()
+        self.assertEqual(activo.ubicacion_fisica, ubicacion_nueva)
+        self.assertEqual(activo.fotos.count(), 1)
+        self.assertTrue(response.url.endswith(reverse("activos:detalle", args=[activo.pk])))
+
 
 class ActivoDetailViewTests(TestCase):
     def setUp(self):

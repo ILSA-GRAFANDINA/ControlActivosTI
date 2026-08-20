@@ -26,6 +26,14 @@ def _actor_name(actor):
     return actor.get_full_name().strip() or actor.get_username()
 
 
+def _format_change_value(value):
+    if value in (None, ""):
+        return "sin valor"
+    if hasattr(value, "pk"):
+        return str(value)
+    return str(value)
+
+
 class NotificationService:
     @classmethod
     def _recipient_ids(cls, actor, permission=None):
@@ -158,6 +166,7 @@ class NotificationService:
             "tipo_activo": "categoría",
             "estado_activo": "estado",
             "empresa": "empresa",
+            "ubicacion_fisica": "ubicación física",
             "activo": "estado del registro",
             "proveedor": "proveedor",
             "factura_compra": "factura",
@@ -174,8 +183,8 @@ class NotificationService:
                     anterior = "Visible" if anterior else "Eliminado"
                     nuevo = "Visible" if nuevo else "Eliminado"
                 else:
-                    anterior = str(anterior if anterior not in (None, "") else "sin valor")
-                    nuevo = str(nuevo if nuevo not in (None, "") else "sin valor")
+                    anterior = _format_change_value(anterior)
+                    nuevo = _format_change_value(nuevo)
                 resumen = f"{etiquetas[campo]} de “{anterior}” a “{nuevo}”"
             else:
                 resumen = etiquetas[campo]
