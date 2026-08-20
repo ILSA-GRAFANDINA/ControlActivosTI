@@ -14,12 +14,13 @@ from .models import (
     CentroCosto,
     DepartamentoEmpresa,
     Empresa,
-    Ubicacion,
     TipoActivo,
     TipoActivoAtributo,
     OpcionAtributoActivo,
     EstadoActivo,
     TipoEventoActivo,
+    Ubicacion,
+    UbicacionFisicaActivo,
 )
 from apps.auditoria.models import RegistroAuditoria
 from apps.auditoria.services import registrar_evento
@@ -144,6 +145,13 @@ class DepartamentoEmpresaAdmin(admin.ModelAdmin):
 
 @admin.register(Ubicacion)
 class UbicacionAdmin(admin.ModelAdmin):
+    list_display = ("nombre", "activo", "created_at")
+    search_fields = ("nombre",)
+    list_filter = ("activo",)
+
+
+@admin.register(UbicacionFisicaActivo)
+class UbicacionFisicaActivoAdmin(admin.ModelAdmin):
     list_display = ("nombre", "activo", "created_at")
     search_fields = ("nombre",)
     list_filter = ("activo",)

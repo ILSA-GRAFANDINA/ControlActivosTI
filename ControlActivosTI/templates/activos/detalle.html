@@ -78,6 +78,10 @@
                     <p class="font-medium text-slate-900">{{ activo.empresa|default:"-" }}</p>
                 </div>
                 <div>
+                    <p class="text-sm text-slate-500">Ubicacion fisica</p>
+                    <p class="font-medium text-slate-900">{{ activo.ubicacion_fisica|default:"-" }}</p>
+                </div>
+                <div>
                     <p class="text-sm text-slate-500">Proveedor de adquisicion</p>
                     {% if activo.proveedor %}{% if perms.proveedores.view_proveedor %}<a href="{% url 'proveedores:detalle' activo.proveedor.pk %}" class="font-medium text-cyan-700 hover:underline">{{ activo.proveedor }}</a>{% else %}<span class="font-medium text-slate-900">{{ activo.proveedor }}</span>{% endif %}{% if not activo.proveedor.activo %}<span class="ml-2 rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600">Inactivo</span>{% endif %}{% else %}<p class="font-medium text-slate-900">-</p>{% endif %}
                 </div>

@@ -52,6 +52,7 @@
                             <button type="button" data-export-filter-tab="estado" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold">Estado</button>
                             <button type="button" data-export-filter-tab="tipo" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold">Tipo</button>
                             <button type="button" data-export-filter-tab="empresa" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold">Empresa</button>
+                            <button type="button" data-export-filter-tab="ubicacion_fisica" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold">Ubicacion</button>
                             <button type="button" data-export-filter-tab="compra" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold">Compra</button>
                             <button type="button" data-export-filter-tab="vista" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold">Vista</button>
                         </nav>
@@ -61,6 +62,7 @@
                                 {{ tipo.nombre }}
                             </span></label>{% endfor %}</section>
                             <section data-export-filter-panel="empresa" class="hidden space-y-2"><h3 class="text-sm font-semibold text-slate-900">Empresa</h3>{% for empresa in empresas_activo %}<label class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-700"><input type="checkbox" name="empresa" value="{{ empresa.pk }}" data-filter-prefix="Empresa" class="h-4 w-4 rounded border-slate-300 text-cyan-600" {% if empresa.pk|stringformat:"s" in empresas_seleccionadas %}checked{% endif %}><span>{{ empresa.nombre }}</span></label>{% endfor %}</section>
+                            <section data-export-filter-panel="ubicacion_fisica" class="hidden space-y-2"><h3 class="text-sm font-semibold text-slate-900">Ubicacion fisica</h3>{% for ubicacion in ubicaciones_fisicas_activo %}<label class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-700"><input type="checkbox" name="ubicacion_fisica" value="{{ ubicacion.pk }}" data-filter-prefix="Ubicacion" class="h-4 w-4 rounded border-slate-300 text-cyan-600" {% if ubicacion.pk|stringformat:"s" in ubicaciones_fisicas_seleccionadas %}checked{% endif %}><span>{{ ubicacion.nombre }}</span></label>{% endfor %}</section>
                             <section data-export-filter-panel="compra" class="hidden space-y-5">
                                 <fieldset>
                                     <legend class="mb-2 text-sm font-semibold text-slate-900">Proveedor</legend>
@@ -171,6 +173,15 @@
                 </select>
             </div>
             <div>
+                <label for="filtro-ubicacion-fisica" class="mb-2 block text-sm font-semibold text-slate-700">Ubicacion fisica</label>
+                <select id="filtro-ubicacion-fisica" name="ubicacion_fisica" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
+                    <option value="">Todas las ubicaciones</option>
+                    {% for ubicacion in ubicaciones_fisicas_activo %}
+                        <option value="{{ ubicacion.pk }}" {% if ubicacion_fisica_seleccionada == ubicacion.pk|stringformat:"s" %}selected{% endif %}>{{ ubicacion.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
                 <label for="filtro-proveedor" class="mb-2 block text-sm font-semibold text-slate-700">Proveedor</label>
                 <select id="filtro-proveedor" name="proveedor" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
                     <option value="">Todos los proveedores</option>
@@ -276,6 +287,9 @@
         {% for empresa_id in empresas_seleccionadas %}
             <input type="hidden" name="empresa" value="{{ empresa_id }}">
         {% endfor %}
+        {% for ubicacion_id in ubicaciones_fisicas_seleccionadas %}
+            <input type="hidden" name="ubicacion_fisica" value="{{ ubicacion_id }}">
+        {% endfor %}
         {% for proveedor_id in proveedores_seleccionados %}
             <input type="hidden" name="proveedor" value="{{ proveedor_id }}">
         {% endfor %}
@@ -306,6 +320,7 @@
                             <th class="px-4 py-3 font-semibold">Codigo</th>
                             <th class="px-4 py-3 font-semibold">Tipo</th>
                             <th class="px-4 py-3 font-semibold">Empresa</th>
+                            <th class="px-4 py-3 font-semibold">Ubicacion fisica</th>
                             <th class="px-4 py-3 font-semibold">Proveedor</th>
                             <th class="px-4 py-3 font-semibold">Marca / Modelo</th>
                             <th class="px-4 py-3 font-semibold">Serie</th>
@@ -331,6 +346,7 @@
                                 <td class="px-4 py-3 font-semibold text-slate-900">{{ activo.codigo }}</td>
                                 <td class="px-4 py-3">{{ activo.tipo_activo }}</td>
                                 <td class="px-4 py-3">{{ activo.empresa|default:"-" }}</td>
+                                <td class="px-4 py-3">{{ activo.ubicacion_fisica|default:"-" }}</td>
                                 <td class="px-4 py-3">{{ activo.proveedor|default:"-" }}</td>
                                 <td class="px-4 py-3">{{ activo.marca }} {{ activo.modelo }}</td>
                                 <td class="px-4 py-3">{{ activo.serie|default:"-" }}</td>
@@ -547,6 +563,7 @@
             disponibilidades: [{% for disponibilidad in disponibilidades_seleccionadas %}"{{ disponibilidad|escapejs }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
             tipos: [{% for tipo_id in tipos_seleccionados %}"{{ tipo_id|escapejs }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
             empresas: [{% for empresa_id in empresas_seleccionadas %}"{{ empresa_id|escapejs }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
+            ubicacionesFisicas: [{% for ubicacion_id in ubicaciones_fisicas_seleccionadas %}"{{ ubicacion_id|escapejs }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
             proveedores: [{% for proveedor_id in proveedores_seleccionados %}"{{ proveedor_id|escapejs }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
             facturas: [{% for factura_id in facturas_seleccionadas %}"{{ factura_id|escapejs }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
             eliminados: "{{ mostrar_eliminados|yesno:'1,0' }}",

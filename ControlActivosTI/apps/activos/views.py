@@ -14,7 +14,7 @@ from django.views import View
 from django.views.generic import CreateView, DetailView, ListView, TemplateView
 
 from apps.asignaciones.models import AsignacionDetalle
-from apps.catalogos.models import AtributoActivo, Empresa, EstadoActivo, TipoActivo
+from apps.catalogos.models import AtributoActivo, Empresa, EstadoActivo, TipoActivo, UbicacionFisicaActivo
 from apps.facturas.models import FacturaCompra
 from apps.notificaciones.services import NotificationService
 from apps.depreciacion.services import DepreciationService
@@ -41,6 +41,7 @@ class ActivoFilterMixin:
         "disponibilidad",
         "tipo",
         "empresa",
+        "ubicacion_fisica",
         "proveedor",
         "factura",
     )
@@ -111,7 +112,14 @@ class ActivoFilterMixin:
 
     def get_filtered_queryset(self):
         queryset = (
-            Activo.objects.select_related("tipo_activo", "estado_activo", "empresa", "proveedor", "factura_compra")
+            Activo.objects.select_related(
+                "tipo_activo",
+                "estado_activo",
+                "empresa",
+                "ubicacion_fisica",
+                "proveedor",
+                "factura_compra",
+            )
             .prefetch_related(
                 "fotos",
                 "valores_atributos__atributo",
@@ -181,6 +189,7 @@ class ActivoFilterMixin:
                 | Q(serie__icontains=busqueda)
                 | Q(codigo_sap__icontains=busqueda)
                 | Q(empresa__nombre__icontains=busqueda)
+                | Q(ubicacion_fisica__nombre__icontains=busqueda)
                 | Q(proveedor__razon_social__icontains=busqueda)
                 | Q(proveedor__nombre_comercial__icontains=busqueda)
                 | Q(proveedor__identificacion__icontains=busqueda)
@@ -213,6 +222,10 @@ class ActivoFilterMixin:
         if empresa_ids:
             queryset = queryset.filter(empresa_id__in=empresa_ids)
 
+        ubicacion_fisica_ids = self.get_active_filters()["ubicacion_fisica"]
+        if ubicacion_fisica_ids:
+            queryset = queryset.filter(ubicacion_fisica_id__in=ubicacion_fisica_ids)
+
         proveedor_ids = self.get_active_filters()["proveedor"]
         if proveedor_ids:
             queryset = queryset.filter(proveedor_id__in=proveedor_ids)
@@ -244,6 +257,8 @@ class ActivoFilterMixin:
             "tipos_seleccionados": filtros["tipo"],
             "empresa_seleccionada": filtros["empresa"][0] if filtros["empresa"] else "",
             "empresas_seleccionadas": filtros["empresa"],
+            "ubicacion_fisica_seleccionada": filtros["ubicacion_fisica"][0] if filtros["ubicacion_fisica"] else "",
+            "ubicaciones_fisicas_seleccionadas": filtros["ubicacion_fisica"],
             "proveedor_seleccionado": filtros["proveedor"][0] if filtros["proveedor"] else "",
             "proveedores_seleccionados": filtros["proveedor"],
             "factura_seleccionada": filtros["factura"][0] if filtros["factura"] else "",
@@ -257,6 +272,7 @@ class ActivoFilterMixin:
             "estados_activo": EstadoActivo.objects.filter(activo=True).order_by("nombre"),
             "tipos_activo": TipoActivo.objects.filter(activo=True).order_by("nombre"),
             "empresas_activo": Empresa.objects.filter(activo=True).order_by("nombre"),
+            "ubicaciones_fisicas_activo": UbicacionFisicaActivo.objects.filter(activo=True).order_by("nombre"),
             "proveedores": Proveedor.objects.order_by("razon_social"),
             "facturas_compra": FacturaCompra.objects.select_related("proveedor").order_by("-fecha_emision"),
         }
@@ -348,6 +364,7 @@ class ActivoListView(LoginRequiredMixin, ActivoFilterMixin, ListView):
     COLUMNAS_DISPONIBLES = [
         ("tipo_activo", "Tipo"),
         ("empresa", "Empresa"),
+        ("ubicacion_fisica", "Ubicacion fisica"),
         ("proveedor", "Proveedor"),
         ("factura", "Factura"),
         ("marca", "Marca"),
@@ -366,6 +383,7 @@ class ActivoListView(LoginRequiredMixin, ActivoFilterMixin, ListView):
     COLUMNAS_POR_DEFECTO = [
         "tipo_activo",
         "empresa",
+        "ubicacion_fisica",
         "proveedor",
         "marca",
         "modelo",
@@ -431,6 +449,7 @@ class ActivoListView(LoginRequiredMixin, ActivoFilterMixin, ListView):
             or context["disponibilidad_seleccionada"]
             or context["tipos_seleccionados"]
             or context["empresa_seleccionada"]
+            or context["ubicacion_fisica_seleccionada"]
             or context["proveedor_seleccionado"]
             or context["factura_seleccionada"]
             or context["orden_seleccionado"]
@@ -538,7 +557,14 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
             return None
 
         return (
-            Activo.objects.select_related("tipo_activo", "estado_activo", "empresa", "proveedor", "factura_compra")
+            Activo.objects.select_related(
+                "tipo_activo",
+                "estado_activo",
+                "empresa",
+                "ubicacion_fisica",
+                "proveedor",
+                "factura_compra",
+            )
             .prefetch_related("fotos")
             .filter(pk=raw_pk)
             .first()
@@ -556,7 +582,12 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
             return None
         return (
             Activo.objects.select_related(
-                "tipo_activo", "estado_activo", "empresa", "proveedor", "factura_compra"
+                "tipo_activo",
+                "estado_activo",
+                "empresa",
+                "ubicacion_fisica",
+                "proveedor",
+                "factura_compra",
             )
             .prefetch_related("valores_atributos__atributo", "valores_atributos__valor_opcion")
             .filter(pk=raw_pk)
@@ -681,6 +712,7 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
             "tipo_activo",
             "estado_activo",
             "empresa",
+            "ubicacion_fisica",
             "activo",
             "proveedor",
             "factura_compra",
@@ -856,7 +888,16 @@ class ActivoDetailView(LoginRequiredMixin, DetailView):
 
     def get_queryset(self):
         return (
-            Activo.objects.select_related("tipo_activo", "estado_activo", "empresa", "proveedor", "factura_compra", "factura_compra__proveedor", "factura_compra__empresa")
+            Activo.objects.select_related(
+                "tipo_activo",
+                "estado_activo",
+                "empresa",
+                "ubicacion_fisica",
+                "proveedor",
+                "factura_compra",
+                "factura_compra__proveedor",
+                "factura_compra__empresa",
+            )
             .prefetch_related(
                 Prefetch(
                     "valores_atributos",

@@ -22,6 +22,7 @@ from apps.catalogos.models import (
     TipoActivo,
     TipoActivoAtributo,
     TipoEventoActivo,
+    UbicacionFisicaActivo,
 )
 
 from .encryption import mask_protected_text
@@ -97,6 +98,13 @@ class Activo(models.Model):
         related_name="activos",
         null=True,
         blank=True,
+    )
+    ubicacion_fisica = models.ForeignKey(
+        UbicacionFisicaActivo,
+        on_delete=models.PROTECT,
+        related_name="activos",
+        verbose_name="Ubicacion fisica",
+        help_text="Lugar fisico del activo dentro de la empresa.",
     )
     proveedor = models.ForeignKey(
         "proveedores.Proveedor",
@@ -310,6 +318,11 @@ class Activo(models.Model):
     def save(self, *args, **kwargs):
         if not self.serie or not self.serie.strip():
             self.serie = "S/N"
+        if not self.ubicacion_fisica_id:
+            self.ubicacion_fisica, _created = UbicacionFisicaActivo.objects.get_or_create(
+                nombre="Sin ubicacion definida",
+                defaults={"descripcion": "Valor inicial para activos pendientes de clasificar."},
+            )
         self.limpiar_especificaciones_no_aplicables()
         self.limpiar_codigo_sap_no_aplicable()
         if self.factura_compra_id:

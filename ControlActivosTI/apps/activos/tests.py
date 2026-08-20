@@ -26,6 +26,7 @@ from apps.catalogos.models import (
     TipoActivoAtributo,
     TipoEventoActivo,
     Ubicacion,
+    UbicacionFisicaActivo,
 )
 from apps.colaboradores.models import Colaborador
 from apps.facturas.models import FacturaCompra
@@ -91,11 +92,13 @@ class ActivoAdminFormTests(TestCase):
         self.tipo_laptop = TipoActivo.objects.create(nombre="Laptop")
         self.tipo_pc = TipoActivo.objects.create(nombre="PC")
         self.empresa = Empresa.objects.create(nombre="Empresa Test")
+        self.ubicacion_fisica = UbicacionFisicaActivo.objects.create(nombre="Administracion")
 
     def _data_base(self, tipo_activo):
         return {
             "tipo_activo": tipo_activo.pk,
             "empresa": self.empresa.pk,
+            "ubicacion_fisica": self.ubicacion_fisica.pk,
             "marca": "Logitech",
             "modelo": "MX",
             "serie": "S/N",
@@ -391,6 +394,7 @@ class EventoActivoAdminViewTests(TestCase):
         self.estado = EstadoActivo.objects.create(nombre="Disponible", permite_asignacion=True)
         self.tipo_laptop = TipoActivo.objects.create(nombre="Laptop")
         self.empresa = Empresa.objects.create(nombre="Acme")
+        self.ubicacion_fisica = UbicacionFisicaActivo.objects.create(nombre="Administracion")
         self.activo = Activo.objects.create(
             tipo_activo=self.tipo_laptop,
             empresa=self.empresa,
@@ -1277,6 +1281,7 @@ class ActivoCreateViewTests(TestCase):
         return {
             "tipo_activo": self.tipo_laptop.pk,
             "empresa": self.empresa.pk,
+            "ubicacion_fisica": self.ubicacion_fisica.pk,
             "marca": "Dell",
             "modelo": "Latitude 5440",
             "serie": "LAP-777",

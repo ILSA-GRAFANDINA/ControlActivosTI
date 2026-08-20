@@ -14,6 +14,7 @@ from apps.catalogos.models import (
     OpcionAtributoActivo,
     TipoActivo,
     TipoActivoAtributo,
+    UbicacionFisicaActivo,
 )
 
 from .attribute_services import guardar_valores_atributos
@@ -156,6 +157,7 @@ class ActivoDynamicFormTests(TestCase):
         self.user = get_user_model().objects.create_user("atributos-user", password="x")
         self.tipo = TipoActivo.objects.create(nombre="Monitor dinamico")
         self.estado = EstadoActivo.objects.create(nombre="Disponible dinamico", permite_asignacion=True)
+        self.ubicacion_fisica = UbicacionFisicaActivo.objects.create(nombre="Produccion")
         self.tamano = AtributoActivo.objects.create(
             nombre="Tamano de pantalla", clave="tamano_pantalla",
             tipo_dato=AtributoActivo.TipoDato.DECIMAL, unidad="pulgadas",
@@ -168,6 +170,7 @@ class ActivoDynamicFormTests(TestCase):
     def data(self, valor="24"):
         return {
             "tipo_activo": self.tipo.pk,
+            "ubicacion_fisica": self.ubicacion_fisica.pk,
             "marca": "LG",
             "modelo": "Ultra",
             "serie": "MON-DYN-1",

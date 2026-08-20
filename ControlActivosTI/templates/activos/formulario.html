@@ -76,6 +76,12 @@
                 {% if form.empresa.errors %}<p class="mt-2 text-sm text-red-600">{{ form.empresa.errors|join:", " }}</p>{% endif %}
             </div>
             <div>
+                <label class="mb-2 block text-sm font-semibold text-slate-700">Ubicacion fisica</label>
+                {{ form.ubicacion_fisica }}
+                {% if form.ubicacion_fisica.help_text %}<p class="mt-2 text-xs text-slate-500">{{ form.ubicacion_fisica.help_text }}</p>{% endif %}
+                {% if form.ubicacion_fisica.errors %}<p class="mt-2 text-sm text-red-600">{{ form.ubicacion_fisica.errors|join:", " }}</p>{% endif %}
+            </div>
+            <div>
                 <label class="mb-2 block text-sm font-semibold text-slate-700">Proveedor de adquisicion</label>
                 <div class="relative mb-2">
                     <input type="search" data-provider-search placeholder="Buscar proveedor" autocomplete="off" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">

@@ -7,6 +7,7 @@ from apps.catalogos.models import (
     EstadoActivo,
     TipoActivo,
     TipoActivoAtributo,
+    UbicacionFisicaActivo,
 )
 
 from .attribute_services import guardar_valores_atributos
@@ -20,6 +21,7 @@ class ActivoCopyFlowTests(TestCase):
         self.estado = EstadoActivo.objects.create(nombre="Disponible copia", permite_asignacion=True)
         self.tipo = TipoActivo.objects.create(nombre="Laptop copia")
         self.otro_tipo = TipoActivo.objects.create(nombre="Monitor copia")
+        self.ubicacion_fisica = UbicacionFisicaActivo.objects.create(nombre="Logistica copia")
         self.ram = AtributoActivo.objects.create(
             nombre="RAM para copia",
             clave="ram_para_copia",
@@ -67,6 +69,7 @@ class ActivoCopyFlowTests(TestCase):
             "activo_base_id": str(self.base.pk),
             # Intenta alterar el tipo: el backend debe conservar el del origen.
             "tipo_activo": str(self.otro_tipo.pk),
+            "ubicacion_fisica": str(self.ubicacion_fisica.pk),
             "marca": "Dell",
             "modelo": "Latitude 5440",
             "serie": "COPIA-002",

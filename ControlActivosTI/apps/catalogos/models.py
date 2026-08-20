@@ -80,6 +80,22 @@ class Ubicacion(models.Model):
         return self.nombre
 
 
+class UbicacionFisicaActivo(models.Model):
+    nombre = models.CharField(max_length=100, unique=True)
+    descripcion = models.TextField(blank=True)
+    activo = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Ubicacion fisica de activo"
+        verbose_name_plural = "Ubicaciones fisicas de activos"
+        ordering = ["nombre"]
+
+    def __str__(self):
+        return self.nombre
+
+
 class DepartamentoEmpresa(models.Model):
     empresa = models.ForeignKey(
         Empresa,

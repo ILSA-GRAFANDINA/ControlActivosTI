@@ -30,6 +30,7 @@ from apps.catalogos.models import (
     TipoActivoAtributo,
     TipoEventoActivo,
     Ubicacion,
+    UbicacionFisicaActivo,
 )
 from apps.catalogos.forms import (
     AtributoActivoAdmin2Form,
@@ -100,6 +101,15 @@ CATALOG_CONFIG = {
         "fields": ["nombre", "descripcion", "activo"],
         "columns": ["nombre", "activo", "updated_at"],
         "admin_changelist": "admin:catalogos_ubicacion_changelist",
+    },
+    "ubicaciones-fisicas-activo": {
+        "model": UbicacionFisicaActivo,
+        "title": "Ubicaciones fisicas de activos",
+        "singular": "Ubicacion fisica de activo",
+        "description": "Definen lugares internos como administracion, logistica, recursos humanos o produccion.",
+        "fields": ["nombre", "descripcion", "activo"],
+        "columns": ["nombre", "activo", "updated_at"],
+        "admin_changelist": "admin:catalogos_ubicacionfisicaactivo_changelist",
     },
     "tipos-activo": {
         "model": TipoActivo,

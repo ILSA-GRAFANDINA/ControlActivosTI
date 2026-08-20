@@ -47,6 +47,7 @@ class ActivoAdmin(admin.ModelAdmin):
         "codigo",
         "tipo_activo",
         "empresa",
+        "ubicacion_fisica",
         "proveedor",
         "factura_compra",
         "marca",
@@ -68,6 +69,7 @@ class ActivoAdmin(admin.ModelAdmin):
         "modelo",
         "serie",
         "empresa__nombre",
+        "ubicacion_fisica__nombre",
         "proveedor__razon_social",
         "proveedor__identificacion",
         "factura_compra__numero_factura",
@@ -79,6 +81,7 @@ class ActivoAdmin(admin.ModelAdmin):
     list_filter = (
         "tipo_activo",
         "empresa",
+        "ubicacion_fisica",
         "proveedor",
         "factura_compra",
         "estado_activo",
@@ -88,7 +91,14 @@ class ActivoAdmin(admin.ModelAdmin):
         "sistema_operativo",
         "fecha_compra",
     )
-    list_select_related = ("tipo_activo", "empresa", "proveedor", "factura_compra", "estado_activo")
+    list_select_related = (
+        "tipo_activo",
+        "empresa",
+        "ubicacion_fisica",
+        "proveedor",
+        "factura_compra",
+        "estado_activo",
+    )
     inlines = [FotoActivoInline, ValorAtributoActivoInline]
 
     class Media:

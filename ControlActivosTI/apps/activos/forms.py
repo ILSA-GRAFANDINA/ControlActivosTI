@@ -6,7 +6,7 @@ from django.db.models import Q
 
 from apps.proveedores.models import Proveedor
 from apps.facturas.models import FacturaCompra
-from apps.catalogos.models import EstadoActivo, TipoActivo
+from apps.catalogos.models import EstadoActivo, TipoActivo, UbicacionFisicaActivo
 from apps.catalogos.models import AtributoActivo, OpcionAtributoActivo
 
 from .attribute_services import configuraciones_para_tipo, validar_valor
@@ -84,6 +84,7 @@ class ActivoAdminForm(forms.ModelForm):
         etiquetas = {
             "tipo_activo": "Tipo de activo",
             "empresa": "Empresa",
+            "ubicacion_fisica": "Ubicacion fisica",
             "proveedor": "Proveedor de adquisicion",
             "factura_compra": "Factura de compra",
             "marca": "Marca",
@@ -201,6 +202,22 @@ class ActivoAdminForm(forms.ModelForm):
                 self.fields["tipo_activo"].help_text = (
                     "El tipo se conserva porque este activo se esta creando a partir de otro."
                 )
+
+        if "ubicacion_fisica" in self.fields:
+            ubicacion_actual_id = (
+                self.instance.ubicacion_fisica_id
+                if self.instance and self.instance.pk
+                else getattr(self.activo_base, "ubicacion_fisica_id", None)
+            )
+            filtro_ubicacion = Q(activo=True)
+            if ubicacion_actual_id:
+                filtro_ubicacion |= Q(pk=ubicacion_actual_id)
+            self.fields["ubicacion_fisica"].queryset = (
+                UbicacionFisicaActivo.objects.filter(filtro_ubicacion).order_by("nombre")
+            )
+            self.fields["ubicacion_fisica"].help_text = (
+                "Ubicacion fisica real del activo dentro de la empresa."
+            )
 
         if "proveedor" in self.fields:
             proveedor_actual_id = (

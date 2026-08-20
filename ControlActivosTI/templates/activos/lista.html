@@ -131,6 +131,7 @@
                             <button type="button" data-filter-tab="estado" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition">Estado</button>
                             <button type="button" data-filter-tab="tipo" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition">Tipo</button>
                             <button type="button" data-filter-tab="empresa" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition">Empresa</button>
+                            <button type="button" data-filter-tab="ubicacion_fisica" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition">Ubicacion</button>
                             <button type="button" data-filter-tab="compra" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition">Compra</button>
                             <button type="button" data-filter-tab="vista" class="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition">Vista</button>
                         </nav>
@@ -147,6 +148,9 @@
                             </div></section>
                             <section data-filter-panel="empresa" class="hidden space-y-3"><h3 class="text-sm font-semibold text-slate-900">Empresa</h3><p class="text-xs text-slate-500">Sin selección se incluyen todas las empresas.</p><div class="space-y-1">
                                 {% for empresa in empresas_activo %}<label class="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" name="empresa" value="{{ empresa.pk }}" data-filter-prefix="Empresa" class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" {% if empresa.pk|stringformat:"s" in empresas_seleccionadas %}checked{% endif %}><span>{{ empresa.nombre }}</span></label>{% endfor %}
+                            </div></section>
+                            <section data-filter-panel="ubicacion_fisica" class="hidden space-y-3"><h3 class="text-sm font-semibold text-slate-900">Ubicacion fisica</h3><p class="text-xs text-slate-500">Puedes seleccionar una o varias ubicaciones internas.</p><div class="space-y-1">
+                                {% for ubicacion in ubicaciones_fisicas_activo %}<label class="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" name="ubicacion_fisica" value="{{ ubicacion.pk }}" data-filter-prefix="Ubicacion" class="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" {% if ubicacion.pk|stringformat:"s" in ubicaciones_fisicas_seleccionadas %}checked{% endif %}><span>{{ ubicacion.nombre }}</span></label>{% endfor %}
                             </div></section>
                             <section data-filter-panel="compra" class="hidden space-y-5">
                                 <fieldset>
@@ -174,7 +178,7 @@
             </details>
         </div>
 
-        {% if busqueda or estados_seleccionados or disponibilidades_seleccionadas or tipos_seleccionados or empresas_seleccionadas or proveedores_seleccionados or facturas_seleccionadas or orden_seleccionado or mostrar_eliminados %}
+        {% if busqueda or estados_seleccionados or disponibilidades_seleccionadas or tipos_seleccionados or empresas_seleccionadas or ubicaciones_fisicas_seleccionadas or proveedores_seleccionados or facturas_seleccionadas or orden_seleccionado or mostrar_eliminados %}
             <div class="flex flex-wrap items-center gap-2" aria-label="Filtros activos">
                 {% if busqueda %}
                     <button type="button" data-remove-filter="q" class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-slate-300"><span>Búsqueda: {{ busqueda }}</span><span aria-hidden="true">×</span><span class="sr-only">Quitar búsqueda</span></button>
@@ -199,6 +203,13 @@
                     {% for empresa in empresas_activo %}
                         {% if empresa.pk|stringformat:"s" in empresas_seleccionadas %}
                             <button type="button" data-remove-filter="empresa" data-remove-value="{{ empresa.pk }}" class="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-medium text-violet-700"><span>Empresa: {{ empresa.nombre }}</span><span aria-hidden="true">×</span></button>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+                {% if ubicaciones_fisicas_seleccionadas %}
+                    {% for ubicacion in ubicaciones_fisicas_activo %}
+                        {% if ubicacion.pk|stringformat:"s" in ubicaciones_fisicas_seleccionadas %}
+                            <button type="button" data-remove-filter="ubicacion_fisica" data-remove-value="{{ ubicacion.pk }}" class="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700"><span>Ubicacion: {{ ubicacion.nombre }}</span><span aria-hidden="true">×</span></button>
                         {% endif %}
                     {% endfor %}
                 {% endif %}
@@ -263,6 +274,7 @@
                     <th class="px-4 py-3 font-semibold">Código</th>
                     {% if "tipo_activo" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Tipo</th>{% endif %}
                     {% if "empresa" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Empresa</th>{% endif %}
+                    {% if "ubicacion_fisica" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Ubicacion fisica</th>{% endif %}
                     {% if "proveedor" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Proveedor</th>{% endif %}
                     {% if "factura" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Factura</th>{% endif %}
                     {% if "marca" in columnas_seleccionadas %}<th class="px-4 py-3 font-semibold">Marca</th>{% endif %}
@@ -322,6 +334,7 @@
                         </td>
                         {% if "tipo_activo" in columnas_seleccionadas %}<td class="px-4 py-3">{{ activo.tipo_activo }}</td>{% endif %}
                         {% if "empresa" in columnas_seleccionadas %}<td class="px-4 py-3">{{ activo.empresa|default:"-" }}</td>{% endif %}
+                        {% if "ubicacion_fisica" in columnas_seleccionadas %}<td class="px-4 py-3">{{ activo.ubicacion_fisica|default:"-" }}</td>{% endif %}
                         {% if "proveedor" in columnas_seleccionadas %}<td class="px-4 py-3">{{ activo.proveedor|default:"-" }}</td>{% endif %}
                         {% if "factura" in columnas_seleccionadas %}<td class="px-4 py-3">{% if activo.factura_compra %}<a href="{% url 'facturas:detalle' activo.factura_compra_id %}" class="font-semibold text-violet-700 hover:underline">{{ activo.factura_compra.numero_factura }}</a>{% else %}-{% endif %}</td>{% endif %}
                         {% if "marca" in columnas_seleccionadas %}<td class="px-4 py-3 font-medium text-slate-900">{{ activo.marca }}</td>{% endif %}
