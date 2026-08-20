@@ -1069,6 +1069,58 @@ html.dark .app-content .profile-banner {
     box-shadow: 0 24px 64px rgba(12, 10, 48, .36) !important;
 }
 
+.app-content .asset-choice-card {
+    position: relative;
+    overflow: hidden;
+    transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease, background-color .22s ease;
+}
+
+.app-content .asset-choice-card:hover {
+    transform: translateY(-2px);
+}
+
+html.dark .app-content .asset-choice-card {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .03), var(--app-shadow) !important;
+}
+
+html.dark .app-content .asset-choice-card--cyan {
+    background: linear-gradient(180deg, rgba(12, 24, 39, .96), rgba(13, 28, 45, .92)) !important;
+    border-color: rgba(34, 211, 238, .22) !important;
+}
+
+html.dark .app-content .asset-choice-card--cyan:hover {
+    border-color: rgba(34, 211, 238, .36) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .045), var(--app-shadow-hover) !important;
+}
+
+html.dark .app-content .asset-choice-card--violet {
+    background: linear-gradient(180deg, rgba(46, 36, 84, .92), rgba(33, 29, 66, .96)) !important;
+    border-color: rgba(167, 139, 250, .28) !important;
+}
+
+html.dark .app-content .asset-choice-card--violet:hover {
+    border-color: rgba(196, 181, 253, .42) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), var(--app-shadow-hover) !important;
+}
+
+html.dark .app-content .asset-choice-card h3 {
+    color: #f8f7ff !important;
+}
+
+html.dark .app-content .asset-choice-card p {
+    color: rgba(226, 232, 240, .82) !important;
+}
+
+html.dark .app-content .asset-choice-card--cyan span:first-child {
+    background-color: rgba(6, 182, 212, .16) !important;
+    color: #8be9ff !important;
+}
+
+html.dark .app-content .asset-choice-card--violet span:first-child {
+    background-color: rgba(167, 139, 250, .18) !important;
+    color: #ddd0ff !important;
+}
+
 /*
  * El dashboard responde al espacio real del contenido, no al ancho global de
  * la ventana. Esto evita columnas comprimidas al usar zoom con el sidebar abierto.
