@@ -48,9 +48,9 @@
                 </div>
             </div>
 
-            <nav class="app-nav flex flex-1 flex-col justify-between">
+            <nav class="app-nav flex flex-1 flex-col gap-6">
                 <div>
-                    <p class="mb-3 px-3 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Principal</p>
+                    <p class="mb-3 px-3 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">General</p>
                     <a
                         href="/dashboard/"
                         data-nav-label="Dashboard"
@@ -65,7 +65,7 @@
                 </div>
 
                 <div>
-                    <p class="mb-3 px-3 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Gestión</p>
+                    <p class="mb-3 px-3 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Inventario y activos</p>
                     <div class="space-y-2">
                         <a
                             href="/activos/"
@@ -87,16 +87,12 @@
                             </svg>
                             <span>Asignaciones</span>
                         </a>
-                        <a
-                            href="/colaboradores/"
-                            data-nav-label="Colaboradores"
-                            class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition {% if request.path|slice:':15' == '/colaboradores/' %}bg-cyan-500/15 text-cyan-200 ring-1 ring-inset ring-cyan-400/30{% else %}text-slate-200 hover:bg-slate-800 hover:text-white{% endif %}"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M10 2.5a3.25 3.25 0 1 0 0 6.5 3.25 3.25 0 0 0 0-6.5ZM4.25 14A3.75 3.75 0 0 1 8 10.25h4A3.75 3.75 0 0 1 15.75 14v1.25a.75.75 0 0 1-.75.75h-10a.75.75 0 0 1-.75-.75V14Z" />
-                            </svg>
-                            <span>Colaboradores</span>
-                        </a>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="mb-3 px-3 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Finanzas y compras</p>
+                    <div class="space-y-2">
                         {% if perms.facturas.view_facturacompra %}
                         <a
                             href="{% url 'facturas:lista' %}"
@@ -128,8 +124,24 @@
                     </div>
                 </div>
 
+                <div>
+                    <p class="mb-3 px-3 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Organización</p>
+                    <div class="space-y-2">
+                        <a
+                            href="/colaboradores/"
+                            data-nav-label="Colaboradores"
+                            class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition {% if request.path|slice:':15' == '/colaboradores/' %}bg-cyan-500/15 text-cyan-200 ring-1 ring-inset ring-cyan-400/30{% else %}text-slate-200 hover:bg-slate-800 hover:text-white{% endif %}"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10 2.5a3.25 3.25 0 1 0 0 6.5 3.25 3.25 0 0 0 0-6.5ZM4.25 14A3.75 3.75 0 0 1 8 10.25h4A3.75 3.75 0 0 1 15.75 14v1.25a.75.75 0 0 1-.75.75h-10a.75.75 0 0 1-.75-.75V14Z" />
+                            </svg>
+                            <span>Colaboradores</span>
+                        </a>
+                    </div>
+                </div>
+
                 <div class="app-nav-admin">
-                    <p class="mb-3 px-3 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Administración</p>
+                    <p class="mb-3 px-3 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Configuración</p>
                     <div class="space-y-2">
                         <a
                             href="/admin/"
