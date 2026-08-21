@@ -103,6 +103,13 @@ class Activo(models.Model):
         null=True,
         blank=True,
     )
+
+    verificado_ti = models.BooleanField(
+        default=False,
+        verbose_name="Verificado por TIc's",
+        help_text="Marca si el activo ya fue revisado por el departamento de TIC'S"
+    )
+
     ubicacion_fisica = models.ForeignKey(
         UbicacionFisicaActivo,
         on_delete=models.PROTECT,

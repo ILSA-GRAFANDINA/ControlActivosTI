@@ -64,6 +64,7 @@ class ActivoAdmin(admin.ModelAdmin):
         "sistema_operativo",
         "cantidad_fotos",
         "miniatura_principal",
+        "verificado_ti"
     )
     search_fields = (
         "codigo",
@@ -96,6 +97,7 @@ class ActivoAdmin(admin.ModelAdmin):
         "marca",
         "sistema_operativo",
         "fecha_compra",
+        "verificado_ti"
     )
     list_select_related = (
         "tipo_activo",
