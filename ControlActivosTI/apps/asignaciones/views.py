@@ -334,15 +334,35 @@ class AsignacionCreateView(LoginRequiredMixin, CreateView):
             .exclude(estado_activo__nombre__icontains="repar")
             .exclude(estado_activo__nombre__icontains="cuarentena")
         )
-        activos_recientes = list(
-            activos_asignables.order_by("-created_at", "-id")[: self.ACTIVOS_RECIENTES_LIMIT]
-        )
-        activos_recientes_ids = [activo.pk for activo in activos_recientes]
-        activos_restantes = activos_asignables.exclude(
-            pk__in=activos_recientes_ids
-        )
+        q_activo = self.request.GET.get("q_activo", "").strip()
+        if q_activo:
+            activos_asignables = activos_asignables.filter(
+                Q(codigo__icontains=q_activo)
+                | Q(marca__icontains=q_activo)
+                | Q(modelo__icontains=q_activo)
+                | Q(serie__icontains=q_activo)
+                | Q(codigo_sap__icontains=q_activo)
+                | Q(tipo_activo__nombre__icontains=q_activo)
+                | Q(cpu__icontains=q_activo)
+                | Q(ram__icontains=q_activo)
+                | Q(disco__icontains=q_activo)
+                | Q(sistema_operativo__icontains=q_activo)
+                | Q(valores_atributos__valor_texto__icontains=q_activo)
+                | Q(valores_atributos__valor_opcion__nombre__icontains=q_activo)
+            ).distinct()
+            activos_recientes = []
+            activos_restantes = activos_asignables
+        else:
+            activos_recientes = list(
+                activos_asignables.order_by("-created_at", "-id")[: self.ACTIVOS_RECIENTES_LIMIT]
+            )
+            activos_recientes_ids = [activo.pk for activo in activos_recientes]
+            activos_restantes = activos_asignables.exclude(
+                pk__in=activos_recientes_ids
+            )
         activos_paginator = Paginator(activos_restantes, self.ACTIVOS_POR_PAGINA)
         activos_page_obj = activos_paginator.get_page(self.request.GET.get("activos_page"))
+        context["q_activo"] = q_activo
         context["activos_recientes"] = activos_recientes
         context["activos_disponibles"] = activos_page_obj.object_list
         context["activos_paginator"] = activos_paginator

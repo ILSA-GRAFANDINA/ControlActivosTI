@@ -46,6 +46,7 @@
                     <input
                         id="filtro-activos"
                         type="search"
+                        value="{{ q_activo|default:'' }}"
                         placeholder="Filtra por código, tipo, marca, modelo, serie o especificaciones"
                         class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
                     >
@@ -128,7 +129,11 @@
                             {% empty %}
                                 <tr>
                                     <td colspan="8" class="px-4 py-8 text-center text-slate-500">
-                                        No hay activos disponibles para asignación.
+                                        {% if q_activo %}
+                                            No se encontraron activos disponibles que coincidan con "{{ q_activo }}".
+                                        {% else %}
+                                            No hay activos disponibles para asignación.
+                                        {% endif %}
                                     </td>
                                 </tr>
                             {% endfor %}
@@ -797,49 +802,80 @@
             });
         }
 
-        // Paginación asíncrona sin recargar la página (preserva el colaborador y selecciones)
+        // Carga dinámica de activos (búsqueda y paginación asíncrona)
+        const cargarUrlActivos = async (url) => {
+            try {
+                if (paginacionContainer) {
+                    paginacionContainer.style.opacity = "0.4";
+                    paginacionContainer.style.pointerEvents = "none";
+                }
+                cuerpoTabla.style.opacity = "0.4";
+
+                const response = await fetch(url, {
+                    headers: { "X-Requested-With": "XMLHttpRequest" }
+                });
+                if (!response.ok) throw new Error("HTTP error " + response.status);
+
+                const html = await response.text();
+                const doc = new DOMParser().parseFromString(html, "text/html");
+
+                const nuevoCuerpo = doc.getElementById("tabla-activos-body");
+                const nuevaPaginacion = doc.getElementById("activos-paginacion-container");
+                const nuevoRecientes = doc.getElementById("activos-recientes");
+                const actualesRecientes = document.getElementById("activos-recientes");
+
+                if (nuevoCuerpo) {
+                    cuerpoTabla.innerHTML = nuevoCuerpo.innerHTML;
+                    if (nuevaPaginacion && paginacionContainer) {
+                        paginacionContainer.innerHTML = nuevaPaginacion.innerHTML;
+                    }
+                    if (actualesRecientes) {
+                        if (nuevoRecientes) {
+                            actualesRecientes.innerHTML = nuevoRecientes.innerHTML;
+                            actualesRecientes.classList.remove("hidden");
+                        } else {
+                            actualesRecientes.classList.add("hidden");
+                        }
+                    }
+
+                    const nuevasFilas = Array.from(document.querySelectorAll(".activo-row"));
+                    nuevasFilas.forEach(vincularFila);
+
+                    actualizarFiltro();
+                    sincronizarHiddenInputs();
+                }
+            } catch (error) {
+                console.error("Error al cargar activos:", error);
+                window.location.href = url;
+            } finally {
+                if (paginacionContainer) {
+                    paginacionContainer.style.opacity = "1";
+                    paginacionContainer.style.pointerEvents = "";
+                }
+                cuerpoTabla.style.opacity = "1";
+            }
+        };
+
         if (paginacionContainer) {
-            paginacionContainer.addEventListener("click", async (event) => {
+            paginacionContainer.addEventListener("click", (event) => {
                 const link = event.target.closest("a");
                 if (!link || !link.href) return;
                 event.preventDefault();
-
-                try {
-                    paginacionContainer.style.opacity = "0.4";
-                    paginacionContainer.style.pointerEvents = "none";
-                    cuerpoTabla.style.opacity = "0.4";
-
-                    const response = await fetch(link.href, {
-                        headers: { "X-Requested-With": "XMLHttpRequest" }
-                    });
-                    if (!response.ok) throw new Error("HTTP error " + response.status);
-
-                    const html = await response.text();
-                    const doc = new DOMParser().parseFromString(html, "text/html");
-
-                    const nuevoCuerpo = doc.getElementById("tabla-activos-body");
-                    const nuevaPaginacion = doc.getElementById("activos-paginacion-container");
-
-                    if (nuevoCuerpo && nuevaPaginacion) {
-                        cuerpoTabla.innerHTML = nuevoCuerpo.innerHTML;
-                        paginacionContainer.innerHTML = nuevaPaginacion.innerHTML;
-
-                        const nuevasFilas = Array.from(cuerpoTabla.querySelectorAll(".activo-row"));
-                        nuevasFilas.forEach(vincularFila);
-
-                        actualizarFiltro();
-                        sincronizarHiddenInputs();
-                    }
-                } catch (error) {
-                    console.error("Error al paginar activos:", error);
-                    window.location.href = link.href;
-                } finally {
-                    paginacionContainer.style.opacity = "1";
-                    paginacionContainer.style.pointerEvents = "";
-                    cuerpoTabla.style.opacity = "1";
-                }
+                cargarUrlActivos(link.href);
             });
         }
+
+        const ejecutarBusquedaBackend = (termino) => {
+            const url = new URL(window.location.href);
+            if (termino) {
+                url.searchParams.set("q_activo", termino);
+            } else {
+                url.searchParams.delete("q_activo");
+            }
+            url.searchParams.delete("activos_page");
+            window.history.replaceState({}, "", url.toString());
+            cargarUrlActivos(url.toString());
+        };
 
         formulario.addEventListener("submit", (event) => {
             if (envioConfirmado) return;
@@ -885,7 +921,23 @@
             }
         });
 
-        filtro.addEventListener("input", actualizarFiltro);
+        let debounceBusquedaTimer = null;
+        filtro.addEventListener("input", () => {
+            actualizarFiltro();
+            clearTimeout(debounceBusquedaTimer);
+            debounceBusquedaTimer = setTimeout(() => {
+                ejecutarBusquedaBackend(filtro.value.trim());
+            }, 350);
+        });
+
+        filtro.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                clearTimeout(debounceBusquedaTimer);
+                ejecutarBusquedaBackend(filtro.value.trim());
+            }
+        });
+
         controlesFiltro.forEach((control) => control.addEventListener("change", actualizarFiltro));
         ordenActivos?.addEventListener("change", actualizarFiltro);
         contenedorFiltros?.addEventListener("toggle", () => {
@@ -900,6 +952,7 @@
             filtro.value = "";
             if (ordenActivos) ordenActivos.value = "codigo";
             actualizarFiltro();
+            ejecutarBusquedaBackend("");
         });
 
         actualizarFiltro();
