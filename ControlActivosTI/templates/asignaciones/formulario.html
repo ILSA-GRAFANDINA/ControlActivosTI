@@ -121,7 +121,8 @@
                                 <th class="px-4 py-3 text-left font-semibold">Estado</th>
                             </tr>
                         </thead>
-                        <tbody id="tabla-activos-body" class="divide-y divide-slate-200">
+                        <div id="activos-seleccionados-hidden" class="hidden"></div>
+<tbody id="tabla-activos-body" class="divide-y divide-slate-200">
                             {% for activo in activos_disponibles %}
                                 {% include "asignaciones/includes/fila_activo.html" with reciente=False %}
                             {% empty %}
@@ -136,7 +137,8 @@
                 </div>
             </div>
 
-            {% if activos_paginator.count %}
+            <div id="activos-paginacion-container">
+{% if activos_paginator.count %}
                 <div class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
                     <p>
                         Mostrando {{ activos_page_obj.start_index }} a {{ activos_page_obj.end_index }} de {{ activos_paginator.count }} activos restantes
@@ -168,6 +170,7 @@
                     {% endif %}
                 </div>
             {% endif %}
+            </div>
 
             <p id="activos-sin-resultados" class="hidden rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
                 No hay activos que coincidan con el filtro actual.
@@ -487,6 +490,8 @@
         const modalActa = document.getElementById("confirmacion-acta-modal");
         const cerrarModalActa = Array.from(document.querySelectorAll("[data-cerrar-confirmacion-acta]"));
         const confirmarActa = document.getElementById("confirmar-generacion-acta");
+        const paginacionContainer = document.getElementById("activos-paginacion-container");
+        const hiddenContainer = document.getElementById("activos-seleccionados-hidden");
 
         if (
             !formulario ||
@@ -508,10 +513,27 @@
             return;
         }
 
-        const filas = Array.from(document.querySelectorAll(".activo-row"));
-        const filasFiltrables = filas.filter((fila) => fila.dataset.reciente !== "true");
-        const ordenOriginal = new Map(filasFiltrables.map((fila, indice) => [fila, indice]));
+        const seleccionadosGlobales = new Map();
         let envioConfirmado = false;
+
+        const normalizar = (valor) => (valor || "")
+            .toString()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLowerCase()
+            .trim();
+
+        const obtenerCheckbox = (fila) => fila.querySelector('input[type="checkbox"][name="activos"]');
+
+        const extraerDatosFila = (fila) => ({
+            id: String(fila.dataset.id || ""),
+            codigo: fila.dataset.codigo || "",
+            marcaModelo: fila.dataset.marcaModelo || "",
+            tipo: fila.dataset.tipo || "",
+            serie: fila.dataset.serie || "S/N",
+            especificaciones: fila.dataset.especificaciones || "Sin especificaciones registradas",
+            estado: fila.dataset.estado || ""
+        });
 
         const posicionarPanelFiltros = () => {
             if (!contenedorFiltros?.open || !panelFiltros) return;
@@ -537,21 +559,6 @@
             panelFiltros.style.overflowY = "auto";
         };
 
-        const normalizar = (valor) => (valor || "")
-            .toString()
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .toLowerCase()
-            .trim();
-
-        const obtenerCheckbox = (fila) => fila.querySelector('input[type="checkbox"][name="activos"]');
-
-        const getSeleccionados = () =>
-            filas.filter((fila) => {
-                const checkbox = obtenerCheckbox(fila);
-                return checkbox && checkbox.checked;
-            });
-
         const cerrarModalConfirmacion = () => {
             modal.classList.add("hidden");
             modal.classList.remove("flex");
@@ -559,19 +566,18 @@
         };
 
         const abrirModalConfirmacion = () => {
-            const seleccionados = getSeleccionados();
             modalLista.innerHTML = "";
 
-            seleccionados.forEach((fila) => {
+            seleccionadosGlobales.forEach((datos) => {
                 const item = document.createElement("li");
                 item.className = "flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3";
                 item.innerHTML = `
                     <div>
-                        <p class="font-semibold text-slate-900">${fila.dataset.codigo || ""}</p>
-                        <p class="text-sm text-slate-600">${fila.dataset.marcaModelo || ""}</p>
+                        <p class="font-semibold text-slate-900">${datos.codigo || ""}</p>
+                        <p class="text-sm text-slate-600">${datos.marcaModelo || ""}</p>
                     </div>
                     <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                        ${fila.dataset.estado || ""}
+                        ${datos.estado || ""}
                     </span>
                 `;
                 modalLista.appendChild(item);
@@ -596,6 +602,8 @@
         };
 
         const actualizarFiltro = () => {
+            const filas = Array.from(document.querySelectorAll(".activo-row"));
+            const filasFiltrables = filas.filter((fila) => fila.dataset.reciente !== "true");
             const terminos = normalizar(filtro.value).split(/\s+/).filter(Boolean);
             const seleccionados = {};
             controlesFiltro.forEach((control) => {
@@ -639,109 +647,138 @@
                 resumenFiltros.appendChild(chip);
             });
 
-            const ordenadas = [...filasFiltrables].sort((a, b) => {
-                if (ordenActivos?.value === "recientes") {
-                    return Number(b.dataset.id || 0) - Number(a.dataset.id || 0);
-                }
-                return ordenOriginal.get(a) - ordenOriginal.get(b);
-            });
-            ordenadas.forEach((fila) => cuerpoTabla.appendChild(fila));
+            if (ordenActivos?.value === "recientes") {
+                const ordenadas = [...filasFiltrables].sort((a, b) => Number(b.dataset.id || 0) - Number(a.dataset.id || 0));
+                ordenadas.forEach((fila) => cuerpoTabla.appendChild(fila));
+            }
         };
 
-        const crearTarjeta = (fila) => {
+        const crearTarjeta = (datos) => {
             const tarjeta = document.createElement("article");
             tarjeta.className = "rounded-xl border border-slate-200 bg-slate-50 p-4";
             tarjeta.innerHTML = `
                 <div class="flex items-start justify-between gap-3">
                     <div>
-                        <p class="text-sm font-semibold text-slate-900">${fila.dataset.codigo || ""}</p>
-                        <p class="mt-1 text-sm text-slate-700">${fila.dataset.marcaModelo || ""}</p>
+                        <p class="text-sm font-semibold text-slate-900">${datos.codigo || ""}</p>
+                        <p class="mt-1 text-sm text-slate-700">${datos.marcaModelo || ""}</p>
                     </div>
                     <span class="rounded-full bg-slate-200 px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-600">
-                        ${fila.dataset.tipo || ""}
+                        ${datos.tipo || ""}
                     </span>
                 </div>
                 <dl class="mt-3 space-y-2 text-xs text-slate-600">
                     <div>
                         <dt class="font-semibold text-slate-700">Serie</dt>
-                        <dd>${fila.dataset.serie || "S/N"}</dd>
+                        <dd>${datos.serie || "S/N"}</dd>
                     </div>
                     <div>
                         <dt class="font-semibold text-slate-700">Especificaciones</dt>
-                        <dd>${fila.dataset.especificaciones || "Sin especificaciones registradas"}</dd>
+                        <dd>${datos.especificaciones || "Sin especificaciones registradas"}</dd>
                     </div>
                     <div>
                         <dt class="font-semibold text-slate-700">Estado actual</dt>
-                        <dd>${fila.dataset.estado || ""}</dd>
+                        <dd>${datos.estado || ""}</dd>
                     </div>
                 </dl>
             `;
             return tarjeta;
         };
 
-        const actualizarSeleccion = () => {
-            const seleccionados = getSeleccionados();
+        const sincronizarHiddenInputs = () => {
+            if (!hiddenContainer) return;
+            hiddenContainer.innerHTML = "";
+            const checkboxesVisibles = Array.from(document.querySelectorAll('input[type="checkbox"][name="activos"]'));
+            const idsVisibles = new Set(checkboxesVisibles.map((cb) => cb.value));
 
-            contador.textContent = `${seleccionados.length} seleccionado${seleccionados.length === 1 ? "" : "s"}`;
-            lista.innerHTML = "";
-
-            if (!seleccionados.length) {
-                vacio.classList.remove("hidden");
-                return;
-            }
-
-            vacio.classList.add("hidden");
-            seleccionados.forEach((fila) => {
-                lista.appendChild(crearTarjeta(fila));
+            seleccionadosGlobales.forEach((datos, id) => {
+                if (!idsVisibles.has(id)) {
+                    const input = document.createElement("input");
+                    input.type = "hidden";
+                    input.name = "activos";
+                    input.value = id;
+                    hiddenContainer.appendChild(input);
+                }
             });
         };
 
-            filas.forEach((fila) => {
-                const checkbox = obtenerCheckbox(fila);
-                if (!checkbox) {
+        const actualizarSeleccion = () => {
+            const total = seleccionadosGlobales.size;
+            contador.textContent = `${total} seleccionado${total === 1 ? "" : "s"}`;
+            lista.innerHTML = "";
+
+            if (!total) {
+                vacio.classList.remove("hidden");
+            } else {
+                vacio.classList.add("hidden");
+                seleccionadosGlobales.forEach((datos) => {
+                    lista.appendChild(crearTarjeta(datos));
+                });
+            }
+
+            sincronizarHiddenInputs();
+        };
+
+        const vincularFila = (fila) => {
+            const checkbox = obtenerCheckbox(fila);
+            if (!checkbox) return;
+
+            if (checkbox.disabled) {
+                fila.classList.add("opacity-60");
+            }
+
+            const id = String(fila.dataset.id || checkbox.value || "");
+            if (seleccionadosGlobales.has(id)) {
+                checkbox.checked = true;
+                fila.classList.add("bg-cyan-50");
+            } else {
+                fila.classList.toggle("bg-cyan-50", checkbox.checked);
+            }
+
+            checkbox.addEventListener("change", () => {
+                if (checkbox.disabled) {
+                    checkbox.checked = false;
                     return;
                 }
-                if (checkbox.disabled) {
-                    fila.classList.add("opacity-60");
+                if (checkbox.checked) {
+                    seleccionadosGlobales.set(id, extraerDatosFila(fila));
+                    fila.classList.add("bg-cyan-50");
+                } else {
+                    seleccionadosGlobales.delete(id);
+                    fila.classList.remove("bg-cyan-50");
                 }
-
-                fila.classList.toggle("bg-cyan-50", checkbox.checked);
-                checkbox.addEventListener("change", () => {
-                    if (checkbox.disabled) {
-                        checkbox.checked = false;
-                        return;
-                    }
-                    fila.classList.toggle("bg-cyan-50", checkbox.checked);
-                    actualizarSeleccion();
-                });
-
-                fila.addEventListener("click", (event) => {
-                    if (event.target.closest('input, button, a, label')) {
-                        return;
-                    }
-                    if (checkbox.disabled) {
-                        return;
-                    }
-                    checkbox.checked = !checkbox.checked;
-                    checkbox.dispatchEvent(new Event("change"));
-                });
+                actualizarSeleccion();
             });
+
+            fila.addEventListener("click", (event) => {
+                if (event.target.closest("input, button, a, label")) return;
+                if (checkbox.disabled) return;
+                checkbox.checked = !checkbox.checked;
+                checkbox.dispatchEvent(new Event("change"));
+            });
+        };
+
+        // Inicializar filas existentes
+        const filasIniciales = Array.from(document.querySelectorAll(".activo-row"));
+        filasIniciales.forEach((fila) => {
+            const checkbox = obtenerCheckbox(fila);
+            if (checkbox && checkbox.checked && !checkbox.disabled) {
+                const id = String(fila.dataset.id || checkbox.value || "");
+                seleccionadosGlobales.set(id, extraerDatosFila(fila));
+            }
+            vincularFila(fila);
+        });
 
         if (seleccionarVisibles) {
             seleccionarVisibles.addEventListener("click", () => {
+                const filas = Array.from(document.querySelectorAll(".activo-row"));
                 filas.forEach((fila) => {
-                    if (fila.classList.contains("hidden")) {
-                        return;
-                    }
+                    if (fila.classList.contains("hidden")) return;
                     const checkbox = obtenerCheckbox(fila);
-                    if (!checkbox) {
-                        return;
-                    }
-                    if (checkbox.disabled) {
-                        return;
-                    }
+                    if (!checkbox || checkbox.disabled) return;
                     checkbox.checked = true;
                     fila.classList.add("bg-cyan-50");
+                    const id = String(fila.dataset.id || checkbox.value || "");
+                    seleccionadosGlobales.set(id, extraerDatosFila(fila));
                 });
                 actualizarSeleccion();
             });
@@ -749,26 +786,66 @@
 
         if (limpiarSeleccion) {
             limpiarSeleccion.addEventListener("click", () => {
+                seleccionadosGlobales.clear();
+                const filas = Array.from(document.querySelectorAll(".activo-row"));
                 filas.forEach((fila) => {
                     const checkbox = obtenerCheckbox(fila);
-                    if (!checkbox) {
-                        return;
-                    }
-                    checkbox.checked = false;
+                    if (checkbox) checkbox.checked = false;
                     fila.classList.remove("bg-cyan-50");
                 });
                 actualizarSeleccion();
             });
         }
 
+        // Paginación asíncrona sin recargar la página (preserva el colaborador y selecciones)
+        if (paginacionContainer) {
+            paginacionContainer.addEventListener("click", async (event) => {
+                const link = event.target.closest("a");
+                if (!link || !link.href) return;
+                event.preventDefault();
+
+                try {
+                    paginacionContainer.style.opacity = "0.4";
+                    paginacionContainer.style.pointerEvents = "none";
+                    cuerpoTabla.style.opacity = "0.4";
+
+                    const response = await fetch(link.href, {
+                        headers: { "X-Requested-With": "XMLHttpRequest" }
+                    });
+                    if (!response.ok) throw new Error("HTTP error " + response.status);
+
+                    const html = await response.text();
+                    const doc = new DOMParser().parseFromString(html, "text/html");
+
+                    const nuevoCuerpo = doc.getElementById("tabla-activos-body");
+                    const nuevaPaginacion = doc.getElementById("activos-paginacion-container");
+
+                    if (nuevoCuerpo && nuevaPaginacion) {
+                        cuerpoTabla.innerHTML = nuevoCuerpo.innerHTML;
+                        paginacionContainer.innerHTML = nuevaPaginacion.innerHTML;
+
+                        const nuevasFilas = Array.from(cuerpoTabla.querySelectorAll(".activo-row"));
+                        nuevasFilas.forEach(vincularFila);
+
+                        actualizarFiltro();
+                        sincronizarHiddenInputs();
+                    }
+                } catch (error) {
+                    console.error("Error al paginar activos:", error);
+                    window.location.href = link.href;
+                } finally {
+                    paginacionContainer.style.opacity = "1";
+                    paginacionContainer.style.pointerEvents = "";
+                    cuerpoTabla.style.opacity = "1";
+                }
+            });
+        }
+
         formulario.addEventListener("submit", (event) => {
-            if (envioConfirmado) {
-                return;
-            }
+            if (envioConfirmado) return;
 
             event.preventDefault();
-            const seleccionados = getSeleccionados();
-            if (seleccionados.length >= 4) {
+            if (seleccionadosGlobales.size >= 4) {
                 abrirModalConfirmacion();
                 return;
             }
@@ -778,9 +855,7 @@
         cerrarModal.addEventListener("click", cerrarModalConfirmacion);
         regresarModal.addEventListener("click", cerrarModalConfirmacion);
         modal.addEventListener("click", (event) => {
-            if (event.target === modal) {
-                cerrarModalConfirmacion();
-            }
+            if (event.target === modal) cerrarModalConfirmacion();
         });
 
         document.addEventListener("keydown", (event) => {
@@ -802,6 +877,7 @@
         confirmarActa.addEventListener("click", () => {
             envioConfirmado = true;
             cerrarConfirmacionActa();
+            sincronizarHiddenInputs();
             if (formulario.requestSubmit) {
                 formulario.requestSubmit();
             } else {

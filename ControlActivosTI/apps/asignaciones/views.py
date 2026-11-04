@@ -308,6 +308,16 @@ class AsignacionCreateView(LoginRequiredMixin, CreateView):
     ACTIVOS_RECIENTES_LIMIT = 5
     ACTIVOS_POR_PAGINA = 10
 
+    def get_initial(self):
+        initial = super().get_initial()
+        colaborador = self.request.GET.get("colaborador")
+        if colaborador:
+            initial["colaborador"] = colaborador
+        activos = self.request.GET.getlist("activos")
+        if activos:
+            initial["activos"] = activos
+        return initial
+
     def build_activos_page_querystring(self):
         params = self.request.GET.copy()
         params.pop("activos_page", None)
@@ -316,7 +326,8 @@ class AsignacionCreateView(LoginRequiredMixin, CreateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         form = context["form"]
-        activos_seleccionados = form["activos"].value() or []
+        raw_activos = form["activos"].value() or self.request.GET.getlist("activos") or []
+        activos_seleccionados = [raw_activos] if isinstance(raw_activos, (int, str)) else raw_activos
         activos_disponibles = form.fields["activos"].queryset
         activos_asignables = (
             activos_disponibles.filter(estado_activo__permite_asignacion=True)
