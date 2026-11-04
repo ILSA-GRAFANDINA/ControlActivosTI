@@ -15,6 +15,7 @@
                 <input
                     id="colaborador-busqueda"
                     type="search"
+                    required
                     autocomplete="off"
                     placeholder="Buscar por nombre, cédula, correo, empresa, área, cargo o CECO"
                     class="w-full rounded-xl border border-slate-300 bg-white py-3 pl-12 pr-4 text-sm text-slate-900 shadow-sm outline-none transition duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
@@ -333,6 +334,7 @@
                 selectedCard.classList.add("hidden");
                 selectedCard.classList.remove("flex");
                 input.value = "";
+                input.setCustomValidity("Selecciona un colaborador de la lista.");
                 return;
             }
 
@@ -361,6 +363,7 @@
             selectedCard.classList.remove("hidden");
             selectedCard.classList.add("flex");
             input.value = option.dataset.nombre || option.textContent.trim();
+            input.setCustomValidity("");
         };
 
         const choose = (option) => {
@@ -466,6 +469,7 @@
         });
 
         nativeContainer.classList.add("hidden");
+        select.removeAttribute("required");
         renderSelected();
     })();
 
@@ -878,6 +882,22 @@
         };
 
         formulario.addEventListener("submit", (event) => {
+            const selectColaborador = document.querySelector('[data-colaborador-select-nativo] select');
+            const inputColaborador = document.getElementById("colaborador-busqueda");
+            if (selectColaborador && !selectColaborador.value) {
+                event.preventDefault();
+                event.stopPropagation();
+                if (inputColaborador) {
+                    inputColaborador.setCustomValidity("Selecciona un colaborador de la lista.");
+                    inputColaborador.reportValidity();
+                    inputColaborador.focus();
+                }
+                return;
+            }
+            if (inputColaborador) {
+                inputColaborador.setCustomValidity("");
+            }
+
             if (envioConfirmado) return;
 
             event.preventDefault();
