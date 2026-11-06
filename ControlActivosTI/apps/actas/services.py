@@ -254,60 +254,11 @@ def _alineacion_con_ajuste(celda, vertical="top"):
     )
 
 
-def _estimar_lineas_celda(valor, caracteres_por_linea):
-    if valor is None:
-        return 0
-    texto = str(valor).strip()
-    if not texto or texto == "-":
-        return 0
-    total_lineas = 0
-    for parrafo in texto.split("\n"):
-        parrafo = parrafo.strip()
-        if not parrafo:
-            total_lineas += 1
-            continue
-        palabras = parrafo.split()
-        if not palabras:
-            total_lineas += 1
-            continue
-        lineas_parrafo = 1
-        longitud_actual = 0
-        for palabra in palabras:
-            len_p = len(palabra)
-            if longitud_actual == 0:
-                longitud_actual = len_p
-            elif longitud_actual + 1 + len_p <= caracteres_por_linea:
-                longitud_actual += 1 + len_p
-            else:
-                lineas_parrafo += 1
-                longitud_actual = len_p
-        total_lineas += lineas_parrafo
-    return max(1, total_lineas)
-
-
 def _ajustar_alto_fila_activo(ws, fila):
-    # La fuente de la plantilla es Aptos Narrow 11pt.
-    # Columna B:C (Artículo, ancho ~24) -> ~26 caracteres por renglón
-    # Columna D:E (Marca, ancho ~24) -> ~26 caracteres por renglón
-    # Columna H (Características, ancho ~24.3) -> ~26 caracteres por renglón
-    # Columna I (Observaciones, ancho ~37.3) -> ~40 caracteres por renglón
-    lineas_articulo = _estimar_lineas_celda(ws.cell(fila, 2).value, 26)
-    lineas_marca = _estimar_lineas_celda(ws.cell(fila, 4).value, 26)
-    lineas_caracteristicas = _estimar_lineas_celda(ws.cell(fila, 8).value, 26)
-    lineas_observaciones = _estimar_lineas_celda(ws.cell(fila, 9).value, 40)
-
-    max_lineas = max(1, lineas_articulo, lineas_marca, lineas_caracteristicas, lineas_observaciones)
-
-    # En Aptos Narrow 11pt, cada renglón en Excel ocupa ~15.0 - 15.25 pt.
-    # Para 1 o 2 líneas, mantenemos la altura estándar de la plantilla (30.75 pt).
-    # Para 3 o más líneas, calculamos la altura justa para que no sobre espacio vacío.
-    if max_lineas <= 2:
-        altura = 30.75
-    else:
-        altura = round(max_lineas * 15.25, 2)
-
-    altura = min(280.0, altura)
-    ws.row_dimensions[fila].height = altura
+    # No se calcula ni se fija la altura: al dejarla sin valor (sin customHeight),
+    # Nota: el autoajuste de Excel ignora celdas combinadas (B:C y D:E); las
+    # columnas Caracteristicas (H) y Observaciones (I) no lo estan, asi que mandan.
+    ws.row_dimensions[fila].height = None
 
     for columna in COLUMNAS_ACTIVOS:
         celda = ws.cell(fila, columna)
