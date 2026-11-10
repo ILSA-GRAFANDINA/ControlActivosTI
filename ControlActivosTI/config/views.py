@@ -49,7 +49,7 @@ class HealthView(View):
 class ProtectedImageView(LoginRequiredMixin, View):
     """Entrega solo imagenes funcionales; nunca documentos del MEDIA_ROOT."""
 
-    allowed_prefixes = ("activos/", "perfiles/")
+    allowed_prefixes = ("activos/", "perfiles/", "actas/")
 
     def get(self, request, path):
         normalized = path.replace("\\", "/").lstrip("/")
