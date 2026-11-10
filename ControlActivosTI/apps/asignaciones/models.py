@@ -1,12 +1,49 @@
+import posixpath
+from io import BytesIO
+from pathlib import Path
+from PIL import Image, ImageOps
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from django.db import models, transaction
-from django.db.models import Q
+from django.db.models import Max, Q
 from django.utils import timezone
 
 from apps.activos.models import Activo
 from apps.catalogos.models import CentroCosto, EstadoActivo
 from apps.colaboradores.models import Colaborador
+
+EVIDENCIA_VARIANTS = {
+    "thumb": 360,
+    "medium": 960,
+    "large": 1600,
+}
+EVIDENCIA_MAX_FOTOS = 10
+
+
+def ruta_evidencia_entrega(instance, filename):
+    codigo = (
+        instance.asignacion.codigo_asignacion
+        if instance.asignacion_id and instance.asignacion.codigo_asignacion
+        else "sin-asignacion"
+    )
+    return f"actas/{codigo}/entrega/evidencias/{filename}"
+
+
+def ruta_evidencia_devolucion(instance, filename):
+    codigo_asg = (
+        instance.devolucion.asignacion.codigo_asignacion
+        if instance.devolucion_id and instance.devolucion.asignacion_id and instance.devolucion.asignacion.codigo_asignacion
+        else "sin-asignacion"
+    )
+    codigo_dev = (
+        instance.devolucion.codigo_devolucion
+        if instance.devolucion_id and instance.devolucion.codigo_devolucion
+        else "sin-devolucion"
+    )
+    return f"actas/{codigo_asg}/recepcion/{codigo_dev}/evidencias/{filename}"
 
 
 class Asignacion(models.Model):
@@ -458,3 +495,251 @@ class DevolucionDetalle(models.Model):
             detalle.observaciones_devolucion = self.observaciones
             detalle.save()
             self.devolucion.asignacion.recalcular_estado_devolucion()
+
+
+class EvidenciaBase(models.Model):
+    descripcion = models.CharField(max_length=255, blank=True)
+    orden = models.PositiveSmallIntegerField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        abstract = True
+
+    def _source_filename(self):
+        if not self.imagen:
+            return ""
+        return Path(self.imagen.name).name
+
+    def _variant_name(self, variant):
+        source_name = self._source_filename()
+        if not source_name:
+            return ""
+        base_name = Path(source_name).stem
+        base_dir = posixpath.dirname(self.imagen.name)
+        variant_filename = f"{base_name}_{variant}.webp"
+        return posixpath.join(base_dir, variant_filename) if base_dir else variant_filename
+
+    def _normalize_image_file(self, max_dimension=1600, quality=88):
+        if not self.imagen:
+            return None
+
+        self.imagen.file.seek(0)
+        with Image.open(self.imagen.file) as image:
+            image = ImageOps.exif_transpose(image)
+            if image.mode == "P":
+                image = image.convert("RGBA")
+            elif image.mode not in ("RGB", "RGBA"):
+                image = image.convert("RGBA" if "A" in image.getbands() else "RGB")
+
+            image.thumbnail((max_dimension, max_dimension), Image.Resampling.LANCZOS)
+
+            buffer = BytesIO()
+            image.save(buffer, format="WEBP", quality=quality, method=6)
+            buffer.seek(0)
+
+        normalized_name = f"{Path(self._source_filename()).stem}.webp"
+        return ContentFile(buffer.read(), name=normalized_name)
+
+    def _save_variant_file(self, variant, max_dimension):
+        variant_name = self._variant_name(variant)
+        if not variant_name or not default_storage.exists(self.imagen.name):
+            return ""
+        if default_storage.exists(variant_name):
+            return variant_name
+
+        with default_storage.open(self.imagen.name, "rb") as source_file:
+            with Image.open(source_file) as image:
+                image = ImageOps.exif_transpose(image)
+                if image.mode == "P":
+                    image = image.convert("RGBA")
+                elif image.mode not in ("RGB", "RGBA"):
+                    image = image.convert("RGBA" if "A" in image.getbands() else "RGB")
+
+                image.thumbnail((max_dimension, max_dimension), Image.Resampling.LANCZOS)
+
+                buffer = BytesIO()
+                image.save(buffer, format="WEBP", quality=82, method=6)
+                buffer.seek(0)
+
+        default_storage.save(variant_name, ContentFile(buffer.read()))
+        return variant_name
+
+    def _ensure_variant_files(self):
+        if not self.imagen:
+            return
+
+        for variant, max_dimension in EVIDENCIA_VARIANTS.items():
+            self._save_variant_file(variant, max_dimension)
+
+    def _delete_related_files(self, source_name):
+        if not source_name:
+            return
+
+        default_storage.delete(source_name)
+        base_name = Path(source_name).stem
+        base_dir = posixpath.dirname(source_name)
+        for variant in EVIDENCIA_VARIANTS:
+            variant_filename = f"{base_name}_{variant}.webp"
+            variant_name = posixpath.join(base_dir, variant_filename) if base_dir else variant_filename
+            default_storage.delete(variant_name)
+
+    def _best_available_image_name(self):
+        if not self.imagen or not self.imagen.name:
+            return ""
+
+        candidate_names = [
+            self.imagen.name,
+            self._variant_name("large"),
+            self._variant_name("medium"),
+            self._variant_name("thumb"),
+        ]
+        for candidate in candidate_names:
+            if candidate and default_storage.exists(candidate):
+                return candidate
+        return ""
+
+    @property
+    def imagen_original_url(self):
+        nombre_imagen = self._best_available_image_name()
+        return default_storage.url(nombre_imagen) if nombre_imagen else ""
+
+    @property
+    def imagen_large_url(self):
+        if not self.imagen:
+            return ""
+        variant_name = self._save_variant_file("large", EVIDENCIA_VARIANTS["large"])
+        if variant_name:
+            return default_storage.url(variant_name)
+        nombre_imagen = self._best_available_image_name()
+        return default_storage.url(nombre_imagen) if nombre_imagen else ""
+
+    @property
+    def imagen_medium_url(self):
+        if not self.imagen:
+            return ""
+        variant_name = self._save_variant_file("medium", EVIDENCIA_VARIANTS["medium"])
+        if variant_name:
+            return default_storage.url(variant_name)
+        nombre_imagen = self._best_available_image_name()
+        return default_storage.url(nombre_imagen) if nombre_imagen else ""
+
+    @property
+    def imagen_thumb_url(self):
+        if not self.imagen:
+            return ""
+        variant_name = self._save_variant_file("thumb", EVIDENCIA_VARIANTS["thumb"])
+        if variant_name:
+            return default_storage.url(variant_name)
+        nombre_imagen = self._best_available_image_name()
+        return default_storage.url(nombre_imagen) if nombre_imagen else ""
+
+    @property
+    def imagen_srcset(self):
+        if not self.imagen:
+            return ""
+        return ", ".join(
+            [
+                f"{self.imagen_thumb_url} 360w",
+                f"{self.imagen_medium_url} 960w",
+                f"{self.imagen_large_url} 1600w",
+            ]
+        )
+
+    @property
+    def preview_url(self):
+        return self.imagen_thumb_url
+
+    def save(self, *args, **kwargs):
+        old_imagen_name = None
+        if self.pk:
+            old_imagen_name = (
+                self.__class__.objects.filter(pk=self.pk)
+                .values_list("imagen", flat=True)
+                .first()
+            )
+
+        if self.imagen and not getattr(self.imagen, "_committed", True):
+            self.imagen = self._normalize_image_file()
+
+        parent_attr = getattr(self, "parent_relation_name", None)
+        if parent_attr and getattr(self, f"{parent_attr}_id") and not self.orden:
+            ultimo_orden = (
+                self.__class__.objects.filter(**{parent_attr: getattr(self, parent_attr)})
+                .exclude(pk=self.pk)
+                .aggregate(max_orden=Max("orden"))
+                .get("max_orden")
+                or 0
+            )
+            self.orden = ultimo_orden + 1
+
+        self.full_clean()
+        super().save(*args, **kwargs)
+        self._ensure_variant_files()
+
+        if old_imagen_name and old_imagen_name != self.imagen.name:
+            self._delete_related_files(old_imagen_name)
+
+    def delete(self, *args, **kwargs):
+        source_name = self.imagen.name if self.imagen else ""
+        super().delete(*args, **kwargs)
+        self._delete_related_files(source_name)
+
+
+class EvidenciaEntrega(EvidenciaBase):
+    parent_relation_name = "asignacion"
+    asignacion = models.ForeignKey(
+        Asignacion,
+        on_delete=models.CASCADE,
+        related_name="evidencias",
+    )
+    imagen = models.ImageField(upload_to=ruta_evidencia_entrega)
+
+    class Meta:
+        verbose_name = "Evidencia de entrega"
+        verbose_name_plural = "Evidencias de entrega"
+        ordering = ["asignacion", "orden", "id"]
+
+    def __str__(self):
+        codigo = self.asignacion.codigo_asignacion if self.asignacion_id else "sin-asignacion"
+        return f"Evidencia Entrega {self.orden or '-'} - {codigo}"
+
+    def clean(self):
+        super().clean()
+        if self.asignacion_id:
+            qs = EvidenciaEntrega.objects.filter(asignacion_id=self.asignacion_id)
+            if self.pk:
+                qs = qs.exclude(pk=self.pk)
+            if qs.count() >= EVIDENCIA_MAX_FOTOS:
+                raise ValidationError(
+                    f"Una asignación no puede tener más de {EVIDENCIA_MAX_FOTOS} fotos de evidencia."
+                )
+
+
+class EvidenciaDevolucion(EvidenciaBase):
+    parent_relation_name = "devolucion"
+    devolucion = models.ForeignKey(
+        Devolucion,
+        on_delete=models.CASCADE,
+        related_name="evidencias",
+    )
+    imagen = models.ImageField(upload_to=ruta_evidencia_devolucion)
+
+    class Meta:
+        verbose_name = "Evidencia de devolución"
+        verbose_name_plural = "Evidencias de devolución"
+        ordering = ["devolucion", "orden", "id"]
+
+    def __str__(self):
+        codigo = self.devolucion.codigo_devolucion if self.devolucion_id else "sin-devolucion"
+        return f"Evidencia Devolución {self.orden or '-'} - {codigo}"
+
+    def clean(self):
+        super().clean()
+        if self.devolucion_id:
+            qs = EvidenciaDevolucion.objects.filter(devolucion_id=self.devolucion_id)
+            if self.pk:
+                qs = qs.exclude(pk=self.pk)
+            if qs.count() >= EVIDENCIA_MAX_FOTOS:
+                raise ValidationError(
+                    f"Una devolución no puede tener más de {EVIDENCIA_MAX_FOTOS} fotos de evidencia."
+                )

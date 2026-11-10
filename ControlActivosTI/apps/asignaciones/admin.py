@@ -1,5 +1,26 @@
 from django.contrib import admin
-from .models import Asignacion, AsignacionDetalle, Devolucion, DevolucionDetalle
+from .models import (
+    Asignacion,
+    AsignacionDetalle,
+    Devolucion,
+    DevolucionDetalle,
+    EvidenciaDevolucion,
+    EvidenciaEntrega,
+)
+
+
+class EvidenciaEntregaInline(admin.TabularInline):
+    model = EvidenciaEntrega
+    extra = 0
+    fields = ("imagen", "descripcion", "orden", "created_at")
+    readonly_fields = ("created_at",)
+
+
+class EvidenciaDevolucionInline(admin.TabularInline):
+    model = EvidenciaDevolucion
+    extra = 0
+    fields = ("imagen", "descripcion", "orden", "created_at")
+    readonly_fields = ("created_at",)
 
 
 class AsignacionDetalleInline(admin.TabularInline):
@@ -56,7 +77,7 @@ class AsignacionAdmin(admin.ModelAdmin):
         "updated_at",
     )
     list_select_related = ("colaborador", "centro_costo", "usuario_responsable", "usuario_recepcion")
-    inlines = [AsignacionDetalleInline]
+    inlines = [AsignacionDetalleInline, EvidenciaEntregaInline]
 
     fieldsets = (
         (
@@ -169,7 +190,7 @@ class DevolucionAdmin(admin.ModelAdmin):
     )
     readonly_fields = ("codigo_devolucion", "created_at", "updated_at")
     raw_id_fields = ("asignacion", "usuario_recepcion")
-    inlines = [DevolucionDetalleInline]
+    inlines = [DevolucionDetalleInline, EvidenciaDevolucionInline]
 
 
 @admin.register(DevolucionDetalle)

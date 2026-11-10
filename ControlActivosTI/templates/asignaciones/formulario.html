@@ -2,7 +2,7 @@
 {% block title %}Nueva asignación - ControlActivosTI{% endblock %}
 {% block page_title %}Nueva asignación{% endblock %}
 {% block content %}
-<form method="post" id="asignacion-form" class="space-y-6">
+<form method="post" id="asignacion-form" enctype="multipart/form-data" class="space-y-6">
     {% csrf_token %}
 
     <div data-colaborador-picker>
@@ -218,6 +218,8 @@
             <p class="mt-2 text-sm text-red-600">{{ form.observaciones_entrega.errors|join:", " }}</p>
         {% endif %}
     </div>
+
+    {% include "asignaciones/_evidencias_formset.html" with formset=evidencias_formset titulo="Fotos de entrega de los equipos" descripcion_seccion="Fotografías que evidencian cómo y en qué estado se entregan los equipos al colaborador." %}
 
     {% if form.non_field_errors %}
         <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">

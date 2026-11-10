@@ -24,7 +24,7 @@
     </div>
 </div>
 
-<form method="post" id="devolucion-form" class="space-y-6">
+<form method="post" id="devolucion-form" enctype="multipart/form-data" class="space-y-6">
     {% csrf_token %}
     {{ formset.management_form }}
 
@@ -83,6 +83,8 @@
             {% endfor %}
         </div>
     </div>
+
+    {% include "asignaciones/_evidencias_formset.html" with formset=evidencias_formset titulo="Fotos de recepción / estado al devolver" descripcion_seccion="Fotografías que evidencian cómo y en qué estado se reciben los equipos devueltos." %}
 
     {% if form.non_field_errors or formset.non_form_errors %}
         <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">

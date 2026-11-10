@@ -32,7 +32,13 @@ from apps.colaboradores.models import Colaborador
 from apps.proveedores.models import Proveedor
 
 from apps.asignaciones.forms import AsignacionCreateForm
-from apps.asignaciones.models import Asignacion, AsignacionDetalle, Devolucion
+from apps.asignaciones.models import (
+    Asignacion,
+    AsignacionDetalle,
+    Devolucion,
+    EvidenciaDevolucion,
+    EvidenciaEntrega,
+)
 
 
 def make_test_media_root():
@@ -871,3 +877,170 @@ class AsignacionListViewTests(TestCase):
 
         self.assertEqual(filtered.status_code, 200)
         self.assertEqual(filtered.context["query_string"], f"q={self.activo_laptop.codigo}")
+
+
+class EvidenciasFotograficasTests(TestCase):
+    def setUp(self):
+        self.media_root = make_test_media_root()
+        self.settings_override = override_settings(MEDIA_ROOT=str(self.media_root))
+        self.settings_override.enable()
+
+        self.user = get_user_model().objects.create_user(
+            username="tester_evidencias",
+            password="secret123",
+        )
+        self.empresa = Empresa.objects.create(nombre="ILSA")
+        self.area = Area.objects.create(nombre="TI")
+        self.cargo = Cargo.objects.create(nombre="Soporte")
+        self.ubicacion = Ubicacion.objects.create(nombre="Matriz")
+        self.ceco = CentroCosto.objects.create(
+            codigo="CC-01",
+            nombre="Tecnología",
+            empresa=self.empresa,
+            activo=True,
+            acepta_asignaciones=True,
+        )
+        self.colaborador = Colaborador.objects.create(
+            nombres="Carlos",
+            apellidos="Prueba",
+            cedula="0999999999",
+            empresa=self.empresa,
+            area=self.area,
+            cargo=self.cargo,
+            ubicacion=self.ubicacion,
+            centro_costo=self.ceco,
+            estado=Colaborador.EstadoColaborador.ACTIVO,
+            fecha_ingreso=date(2026, 1, 1),
+        )
+        self.tipo_activo = TipoActivo.objects.create(nombre="Laptop")
+        self.estado_disponible = EstadoActivo.objects.create(
+            nombre="Disponible",
+            permite_asignacion=True,
+        )
+        self.estado_asignado = EstadoActivo.objects.create(
+            nombre="Asignado",
+            permite_asignacion=False,
+        )
+        self.estado_bueno = EstadoActivo.objects.create(
+            nombre="Bueno",
+            permite_asignacion=True,
+        )
+        self.activo = Activo.objects.create(
+            codigo="LAP-00100",
+            tipo_activo=self.tipo_activo,
+            estado_activo=self.estado_disponible,
+            empresa=self.empresa,
+            marca="Lenovo",
+            modelo="ThinkPad",
+        )
+        self.asignacion = Asignacion.objects.create(
+            colaborador=self.colaborador,
+            usuario_responsable=self.user,
+        )
+        self.detalle = AsignacionDetalle.objects.create(
+            asignacion=self.asignacion,
+            activo=self.activo,
+            orden=1,
+            activa=True,
+        )
+
+    def tearDown(self):
+        self.settings_override.disable()
+        shutil.rmtree(self.media_root, ignore_errors=True)
+
+    def _crear_imagen_subida(self, nombre="evidencia.png"):
+        from io import BytesIO
+        from PIL import Image
+        buffer = BytesIO()
+        image = Image.new("RGB", (200, 200), color="green")
+        image.save(buffer, format="PNG")
+        buffer.seek(0)
+        return SimpleUploadedFile(nombre, buffer.read(), content_type="image/png")
+
+    def test_evidencia_entrega_se_guarda_en_ruta_correcta_y_genera_variantes(self):
+        archivo = self._crear_imagen_subida("entrega_laptop.png")
+        evidencia = EvidenciaEntrega.objects.create(
+            asignacion=self.asignacion,
+            imagen=archivo,
+            descripcion="Laptop encendida en entrega",
+        )
+
+        self.assertEqual(evidencia.orden, 1)
+        self.assertTrue(evidencia.imagen.name.startswith(f"actas/{self.asignacion.codigo_asignacion}/entrega/evidencias/"))
+        self.assertTrue(evidencia.imagen.name.endswith(".webp"))
+        self.assertTrue(default_storage.exists(evidencia.imagen.name))
+        self.assertTrue(default_storage.exists(evidencia._variant_name("thumb")))
+        self.assertTrue(default_storage.exists(evidencia._variant_name("medium")))
+        self.assertTrue(default_storage.exists(evidencia._variant_name("large")))
+        self.assertIn("360w", evidencia.imagen_srcset)
+
+    def test_evidencia_devolucion_se_guarda_en_ruta_con_codigo_devolucion(self):
+        devolucion = Devolucion.objects.create(
+            asignacion=self.asignacion,
+            usuario_recepcion=self.user,
+        )
+        archivo = self._crear_imagen_subida("retorno_laptop.png")
+        evidencia = EvidenciaDevolucion.objects.create(
+            devolucion=devolucion,
+            imagen=archivo,
+            descripcion="Equipo sin golpes",
+        )
+
+        self.assertEqual(evidencia.orden, 1)
+        self.assertTrue(
+            evidencia.imagen.name.startswith(
+                f"actas/{self.asignacion.codigo_asignacion}/recepcion/{devolucion.codigo_devolucion}/evidencias/"
+            )
+        )
+        self.assertTrue(evidencia.imagen.name.endswith(".webp"))
+        self.assertTrue(default_storage.exists(evidencia.imagen.name))
+
+    def test_limite_maximo_diez_evidencias_por_asignacion(self):
+        for i in range(10):
+            EvidenciaEntrega.objects.create(
+                asignacion=self.asignacion,
+                imagen=self._crear_imagen_subida(f"foto_{i}.png"),
+                orden=i + 1,
+            )
+
+        with self.assertRaises(ValidationError):
+            evidencia_11 = EvidenciaEntrega(
+                asignacion=self.asignacion,
+                imagen=self._crear_imagen_subida("foto_11.png"),
+            )
+            evidencia_11.full_clean()
+
+    def test_creacion_asignacion_con_evidencias_desde_formulario(self):
+        self.client.force_login(self.user)
+        activo_nuevo = Activo.objects.create(
+            codigo="LAP-00101",
+            tipo_activo=self.tipo_activo,
+            estado_activo=self.estado_disponible,
+            empresa=self.empresa,
+            marca="HP",
+            modelo="ProBook",
+        )
+        post_data = {
+            "colaborador": self.colaborador.pk,
+            "fecha_asignacion": timezone.localdate().isoformat(),
+            "observaciones_entrega": "Entrega con foto",
+            "activos": [activo_nuevo.pk],
+            "evidencias-TOTAL_FORMS": "2",
+            "evidencias-INITIAL_FORMS": "0",
+            "evidencias-MIN_NUM_FORMS": "0",
+            "evidencias-MAX_NUM_FORMS": "10",
+            "evidencias-0-descripcion": "Foto entrega 1",
+            "evidencias-0-orden": "1",
+            "evidencias-0-imagen": self._crear_imagen_subida("foto_post.png"),
+            "evidencias-1-descripcion": "",
+            "evidencias-1-orden": "2",
+        }
+        response = self.client.post(reverse("asignaciones:nueva"), post_data)
+        self.assertEqual(response.status_code, 302)
+
+        nueva_asg = Asignacion.objects.filter(colaborador=self.colaborador).exclude(pk=self.asignacion.pk).first()
+        self.assertIsNotNone(nueva_asg)
+        self.assertEqual(nueva_asg.evidencias.count(), 1)
+        evidencia = nueva_asg.evidencias.first()
+        self.assertEqual(evidencia.descripcion, "Foto entrega 1")
+        self.assertTrue(evidencia.imagen.name.startswith(f"actas/{nueva_asg.codigo_asignacion}/entrega/evidencias/"))

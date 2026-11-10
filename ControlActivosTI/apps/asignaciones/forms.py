@@ -1,4 +1,7 @@
+from pathlib import Path
+
 from django import forms
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.forms import inlineformset_factory
 from django.utils import timezone
@@ -7,7 +10,23 @@ from apps.activos.models import Activo
 from apps.catalogos.models import EstadoActivo
 from apps.colaboradores.models import Colaborador
 
-from .models import Asignacion, AsignacionDetalle, Devolucion, DevolucionDetalle
+from .models import (
+    Asignacion,
+    AsignacionDetalle,
+    Devolucion,
+    DevolucionDetalle,
+    EvidenciaDevolucion,
+    EvidenciaEntrega,
+)
+
+FILE_INPUT_CLASS = (
+    "block w-full text-sm text-slate-700 file:mr-4 file:rounded-lg file:border-0 "
+    "file:bg-cyan-600 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white "
+    "hover:file:bg-cyan-700"
+)
+FOTO_EVIDENCIA_MAX_FORMS = 10
+FOTO_EVIDENCIA_INITIAL_FORMS = 2
+FOTO_EVIDENCIA_ALLOWED_EXTENSIONS = ("jpg", "jpeg", "png", "webp")
 
 
 BASE_CLASS = (
@@ -370,4 +389,92 @@ AsignacionDetalleDevolucionFormSet = inlineformset_factory(
     form=AsignacionDetalleDevolucionForm,
     extra=0,
     can_delete=False,
+)
+
+
+class EvidenciaEntregaForm(forms.ModelForm):
+    class Meta:
+        model = EvidenciaEntrega
+        fields = ["imagen", "descripcion", "orden"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if "imagen" in self.fields:
+            self.fields["imagen"].required = False
+            self.fields["imagen"].widget.attrs["class"] = FILE_INPUT_CLASS
+            self.fields["imagen"].widget.attrs["accept"] = "image/*,.jpg,.jpeg,.png,.webp"
+        if "descripcion" in self.fields:
+            self.fields["descripcion"].widget.attrs["class"] = BASE_CLASS
+            self.fields["descripcion"].widget.attrs["placeholder"] = "Ej: Equipos completos, pantalla encendida, sellos..."
+        if "orden" in self.fields:
+            self.fields["orden"].widget = forms.HiddenInput()
+
+    def clean_imagen(self):
+        imagen = self.cleaned_data.get("imagen")
+        if self.instance.pk and not imagen:
+            return self.instance.imagen
+        if not imagen:
+            return imagen
+        extension = Path(getattr(imagen, "name", "")).suffix.lower().lstrip(".")
+        if extension not in FOTO_EVIDENCIA_ALLOWED_EXTENSIONS:
+            raise ValidationError("Solo se permiten imagenes en formato JPG, JPEG, PNG o WEBP.")
+        content_type = getattr(imagen, "content_type", "") or ""
+        if content_type and not content_type.startswith("image/"):
+            raise ValidationError("El archivo cargado debe ser una imagen valida.")
+        return imagen
+
+
+EvidenciaEntregaFormSet = inlineformset_factory(
+    Asignacion,
+    EvidenciaEntrega,
+    form=EvidenciaEntregaForm,
+    fields=["imagen", "descripcion", "orden"],
+    extra=FOTO_EVIDENCIA_INITIAL_FORMS,
+    max_num=FOTO_EVIDENCIA_MAX_FORMS,
+    validate_max=True,
+    can_delete=True,
+)
+
+
+class EvidenciaDevolucionForm(forms.ModelForm):
+    class Meta:
+        model = EvidenciaDevolucion
+        fields = ["imagen", "descripcion", "orden"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if "imagen" in self.fields:
+            self.fields["imagen"].required = False
+            self.fields["imagen"].widget.attrs["class"] = FILE_INPUT_CLASS
+            self.fields["imagen"].widget.attrs["accept"] = "image/*,.jpg,.jpeg,.png,.webp"
+        if "descripcion" in self.fields:
+            self.fields["descripcion"].widget.attrs["class"] = BASE_CLASS
+            self.fields["descripcion"].widget.attrs["placeholder"] = "Ej: Estado de pantalla, carcasa, cables..."
+        if "orden" in self.fields:
+            self.fields["orden"].widget = forms.HiddenInput()
+
+    def clean_imagen(self):
+        imagen = self.cleaned_data.get("imagen")
+        if self.instance.pk and not imagen:
+            return self.instance.imagen
+        if not imagen:
+            return imagen
+        extension = Path(getattr(imagen, "name", "")).suffix.lower().lstrip(".")
+        if extension not in FOTO_EVIDENCIA_ALLOWED_EXTENSIONS:
+            raise ValidationError("Solo se permiten imagenes en formato JPG, JPEG, PNG o WEBP.")
+        content_type = getattr(imagen, "content_type", "") or ""
+        if content_type and not content_type.startswith("image/"):
+            raise ValidationError("El archivo cargado debe ser una imagen valida.")
+        return imagen
+
+
+EvidenciaDevolucionFormSet = inlineformset_factory(
+    Devolucion,
+    EvidenciaDevolucion,
+    form=EvidenciaDevolucionForm,
+    fields=["imagen", "descripcion", "orden"],
+    extra=FOTO_EVIDENCIA_INITIAL_FORMS,
+    max_num=FOTO_EVIDENCIA_MAX_FORMS,
+    validate_max=True,
+    can_delete=True,
 )

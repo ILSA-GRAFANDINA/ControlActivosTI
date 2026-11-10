@@ -20,8 +20,10 @@ from .forms import (
     AsignacionCreateForm,
     AsignacionDetalleDevolucionFormSet,
     DevolucionForm,
+    EvidenciaDevolucionFormSet,
+    EvidenciaEntregaFormSet,
 )
-from .models import Asignacion, Devolucion
+from .models import Asignacion, Devolucion, EvidenciaDevolucion, EvidenciaEntrega
 
 
 logger = logging.getLogger("controlactivos")
@@ -168,7 +170,9 @@ class AsignacionListView(LoginRequiredMixin, ListView):
             )
             .prefetch_related(
                 "actas",
+                "evidencias",
                 "devoluciones__actas",
+                "devoluciones__evidencias",
                 "devoluciones__usuario_recepcion",
                 "devoluciones__detalles__detalle_asignacion__activo__tipo_activo",
                 "devoluciones__detalles__estado_activo_devolucion",
@@ -265,7 +269,9 @@ class AsignacionDetailView(LoginRequiredMixin, DetailView):
             )
             .prefetch_related(
                 "actas",
+                "evidencias",
                 "devoluciones__actas",
+                "devoluciones__evidencias",
                 "devoluciones__usuario_recepcion",
                 "devoluciones__detalles__detalle_asignacion__activo__tipo_activo",
                 "devoluciones__detalles__estado_activo_devolucion",
@@ -293,6 +299,7 @@ class DevolucionDetailView(LoginRequiredMixin, DetailView):
             )
             .prefetch_related(
                 "actas",
+                "evidencias",
                 "detalles__detalle_asignacion__activo__tipo_activo",
                 "detalles__detalle_asignacion__activo__estado_activo",
                 "detalles__estado_activo_devolucion",
@@ -382,12 +389,43 @@ class AsignacionCreateView(LoginRequiredMixin, CreateView):
         context["facturas_activo_filtro"] = FacturaCompra.objects.select_related(
             "proveedor"
         ).order_by("-fecha_emision", "-id")
+        context.setdefault("evidencias_formset", self.get_evidencias_formset())
         return context
 
-    def form_valid(self, form):
+    def get_evidencias_formset(self, data=None, files=None):
+        kwargs = {
+            "instance": getattr(self, "object", None) or Asignacion(),
+            "prefix": "evidencias",
+        }
+        if data is not None:
+            kwargs["data"] = data
+        if files is not None:
+            kwargs["files"] = files
+        return EvidenciaEntregaFormSet(**kwargs)
+
+    def post(self, request, *args, **kwargs):
+        self.object = None
+        form = self.get_form()
+        has_evidencias = "evidencias-TOTAL_FORMS" in request.POST
+        evidencias_formset = self.get_evidencias_formset(request.POST, request.FILES) if has_evidencias else None
+        if form.is_valid() and (evidencias_formset is None or evidencias_formset.is_valid()):
+            return self.forms_valid(form, evidencias_formset)
+        return self.forms_invalid(form, evidencias_formset)
+
+    def forms_valid(self, form, evidencias_formset=None):
         form.instance.usuario_responsable = self.request.user
         with transaction.atomic():
             self.object = form.save()
+            if evidencias_formset is not None:
+                evidencias_formset.instance = self.object
+                evidencias = evidencias_formset.save(commit=False)
+                for evidencia in evidencias:
+                    if not evidencia.pk and not evidencia.imagen:
+                        continue
+                    evidencia.asignacion = self.object
+                    evidencia.save()
+                for deleted_obj in evidencias_formset.deleted_objects:
+                    deleted_obj.delete()
             NotificationService.asignacion_creada(self.object, self.request.user)
 
         try:
@@ -409,6 +447,14 @@ class AsignacionCreateView(LoginRequiredMixin, CreateView):
             return HttpResponseRedirect(self.get_success_url())
 
         return HttpResponseRedirect(reverse("asignaciones:detalle", args=[self.object.pk]))
+
+    def forms_invalid(self, form, evidencias_formset=None):
+        return self.render_to_response(
+            self.get_context_data(
+                form=form,
+                evidencias_formset=evidencias_formset or self.get_evidencias_formset(),
+            )
+        )
 
 
 class AsignacionDevolucionView(LoginRequiredMixin, UpdateView):
@@ -441,6 +487,17 @@ class AsignacionDevolucionView(LoginRequiredMixin, UpdateView):
         kwargs["asignacion"] = self.object
         return kwargs
 
+    def get_evidencias_formset(self, data=None, files=None):
+        kwargs = {
+            "instance": Devolucion(),
+            "prefix": "evidencias",
+        }
+        if data is not None:
+            kwargs["data"] = data
+        if files is not None:
+            kwargs["files"] = files
+        return EvidenciaDevolucionFormSet(**kwargs)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         detalles_pendientes = self.object.detalles.filter(activa=True)
@@ -451,12 +508,16 @@ class AsignacionDevolucionView(LoginRequiredMixin, UpdateView):
                 queryset=detalles_pendientes,
                 prefix="detalles",
             )
+            context["evidencias_formset"] = self.get_evidencias_formset(
+                self.request.POST, self.request.FILES
+            )
         else:
             context["formset"] = AsignacionDetalleDevolucionFormSet(
                 instance=self.object,
                 queryset=detalles_pendientes,
                 prefix="detalles",
             )
+            context["evidencias_formset"] = self.get_evidencias_formset()
         return context
 
     def post(self, request, *args, **kwargs):
@@ -468,8 +529,10 @@ class AsignacionDevolucionView(LoginRequiredMixin, UpdateView):
             queryset=self.object.detalles.filter(activa=True),
             prefix="detalles",
         )
+        has_evidencias = "evidencias-TOTAL_FORMS" in request.POST
+        evidencias_formset = self.get_evidencias_formset(request.POST, request.FILES) if has_evidencias else None
 
-        if form.is_valid() and formset.is_valid():
+        if form.is_valid() and formset.is_valid() and (evidencias_formset is None or evidencias_formset.is_valid()):
             seleccionados = [
                 detalle_form
                 for detalle_form in formset.forms
@@ -477,11 +540,11 @@ class AsignacionDevolucionView(LoginRequiredMixin, UpdateView):
             ]
             if not seleccionados:
                 form.add_error(None, "Selecciona al menos un activo para registrar la devolucion.")
-                return self.forms_invalid(form, formset)
-            return self.forms_valid(form, formset)
-        return self.forms_invalid(form, formset)
+                return self.forms_invalid(form, formset, evidencias_formset)
+            return self.forms_valid(form, formset, evidencias_formset)
+        return self.forms_invalid(form, formset, evidencias_formset)
 
-    def forms_valid(self, form, formset):
+    def forms_valid(self, form, formset, evidencias_formset=None):
         codigos_devueltos = [
             detalle_form.instance.activo.codigo
             for detalle_form in formset.forms
@@ -499,6 +562,17 @@ class AsignacionDevolucionView(LoginRequiredMixin, UpdateView):
             for detalle_form in formset.forms:
                 detalle_form.save_devolucion_detalle(devolucion)
 
+            if evidencias_formset is not None:
+                evidencias_formset.instance = devolucion
+                evidencias = evidencias_formset.save(commit=False)
+                for evidencia in evidencias:
+                    if not evidencia.pk and not evidencia.imagen:
+                        continue
+                    evidencia.devolucion = devolucion
+                    evidencia.save()
+                for deleted_obj in evidencias_formset.deleted_objects:
+                    deleted_obj.delete()
+
             generar_o_actualizar_actas_devolucion(devolucion, self.request.user)
             self.object.refresh_from_db(fields=["estado_asignacion", "updated_at"])
             NotificationService.asignacion_devuelta(
@@ -511,5 +585,11 @@ class AsignacionDevolucionView(LoginRequiredMixin, UpdateView):
         messages.success(self.request, "La devolución fue registrada correctamente.")
         return HttpResponseRedirect(reverse("asignaciones:devolucion_detalle", args=[devolucion.pk]))
 
-    def forms_invalid(self, form, formset):
-        return self.render_to_response(self.get_context_data(form=form, formset=formset))
+    def forms_invalid(self, form, formset, evidencias_formset=None):
+        return self.render_to_response(
+            self.get_context_data(
+                form=form,
+                formset=formset,
+                evidencias_formset=evidencias_formset or self.get_evidencias_formset(),
+            )
+        )

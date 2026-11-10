@@ -1,0 +1,367 @@
+<div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm" data-evidencias-wrapper>
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-600">Evidencias Fotográficas</p>
+            <h3 class="mt-1 text-lg font-semibold text-slate-900">{{ titulo|default:"Fotos de evidencia" }}</h3>
+            <p class="mt-1 text-xs text-slate-500">{{ descripcion_seccion|default:"Fotografías del estado físico de los equipos (máx. 10 fotos en JPG, PNG o WEBP)." }}</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                Opcional
+            </span>
+            <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                Máximo 10 fotos
+            </span>
+        </div>
+    </div>
+
+    {{ formset.management_form }}
+
+    <!-- Dropzone de carga masiva / drag & drop -->
+    <div
+        class="mt-6 rounded-2xl border-2 border-dashed border-cyan-200 bg-cyan-50/50 px-5 py-6 text-center transition hover:border-cyan-400"
+        data-evidencias-dropzone
+    >
+        <input
+            id="evidencias-bulk-input"
+            type="file"
+            accept="image/*,.jpg,.jpeg,.png,.webp"
+            multiple
+            class="sr-only"
+            data-evidencias-bulk-input
+        >
+        <label
+            for="evidencias-bulk-input"
+            class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700"
+        >
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            Seleccionar foto(s)
+        </label>
+        <p class="mt-3 text-sm text-slate-600">O arrastra y suelta las fotos directamente en este recuadro.</p>
+    </div>
+
+    <!-- Contenedor de formularios individuales -->
+    <div class="mt-6 grid gap-4 lg:grid-cols-2" data-evidencias-forms>
+        {% for foto_form in formset %}
+            <div class="relative rounded-2xl border border-slate-200 bg-slate-50 p-4 transition" data-evidencia-card draggable="true">
+                {{ foto_form.id }}
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <p class="text-sm font-semibold text-slate-900" data-evidencia-title>Evidencia {{ forloop.counter }}</p>
+                    <div class="flex items-center gap-2">
+                        <button type="button" class="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-100" data-evidencia-move="up">Subir</button>
+                        <button type="button" class="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-100" data-evidencia-move="down">Bajar</button>
+                    </div>
+                    <span class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500" data-evidencia-status-badge>
+                        <span data-evidencia-status-icon aria-hidden="true">○</span>
+                        <span data-evidencia-status-text>Sin imagen</span>
+                    </span>
+                </div>
+
+                <div class="mt-4 space-y-4">
+                    {% if foto_form.instance.pk and foto_form.instance.imagen %}
+                    <div class="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                        <a href="{{ foto_form.instance.imagen_original_url }}" target="_blank" rel="noopener" class="block">
+                            <img src="{{ foto_form.instance.imagen_thumb_url }}" alt="Evidencia actual {{ forloop.counter }}" class="h-36 w-full object-cover">
+                        </a>
+                        <div class="border-t border-slate-200 px-3 py-2 text-xs text-slate-500">
+                            Imagen cargada
+                        </div>
+                    </div>
+                    {% endif %}
+                    <div>
+                        <label class="mb-2 block text-sm font-semibold text-slate-700">Fotografía</label>
+                        {{ foto_form.imagen }}
+                        {% if foto_form.imagen.errors %}<p class="mt-2 text-sm text-red-600">{{ foto_form.imagen.errors|join:", " }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-sm font-semibold text-slate-700">Descripción u observaciones (Opcional)</label>
+                        {{ foto_form.descripcion }}
+                        {% if foto_form.descripcion.errors %}<p class="mt-2 text-sm text-red-600">{{ foto_form.descripcion.errors|join:", " }}</p>{% endif %}
+                    </div>
+                    <div class="hidden">
+                        {{ foto_form.orden }}
+                        {% if foto_form.DELETE %}{{ foto_form.DELETE }}{% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Template vacío para clonar nuevas tarjetas -->
+    <template id="evidencia-empty-form-template">
+        <div class="relative rounded-2xl border border-slate-200 bg-slate-50 p-4 transition" data-evidencia-card draggable="true">
+            {{ formset.empty_form.id }}
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <p class="text-sm font-semibold text-slate-900" data-evidencia-title>Evidencia __index__</p>
+                <div class="flex items-center gap-2">
+                    <button type="button" class="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-100" data-evidencia-move="up">Subir</button>
+                    <button type="button" class="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-100" data-evidencia-move="down">Bajar</button>
+                </div>
+                <span class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500" data-evidencia-status-badge>
+                    <span data-evidencia-status-icon aria-hidden="true">○</span>
+                    <span data-evidencia-status-text>Sin imagen</span>
+                </span>
+            </div>
+            <div class="mt-4 space-y-4">
+                <div>
+                    <label class="mb-2 block text-sm font-semibold text-slate-700">Fotografía</label>
+                    {{ formset.empty_form.imagen }}
+                </div>
+                <div>
+                    <label class="mb-2 block text-sm font-semibold text-slate-700">Descripción u observaciones (Opcional)</label>
+                    {{ formset.empty_form.descripcion }}
+                </div>
+                <div class="hidden">
+                    {{ formset.empty_form.orden }}
+                    {% if formset.empty_form.DELETE %}{{ formset.empty_form.DELETE }}{% endif %}
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <p class="text-sm text-slate-500">Puedes subir hasta 10 fotos de evidencia.</p>
+        <button
+            type="button"
+            class="rounded-xl border border-cyan-200 bg-cyan-50 px-5 py-3 text-sm font-semibold text-cyan-700 shadow-sm transition hover:bg-cyan-100"
+            data-add-evidencia-button
+        >
+            + Agregar otra evidencia
+        </button>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const wrapper = document.querySelector("[data-evidencias-wrapper]");
+        if (!wrapper) return;
+
+        const maxForms = 10;
+        const prefix = "evidencias";
+        const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/jpg"];
+        const formsContainer = wrapper.querySelector("[data-evidencias-forms]");
+        const addButton = wrapper.querySelector("[data-add-evidencia-button]");
+        const template = document.getElementById("evidencia-empty-form-template");
+        const totalFormsInput = document.querySelector(`#id_${prefix}-TOTAL_FORMS`);
+        const dropzone = wrapper.querySelector("[data-evidencias-dropzone]");
+        const bulkInput = wrapper.querySelector("[data-evidencias-bulk-input]");
+
+        const paintStatus = (card, state, message) => {
+            const badge = card.querySelector("[data-evidencia-status-badge]");
+            const icon = card.querySelector("[data-evidencia-status-icon]");
+            const text = card.querySelector("[data-evidencia-status-text]");
+            if (!badge || !icon || !text) return;
+
+            badge.className = "inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-semibold";
+            if (state === "ok") {
+                badge.classList.add("bg-emerald-50", "text-emerald-700");
+                icon.textContent = "✓";
+                text.textContent = message || "Imagen lista";
+            } else if (state === "error") {
+                badge.classList.add("bg-rose-50", "text-rose-700");
+                icon.textContent = "!";
+                text.textContent = message || "Formato no válido";
+            } else {
+                badge.classList.add("bg-slate-100", "text-slate-500");
+                icon.textContent = "○";
+                text.textContent = message || "Sin imagen";
+            }
+        };
+
+        const isAllowedFile = (file) => {
+            const mimeType = (file?.type || "").toLowerCase();
+            const fileName = (file?.name || "").toLowerCase();
+            const extensionOk = [".jpg", ".jpeg", ".png", ".webp"].some((ext) => fileName.endsWith(ext));
+            return allowedTypes.includes(mimeType) || extensionOk;
+        };
+
+        const cardHasExisting = (card) => Boolean(card.querySelector(`input[type="hidden"][name^="${prefix}-"][name$="-id"]`)?.value);
+        const cardHasSelected = (card) => Boolean(card.querySelector('input[type="file"]')?.files?.length);
+        let draggedCard = null;
+
+        const wireCard = (card) => {
+            const input = card.querySelector('input[type="file"]');
+            if (input && input.dataset.wired !== "true") {
+                input.dataset.wired = "true";
+                input.accept = "image/*,.jpg,.jpeg,.png,.webp";
+
+                const updateStatus = () => {
+                    const file = input.files && input.files[0];
+                    if (!file) {
+                        paintStatus(card, cardHasExisting(card) ? "ok" : "idle", cardHasExisting(card) ? "Imagen cargada" : "Sin imagen");
+                        return;
+                    }
+                    if (isAllowedFile(file)) {
+                        paintStatus(card, "ok", file.name || "Imagen lista");
+                        return;
+                    }
+                    input.value = "";
+                    paintStatus(card, "error", "Solo JPG, PNG o WEBP");
+                };
+
+                input.addEventListener("change", updateStatus);
+                updateStatus();
+            }
+
+            if (card.dataset.sortWired === "true") return;
+            card.dataset.sortWired = "true";
+
+            card.addEventListener("dragstart", (e) => {
+                draggedCard = card;
+                e.dataTransfer.effectAllowed = "move";
+                card.classList.add("opacity-50");
+            });
+            card.addEventListener("dragend", () => {
+                draggedCard = null;
+                card.classList.remove("opacity-50");
+            });
+            card.addEventListener("dragover", (e) => {
+                if (!draggedCard || draggedCard === card) return;
+                e.preventDefault();
+            });
+            card.addEventListener("drop", (e) => {
+                if (!draggedCard || draggedCard === card || !formsContainer) return;
+                e.preventDefault();
+                const rect = card.getBoundingClientRect();
+                const insertAfter = e.clientY > rect.top + rect.height / 2;
+                formsContainer.insertBefore(draggedCard, insertAfter ? card.nextSibling : card);
+                refreshCards();
+            });
+
+            card.querySelectorAll("[data-evidencia-move]").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    const dir = btn.dataset.evidenciaMove;
+                    if (dir === "up" && card.previousElementSibling) {
+                        formsContainer.insertBefore(card, card.previousElementSibling);
+                    } else if (dir === "down" && card.nextElementSibling) {
+                        formsContainer.insertBefore(card.nextElementSibling, card);
+                    }
+                    refreshCards();
+                });
+            });
+        };
+
+        const refreshCards = () => {
+            if (!formsContainer) return;
+            const cards = Array.from(formsContainer.querySelectorAll("[data-evidencia-card]"));
+            cards.forEach((card, index) => {
+                const title = card.querySelector("[data-evidencia-title]");
+                if (title) title.textContent = `Evidencia ${index + 1}`;
+
+                const orderInput = card.querySelector(`[name$="-orden"]`);
+                if (orderInput) orderInput.value = String(index + 1);
+
+                card.querySelectorAll("[data-evidencia-move]").forEach((btn) => {
+                    const disabled = (btn.dataset.evidenciaMove === "up" && index === 0)
+                        || (btn.dataset.evidenciaMove === "down" && index === cards.length - 1);
+                    btn.disabled = disabled;
+                    btn.classList.toggle("opacity-50", disabled);
+                    btn.classList.toggle("cursor-not-allowed", disabled);
+                });
+
+                card.querySelectorAll("[name], [id], [for]").forEach((field) => {
+                    const name = field.getAttribute("name");
+                    const id = field.getAttribute("id");
+                    const htmlFor = field.getAttribute("for");
+                    if (name) field.setAttribute("name", name.replace(new RegExp(`${prefix}-(?:\\d+|__prefix__)-`, "g"), `${prefix}-${index}-`));
+                    if (id) field.setAttribute("id", id.replace(new RegExp(`${prefix}-(?:\\d+|__prefix__)-`, "g"), `${prefix}-${index}-`));
+                    if (htmlFor) field.setAttribute("for", htmlFor.replace(new RegExp(`${prefix}-(?:\\d+|__prefix__)-`, "g"), `${prefix}-${index}-`));
+                });
+
+                wireCard(card);
+            });
+
+            if (totalFormsInput) totalFormsInput.value = String(cards.length);
+            if (addButton) {
+                const isFull = cards.length >= maxForms;
+                addButton.disabled = isFull;
+                addButton.classList.toggle("opacity-50", isFull);
+                addButton.classList.toggle("cursor-not-allowed", isFull);
+            }
+        };
+
+        const appendForm = () => {
+            if (!template || !formsContainer) return null;
+            const count = formsContainer.querySelectorAll("[data-evidencia-card]").length;
+            if (count >= maxForms) return null;
+            const html = template.innerHTML
+                .replace(/__prefix__/g, String(count))
+                .replace(/__index__/g, String(count + 1));
+            const wrapperDiv = document.createElement("div");
+            wrapperDiv.innerHTML = html.trim();
+            const card = wrapperDiv.firstElementChild;
+            if (!card) return null;
+            formsContainer.appendChild(card);
+            refreshCards();
+            return card;
+        };
+
+        if (addButton) addButton.addEventListener("click", appendForm);
+
+        const availableCard = () => {
+            if (!formsContainer) return null;
+            return Array.from(formsContainer.querySelectorAll("[data-evidencia-card]"))
+                .find((card) => !cardHasExisting(card) && !cardHasSelected(card));
+        };
+
+        const handleBulkFiles = (fileList) => {
+            const files = Array.from(fileList || []);
+            if (!files.length) return;
+            files.forEach((file) => {
+                if (!isAllowedFile(file)) return;
+                let targetCard = availableCard();
+                if (!targetCard) {
+                    targetCard = appendForm();
+                }
+                if (!targetCard) return;
+
+                const input = targetCard.querySelector('input[type="file"]');
+                if (input && window.DataTransfer) {
+                    const dt = new DataTransfer();
+                    dt.items.add(file);
+                    input.files = dt.files;
+                    input.dispatchEvent(new Event("change", { bubbles: true }));
+                }
+            });
+        };
+
+        if (bulkInput) {
+            bulkInput.addEventListener("change", () => {
+                handleBulkFiles(bulkInput.files);
+                bulkInput.value = "";
+            });
+        }
+
+        if (dropzone) {
+            ["dragenter", "dragover"].forEach((eventName) => {
+                dropzone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    dropzone.classList.add("border-cyan-500", "bg-cyan-100/60");
+                });
+            });
+            ["dragleave", "drop"].forEach((eventName) => {
+                dropzone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    dropzone.classList.remove("border-cyan-500", "bg-cyan-100/60");
+                });
+            });
+            dropzone.addEventListener("drop", (e) => {
+                const dt = e.dataTransfer;
+                if (dt && dt.files && dt.files.length) {
+                    handleBulkFiles(dt.files);
+                }
+            });
+        }
+
+        // Inicializar tarjetas existentes
+        if (formsContainer) {
+            Array.from(formsContainer.children).forEach((card) => wireCard(card));
+            refreshCards();
+        }
+    })();
+</script>
+
