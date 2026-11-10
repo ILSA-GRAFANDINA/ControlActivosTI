@@ -448,6 +448,23 @@ def _colocar_logo(ws, empresa):
     ws.add_image(logo)
 
 
+def _llenar_credenciales_entrega(ws, asignacion):
+    fila_credenciales = _buscar_fila_por_texto(ws, "CREDENCIALES DE ACCESO")
+    if not fila_credenciales:
+        return
+
+    correo = _texto(getattr(asignacion.colaborador, "correo_corporativo", ""), default="")
+    if correo == "-":
+        correo = ""
+
+    usuario_laptop = correo.split("@")[0].strip() if "@" in correo else correo.strip()
+
+    if usuario_laptop:
+        ws.cell(fila_credenciales + 2, 6).value = usuario_laptop
+    if correo:
+        ws.cell(fila_credenciales + 3, 6).value = correo
+
+
 def _llenar_firmas_entrega(ws, asignacion):
     fila_recibe = _buscar_fila_por_texto(ws, "RECIBE CONFORME")
     if fila_recibe:
@@ -494,6 +511,7 @@ def construir_hoja_acta_entrega(asignacion):
         ws.cell(indice, 9).value = _observaciones_acta_activo(detalle.activo)
         _ajustar_alto_fila_activo(ws, indice)
 
+    _llenar_credenciales_entrega(ws, asignacion)
     _llenar_firmas_entrega(ws, asignacion)
 
     salida = BytesIO()
