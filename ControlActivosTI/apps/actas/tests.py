@@ -11,11 +11,13 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.conf import settings
 from django.core.files.storage import default_storage
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.test.utils import override_settings
 from django.urls import reverse
 from django.utils import timezone
 from openpyxl import load_workbook
+from PIL import Image as PILImage
 
 from apps.accounts.models import PerfilUsuario
 from apps.actas.models import ActaEntrega
@@ -31,6 +33,7 @@ from apps.asignaciones.models import (
     AsignacionDetalle,
     Devolucion,
     DevolucionDetalle,
+    EvidenciaEntrega,
 )
 from apps.catalogos.models import Area, Cargo, CentroCosto, Empresa, EstadoActivo, TipoActivo, Ubicacion
 from apps.colaboradores.models import Colaborador
@@ -158,8 +161,13 @@ class ActaEntregaExcelTests(TestCase):
         self.assertEqual(ws["E10"].value, "Ana Perez")
         self.assertEqual(ws["E11"].value, "0123456789")
         self.assertEqual(ws["I10"].value, "Analista de soporte - TI")
-        self.assertEqual(ws["D62"].value, "Ana Perez")
-        self.assertEqual(ws["D63"].value, "Analista de soporte - TI")
+        fila_recibe = next(
+            fila
+            for fila in range(50, ws.max_row + 1)
+            if "RECIBE CONFORME" in str(ws.cell(fila, 2).value)
+        )
+        self.assertEqual(ws.cell(fila_recibe + 1, 4).value, "Ana Perez")
+        self.assertEqual(ws.cell(fila_recibe + 2, 4).value, "Analista de soporte - TI")
         self.assertIsNone(ws["B1"].value)
         self.assertEqual(ws["B14"].value, "Laptop")
         self.assertEqual(ws["D14"].value, "Dell")
@@ -169,7 +177,7 @@ class ActaEntregaExcelTests(TestCase):
         self.assertIn("CPU: Intel i5", ws["H14"].value)
         self.assertIn("RAM: 16GB", ws["H14"].value)
         self.assertTrue(ws["H14"].alignment.wrap_text)
-        self.assertGreater(ws.row_dimensions[14].height, 30)
+        self.assertIsNone(ws.row_dimensions[14].height)
         self.assertIsNone(ws["I14"].value)
         xml = self.cargar_xml_hoja_generada(acta)
         self.assertNotIn(b"<t> </t>", xml)
@@ -218,6 +226,9 @@ class ActaEntregaExcelTests(TestCase):
     def test_generates_grafandina_delivery_from_f_ti_04(self):
         self.empresa.nombre = "GRAFANDINA"
         self.empresa.save(update_fields=["nombre"])
+        self.colaborador.empresa = self.empresa
+        self.colaborador.save(update_fields=["empresa"])
+        self.asignacion.colaborador = self.colaborador
         self.crear_detalle()
 
         _acta, workbook = self.cargar_workbook_generado()
@@ -225,6 +236,50 @@ class ActaEntregaExcelTests(TestCase):
         self.assertEqual(workbook.active["I1"].value, "F-TI-04")
         self.assertEqual(workbook.active["I10"].value, "Analista de soporte - TI")
         self.assertIsNone(workbook.active["G14"].value)
+
+    def test_generates_delivery_excel_with_evidence_photos(self):
+        self.crear_detalle()
+        for i in range(4):
+            buf = BytesIO()
+            PILImage.new("RGB", (300, 200), color=(10 * i, 50, 100)).save(buf, format="PNG")
+            EvidenciaEntrega.objects.create(
+                asignacion=self.asignacion,
+                imagen=SimpleUploadedFile(f"test_{i}.png", buf.getvalue(), content_type="image/png"),
+                orden=i,
+            )
+
+        _acta, workbook = self.cargar_workbook_generado()
+        ws = workbook.active
+
+        self.assertEqual(len(ws._images), 5)
+        foto_anchors = [img.anchor for img in ws._images[1:]]
+        self.assertEqual(foto_anchors[0]._from.col, 1)
+        self.assertEqual(foto_anchors[1]._from.col, 4)
+        self.assertEqual(foto_anchors[2]._from.col, 7)
+        self.assertEqual(foto_anchors[3]._from.col, 1)
+
+    def test_generates_delivery_excel_with_more_than_six_photos_dynamically_expands_grid(self):
+        self.crear_detalle()
+        for i in range(8):
+            buf = BytesIO()
+            PILImage.new("RGB", (200, 200), color=(20 * i, 30, 40)).save(buf, format="PNG")
+            EvidenciaEntrega.objects.create(
+                asignacion=self.asignacion,
+                imagen=SimpleUploadedFile(f"extra_{i}.png", buf.getvalue(), content_type="image/png"),
+                orden=i,
+            )
+
+        _acta, workbook = self.cargar_workbook_generado()
+        ws = workbook.active
+
+        self.assertEqual(len(ws._images), 9)
+
+        fila_recibe = next(
+            fila
+            for fila in range(50, ws.max_row + 1)
+            if "RECIBE CONFORME" in str(ws.cell(fila, 2).value)
+        )
+        self.assertEqual(fila_recibe, 64 + 3)
 
 
 class ActaRecepcionExcelTests(ActaEntregaExcelTests):
@@ -359,6 +414,9 @@ class ActaRecepcionExcelTests(ActaEntregaExcelTests):
     def test_generates_grafandina_reception_from_f_ti_05(self):
         self.empresa.nombre = "GRAFANDINA"
         self.empresa.save(update_fields=["nombre"])
+        self.colaborador.empresa = self.empresa
+        self.colaborador.save(update_fields=["empresa"])
+        self.asignacion.colaborador = self.colaborador
         detalle = self.crear_detalle()
         devolucion = self.crear_devolucion([(detalle, "Sin novedades")])
 

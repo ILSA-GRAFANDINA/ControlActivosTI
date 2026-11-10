@@ -1,3 +1,4 @@
+import logging
 from decimal import Decimal
 from io import BytesIO
 from copy import copy, deepcopy
@@ -9,18 +10,23 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 from django.conf import settings
 from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from django.utils import timezone
 from django.utils.text import slugify
+
+from PIL import Image, ImageOps
 
 from openpyxl import load_workbook
 from openpyxl.drawing.image import Image as ExcelImage
 from openpyxl.drawing.spreadsheet_drawing import AnchorMarker, OneCellAnchor
 from openpyxl.drawing.xdr import XDRPositiveSize2D
-from openpyxl.styles import Alignment
+from openpyxl.styles import Alignment, Border, Side
 from openpyxl.utils import get_column_letter, range_boundaries
 
 from .models import ActaEntrega
 from apps.activos.attribute_services import instantanea_activo
+
+logger = logging.getLogger("controlactivos")
 
 
 TIPO_ENTREGA = ActaEntrega.TipoActa.ENTREGA
@@ -465,6 +471,132 @@ def _llenar_credenciales_entrega(ws, asignacion):
         ws.cell(fila_credenciales + 3, 6).value = correo
 
 
+def _llenar_fotografias_entrega(ws, asignacion):
+    fila_foto = _buscar_fila_por_texto(ws, "FOTOGRAFÍAS DE LOS EQUIPOS") or _buscar_fila_por_texto(
+        ws, "FOTOGRAFIAS DE LOS EQUIPOS"
+    )
+    if not fila_foto:
+        return
+
+    evidencias = list(asignacion.evidencias.order_by("orden", "id"))
+    if not evidencias:
+        return
+
+    bloques_plantilla = 2
+    fotos_por_bloque = 3
+    filas_por_bloque = 3
+    total_fotos = len(evidencias)
+    bloques_necesarios = max(bloques_plantilla, ceil(total_fotos / fotos_por_bloque))
+    bloques_extra = bloques_necesarios - bloques_plantilla
+    borde_medio = Side(style="medium")
+
+    if bloques_extra > 0:
+        fila_anterior_fin = fila_foto + (bloques_plantilla * filas_por_bloque)
+        fila_insercion = fila_anterior_fin + 1
+        filas_extra = bloques_extra * filas_por_bloque
+        _insertar_filas_preservando_combinadas(ws, fila_insercion, filas_extra)
+
+        for c in range(2, 10):
+            celda = ws.cell(fila_anterior_fin, c)
+            celda.border = Border(
+                left=celda.border.left,
+                right=celda.border.right,
+                top=celda.border.top,
+                bottom=None,
+            )
+
+        for b in range(bloques_extra):
+            r_inicio = fila_insercion + (b * filas_por_bloque)
+            es_ultimo = (b == bloques_extra - 1)
+
+            for offset in range(filas_por_bloque):
+                fila_actual = r_inicio + offset
+                fila_ref = fila_foto + 1 + offset
+                _copiar_formato_fila(ws, fila_ref, fila_actual)
+
+                celda_izq = ws.cell(fila_actual, 2)
+                celda_izq.border = Border(left=borde_medio, right=None, top=None, bottom=None)
+                for c in range(3, 9):
+                    ws.cell(fila_actual, c).border = Border(left=None, right=None, top=None, bottom=None)
+                celda_der = ws.cell(fila_actual, 9)
+                celda_der.border = Border(left=None, right=borde_medio, top=None, bottom=None)
+
+            if es_ultimo:
+                fila_final = r_inicio + filas_por_bloque - 1
+                for c in range(2, 10):
+                    celda = ws.cell(fila_final, c)
+                    celda.border = Border(
+                        left=celda.border.left,
+                        right=celda.border.right,
+                        top=celda.border.top,
+                        bottom=borde_medio,
+                    )
+
+            ws.merge_cells(start_row=r_inicio, start_column=2, end_row=r_inicio + 2, end_column=4)
+            ws.merge_cells(start_row=r_inicio, start_column=5, end_row=r_inicio + 2, end_column=7)
+            ws.merge_cells(start_row=r_inicio, start_column=8, end_row=r_inicio + 2, end_column=9)
+
+    config_columnas = [
+        (("B", "C", "D"), 1),
+        (("E", "F", "G"), 4),
+        (("H", "I"), 7),
+    ]
+
+    for idx, evidencia in enumerate(evidencias):
+        if not evidencia.imagen or not default_storage.exists(evidencia.imagen.name):
+            continue
+
+        b = idx // fotos_por_bloque
+        col_pos = idx % fotos_por_bloque
+        r_inicio = fila_foto + 1 + (b * filas_por_bloque)
+        columnas, start_col_idx = config_columnas[col_pos]
+
+        slot_w = _ancho_columnas_px(ws, columnas)
+        slot_h = _alto_filas_px(ws, range(r_inicio, r_inicio + filas_por_bloque))
+        max_w = max(10, slot_w - 16)
+        max_h = max(10, slot_h - 16)
+
+        try:
+            with default_storage.open(evidencia.imagen.name, "rb") as f:
+                with Image.open(f) as pil_img:
+                    pil_img = ImageOps.exif_transpose(pil_img)
+                    if pil_img.mode != "RGB":
+                        pil_img = pil_img.convert("RGB")
+
+                    pil_img.thumbnail((960, 960), Image.Resampling.LANCZOS)
+                    img_w, img_h = pil_img.size
+
+                    escala = min(max_w / img_w, max_h / img_h, 1)
+                    new_w = max(1, int(img_w * escala))
+                    new_h = max(1, int(img_h * escala))
+
+                    offset_x = max(0, int((slot_w - new_w) / 2))
+                    offset_y = max(0, int((slot_h - new_h) / 2))
+
+                    img_buffer = BytesIO()
+                    pil_img.save(img_buffer, format="JPEG", quality=85)
+                    img_buffer.seek(0)
+
+                    excel_img = ExcelImage(img_buffer)
+                    excel_img.width = new_w
+                    excel_img.height = new_h
+                    excel_img.anchor = OneCellAnchor(
+                        _from=AnchorMarker(
+                            col=start_col_idx,
+                            row=r_inicio - 1,
+                            colOff=offset_x * EMU_POR_PIXEL,
+                            rowOff=offset_y * EMU_POR_PIXEL,
+                        ),
+                        ext=XDRPositiveSize2D(
+                            cx=new_w * EMU_POR_PIXEL,
+                            cy=new_h * EMU_POR_PIXEL,
+                        ),
+                    )
+                    ws.add_image(excel_img)
+        except Exception:
+            logger.exception("Error al insertar evidencia fotografica en acta evidencia_id=%s", evidencia.pk)
+
+
 def _llenar_firmas_entrega(ws, asignacion):
     fila_recibe = _buscar_fila_por_texto(ws, "RECIBE CONFORME")
     if fila_recibe:
@@ -495,6 +627,7 @@ def construir_hoja_acta_entrega(asignacion):
         filas_plantilla=filas_plantilla,
     )
 
+    ws["I1"] = PLANTILLAS_POR_EMPRESA[_clave_empresa(asignacion.colaborador.empresa)][TIPO_ENTREGA]
     ws["E6"] = timezone.localdate()
     ws["E10"] = _texto(asignacion.nombre_colaborador_completo, default="")
     ws["E11"] = _texto(asignacion.colaborador.cedula, default="")
@@ -512,6 +645,7 @@ def construir_hoja_acta_entrega(asignacion):
         _ajustar_alto_fila_activo(ws, indice)
 
     _llenar_credenciales_entrega(ws, asignacion)
+    _llenar_fotografias_entrega(ws, asignacion)
     _llenar_firmas_entrega(ws, asignacion)
 
     salida = BytesIO()
@@ -612,6 +746,7 @@ def generar_acta_recepcion(devolucion):
         filas_plantilla=filas_plantilla,
     )
 
+    ws["I1"] = PLANTILLAS_POR_EMPRESA[_clave_empresa(asignacion.colaborador.empresa)][TIPO_RECEPCION]
     ws["E6"] = devolucion.fecha_devolucion
     ws["E10"] = _texto(asignacion.nombre_colaborador_completo, default="")
     ws["E11"] = _texto(asignacion.colaborador.cedula, default="")
