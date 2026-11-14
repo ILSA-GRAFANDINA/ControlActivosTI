@@ -10,6 +10,34 @@ on:
       - develop
 
 jobs:
+  lint:
+    name: Calidad de Codigo (Ruff)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Errores criticos de Python (bloqueante)
+        uses: astral-sh/ruff-action@v3
+        with:
+          src: "ControlActivosTI"
+          args: "check --config ControlActivosTI/pyproject.toml --select E9,F63,F7,F82"
+
+      - name: Revision completa de lint (informativo)
+        uses: astral-sh/ruff-action@v3
+        continue-on-error: true
+        with:
+          src: "ControlActivosTI"
+          args: "check --config ControlActivosTI/pyproject.toml"
+
+      - name: Revision de formato estilo Black (informativo)
+        uses: astral-sh/ruff-action@v3
+        continue-on-error: true
+        with:
+          src: "ControlActivosTI"
+          args: "format --check --config ControlActivosTI/pyproject.toml"
+
   test:
     name: Pruebas Django & PostgreSQL
     runs-on: ubuntu-latest

@@ -1,0 +1,31 @@
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "__pycache__",
+    "**/migrations/*",
+    "media",
+    "private_media",
+    "staticfiles",
+    "test-media",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes (imports sin usar, variables indefinidas)
+    "I",   # isort (orden de imports)
+    "B",   # flake8-bugbear (posibles bugs)
+]
+ignore = [
+    "E501", # longitud de linea (manejada por el formateador)
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
