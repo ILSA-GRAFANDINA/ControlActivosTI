@@ -83,7 +83,7 @@ class ColaboradorForm(forms.ModelForm):
             if nombre_campo in self.fields:
                 self.fields[nombre_campo].label = etiqueta
 
-        for nombre_campo, field in self.fields.items():
+        for field in self.fields.values():
             if isinstance(field.widget, forms.Textarea):
                 field.widget.attrs["class"] = TEXTAREA_CLASS
             else:
