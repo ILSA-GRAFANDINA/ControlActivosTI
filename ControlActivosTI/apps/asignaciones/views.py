@@ -23,7 +23,7 @@ from .forms import (
     EvidenciaDevolucionFormSet,
     EvidenciaEntregaFormSet,
 )
-from .models import Asignacion, Devolucion, EvidenciaDevolucion, EvidenciaEntrega
+from .models import Asignacion, Devolucion
 
 logger = logging.getLogger("controlactivos")
 
