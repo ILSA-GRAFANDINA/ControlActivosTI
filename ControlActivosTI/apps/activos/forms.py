@@ -138,7 +138,7 @@ class ActivoAdminForm(forms.ModelForm):
                 attrs={
                     "type": "date",
                     "class": BASE_INPUT_CLASS,
-                }
+                },
             )
             self.fields["fecha_compra"].input_formats = ["%Y-%m-%d"]
             if self.instance and self.instance.pk and self.instance.fecha_compra:
@@ -165,15 +165,15 @@ class ActivoAdminForm(forms.ModelForm):
         self.fields["disco"].help_text = ayuda_tecnica
         self.fields["sistema_operativo"].help_text = ayuda_tecnica
         if "valor" in self.fields:
-            self.fields["valor"].help_text = (
-                "Usa coma para miles y punto para decimales, por ejemplo 10,482.00."
-            )
+            self.fields[
+                "valor"
+            ].help_text = "Usa coma para miles y punto para decimales, por ejemplo 10,482.00."
         if "codigo_sap" in self.fields:
             self.fields["codigo_sap"].help_text = ayuda_codigo_sap
         if "serie" in self.fields:
-            self.fields["serie"].help_text = (
-                "Puede ser el S/N del fabricante u otro identificador unico del activo."
-            )
+            self.fields[
+                "serie"
+            ].help_text = "Puede ser el S/N del fabricante u otro identificador unico del activo."
 
         if "estado_activo" in self.fields:
             estado_actual_id = (
@@ -183,11 +183,11 @@ class ActivoAdminForm(forms.ModelForm):
             )
             estados = EstadoActivo.objects.filter(activo=True)
             if estado_actual_id:
-                estados = EstadoActivo.objects.filter(
-                    Q(activo=True) | Q(pk=estado_actual_id)
-                )
+                estados = EstadoActivo.objects.filter(Q(activo=True) | Q(pk=estado_actual_id))
             self.fields["estado_activo"].queryset = estados.order_by("nombre")
-            self.fields["estado_activo"].help_text = (
+            self.fields[
+                "estado_activo"
+            ].help_text = (
                 "“Dado de baja” mantiene el activo visible, pero impide nuevas asignaciones."
             )
 
@@ -200,12 +200,16 @@ class ActivoAdminForm(forms.ModelForm):
             filtro_tipo = Q(activo=True)
             if tipo_actual_id:
                 filtro_tipo |= Q(pk=tipo_actual_id)
-            self.fields["tipo_activo"].queryset = TipoActivo.objects.filter(filtro_tipo).order_by("nombre")
+            self.fields["tipo_activo"].queryset = TipoActivo.objects.filter(filtro_tipo).order_by(
+                "nombre"
+            )
             if bloquear_tipo:
                 # `disabled` tambien hace que Django ignore cualquier valor
                 # manipulado en el POST y conserve el tipo del activo base.
                 self.fields["tipo_activo"].disabled = True
-                self.fields["tipo_activo"].help_text = (
+                self.fields[
+                    "tipo_activo"
+                ].help_text = (
                     "El tipo se conserva porque este activo se esta creando a partir de otro."
                 )
 
@@ -218,12 +222,12 @@ class ActivoAdminForm(forms.ModelForm):
             filtro_ubicacion = Q(activo=True)
             if ubicacion_actual_id:
                 filtro_ubicacion |= Q(pk=ubicacion_actual_id)
-            self.fields["ubicacion_fisica"].queryset = (
-                UbicacionFisicaActivo.objects.filter(filtro_ubicacion).order_by("nombre")
-            )
-            self.fields["ubicacion_fisica"].help_text = (
-                "Ubicacion fisica real del activo dentro de la empresa."
-            )
+            self.fields["ubicacion_fisica"].queryset = UbicacionFisicaActivo.objects.filter(
+                filtro_ubicacion
+            ).order_by("nombre")
+            self.fields[
+                "ubicacion_fisica"
+            ].help_text = "Ubicacion fisica real del activo dentro de la empresa."
 
         if "proveedor" in self.fields:
             proveedor_actual_id = (
@@ -234,9 +238,13 @@ class ActivoAdminForm(forms.ModelForm):
             filtro = Q(activo=True)
             if proveedor_actual_id:
                 filtro |= Q(pk=proveedor_actual_id)
-            self.fields["proveedor"].queryset = Proveedor.objects.filter(filtro).order_by("razon_social")
+            self.fields["proveedor"].queryset = Proveedor.objects.filter(filtro).order_by(
+                "razon_social"
+            )
             self.fields["proveedor"].required = False
-            self.fields["proveedor"].help_text = "Opcional. En altas solo se muestran proveedores activos."
+            self.fields[
+                "proveedor"
+            ].help_text = "Opcional. En altas solo se muestran proveedores activos."
 
         if "proveedor_propietario" in self.fields:
             propietario_actual_id = (
@@ -247,9 +255,13 @@ class ActivoAdminForm(forms.ModelForm):
             filtro = Q(activo=True)
             if propietario_actual_id:
                 filtro |= Q(pk=propietario_actual_id)
-            self.fields["proveedor_propietario"].queryset = Proveedor.objects.filter(filtro).order_by("razon_social")
+            self.fields["proveedor_propietario"].queryset = Proveedor.objects.filter(
+                filtro
+            ).order_by("razon_social")
             self.fields["proveedor_propietario"].required = False
-            self.fields["proveedor_propietario"].help_text = "Obligatorio solo para activos arrendados."
+            self.fields[
+                "proveedor_propietario"
+            ].help_text = "Obligatorio solo para activos arrendados."
 
         if "modalidad_tenencia" in self.fields:
             self.fields["modalidad_tenencia"].required = False
@@ -274,14 +286,20 @@ class ActivoAdminForm(forms.ModelForm):
             filtro_factura = Q(activa=True)
             if factura_actual_id:
                 filtro_factura |= Q(pk=factura_actual_id)
-            facturas = FacturaCompra.objects.filter(filtro_factura).select_related("proveedor", "empresa")
+            facturas = FacturaCompra.objects.filter(filtro_factura).select_related(
+                "proveedor", "empresa"
+            )
             if str(proveedor_id or "").isdigit():
                 facturas = facturas.filter(proveedor_id=proveedor_id)
             if str(empresa_id or "").isdigit():
                 facturas = facturas.filter(empresa_id=empresa_id)
-            self.fields["factura_compra"].queryset = facturas.order_by("-fecha_emision", "numero_factura")
+            self.fields["factura_compra"].queryset = facturas.order_by(
+                "-fecha_emision", "numero_factura"
+            )
             self.fields["factura_compra"].required = False
-            self.fields["factura_compra"].help_text = "Opcional. Solo se muestran facturas compatibles con proveedor y empresa."
+            self.fields[
+                "factura_compra"
+            ].help_text = "Opcional. Solo se muestran facturas compatibles con proveedor y empresa."
 
         if not permitir_cambio_vigencia:
             self.fields.pop("activo", None)
@@ -319,7 +337,11 @@ class ActivoAdminForm(forms.ModelForm):
             return None
         if atributo.tipo_dato == AtributoActivo.TipoDato.TEXTO_PROTEGIDO:
             return None
-        return valor.valor_opcion_id if atributo.tipo_dato == AtributoActivo.TipoDato.LISTA else valor.valor
+        return (
+            valor.valor_opcion_id
+            if atributo.tipo_dato == AtributoActivo.TipoDato.LISTA
+            else valor.valor
+        )
 
     def _tiene_valor_protegido(self, atributo):
         activo_origen = self.instance if self.instance and self.instance.pk else self.activo_base
@@ -342,7 +364,10 @@ class ActivoAdminForm(forms.ModelForm):
             atributo = configuracion.atributo
             nombre = self.nombre_campo_atributo(atributo.clave)
             required = configuracion.obligatorio
-            if atributo.tipo_dato == AtributoActivo.TipoDato.TEXTO_PROTEGIDO and self._tiene_valor_protegido(atributo):
+            if (
+                atributo.tipo_dato == AtributoActivo.TipoDato.TEXTO_PROTEGIDO
+                and self._tiene_valor_protegido(atributo)
+            ):
                 required = False
             initial = self._valor_inicial(atributo)
             unidad = configuracion.unidad_efectiva
@@ -404,7 +429,9 @@ class ActivoAdminForm(forms.ModelForm):
                     opciones = OpcionAtributoActivo.objects.filter(atributo=atributo).filter(
                         Q(activo=True) | Q(pk=initial)
                     )
-                campo = forms.ModelChoiceField(queryset=opciones.order_by("orden", "nombre"), **comunes)
+                campo = forms.ModelChoiceField(
+                    queryset=opciones.order_by("orden", "nombre"), **comunes
+                )
 
             widget = campo.widget
             if isinstance(widget, forms.Textarea):
@@ -414,9 +441,19 @@ class ActivoAdminForm(forms.ModelForm):
             if unidad:
                 widget.attrs["data-unidad"] = unidad
             if atributo.tipo_dato == AtributoActivo.TipoDato.ENTERO:
-                widget.attrs.update({"inputmode": "numeric", "placeholder": f"Solo valor (sin {unidad})" if unidad else "Solo valor"})
+                widget.attrs.update(
+                    {
+                        "inputmode": "numeric",
+                        "placeholder": f"Solo valor (sin {unidad})" if unidad else "Solo valor",
+                    }
+                )
             elif atributo.tipo_dato == AtributoActivo.TipoDato.DECIMAL:
-                widget.attrs.update({"inputmode": "decimal", "placeholder": f"Solo valor (sin {unidad})" if unidad else "Solo valor"})
+                widget.attrs.update(
+                    {
+                        "inputmode": "decimal",
+                        "placeholder": f"Solo valor (sin {unidad})" if unidad else "Solo valor",
+                    }
+                )
             self.fields[nombre] = campo
             self.nombres_campos_dinamicos.append(nombre)
 
@@ -425,8 +462,7 @@ class ActivoAdminForm(forms.ModelForm):
         tipo_activo = cleaned_data.get("tipo_activo")
         nombre_tipo = (tipo_activo.nombre if tipo_activo else "").strip().lower()
         requiere_especificaciones = any(
-            clave in nombre_tipo
-            for clave in TIPOS_ACTIVO_CON_ESPECIFICACIONES
+            clave in nombre_tipo for clave in TIPOS_ACTIVO_CON_ESPECIFICACIONES
         )
 
         if not requiere_especificaciones and not self.instance.pk:
@@ -449,19 +485,28 @@ class ActivoAdminForm(forms.ModelForm):
                 self.add_error(nombre, exc)
 
         if self.instance and self.instance.pk and tipo_activo:
-            tipo_anterior_id = type(self.instance).objects.filter(pk=self.instance.pk).values_list(
-                "tipo_activo_id", flat=True
-            ).first()
+            tipo_anterior_id = (
+                type(self.instance)
+                .objects.filter(pk=self.instance.pk)
+                .values_list("tipo_activo_id", flat=True)
+                .first()
+            )
             if tipo_anterior_id and tipo_anterior_id != tipo_activo.pk:
                 if not cleaned_data.get("confirmar_cambio_tipo"):
-                    self.add_error("confirmar_cambio_tipo", "Debes confirmar expresamente el cambio de tipo.")
+                    self.add_error(
+                        "confirmar_cambio_tipo", "Debes confirmar expresamente el cambio de tipo."
+                    )
                 tiene_historial = (
                     self.instance.eventos.exists()
                     or self.instance.detalles_asignacion.exists()
-                    or self.instance.detalles_asignacion.filter(asignacion__actas__isnull=False).exists()
+                    or self.instance.detalles_asignacion.filter(
+                        asignacion__actas__isnull=False
+                    ).exists()
                 )
                 if tiene_historial:
-                    if not self.usuario or not self.usuario.has_perm("activos.change_asset_type_controlled"):
+                    if not self.usuario or not self.usuario.has_perm(
+                        "activos.change_asset_type_controlled"
+                    ):
                         self.add_error(
                             "tipo_activo",
                             "El activo tiene historial. Se requiere el permiso especial para cambiar su tipo.",
@@ -489,8 +534,7 @@ class ActivoAdminForm(forms.ModelForm):
             self.add_error("proveedor", "El proveedor seleccionado esta inactivo.")
 
         modalidad_tenencia = (
-            cleaned_data.get("modalidad_tenencia")
-            or Activo.ModalidadTenencia.PROPIO
+            cleaned_data.get("modalidad_tenencia") or Activo.ModalidadTenencia.PROPIO
         )
         cleaned_data["modalidad_tenencia"] = modalidad_tenencia
         proveedor_propietario = cleaned_data.get("proveedor_propietario")
@@ -499,10 +543,7 @@ class ActivoAdminForm(forms.ModelForm):
             if self.instance and self.instance.pk
             else getattr(self.activo_base, "proveedor_propietario_id", None)
         )
-        if (
-            modalidad_tenencia == Activo.ModalidadTenencia.ARRENDADO
-            and not proveedor_propietario
-        ):
+        if modalidad_tenencia == Activo.ModalidadTenencia.ARRENDADO and not proveedor_propietario:
             self.add_error(
                 "proveedor_propietario",
                 "El proveedor propietario es obligatorio para activos arrendados.",
@@ -512,7 +553,9 @@ class ActivoAdminForm(forms.ModelForm):
             and not proveedor_propietario.activo
             and proveedor_propietario.pk != propietario_actual_id
         ):
-            self.add_error("proveedor_propietario", "El proveedor propietario seleccionado esta inactivo.")
+            self.add_error(
+                "proveedor_propietario", "El proveedor propietario seleccionado esta inactivo."
+            )
 
         factura = cleaned_data.get("factura_compra")
         empresa = cleaned_data.get("empresa")
@@ -525,9 +568,13 @@ class ActivoAdminForm(forms.ModelForm):
             if not factura.activa and factura.pk != factura_actual_id:
                 self.add_error("factura_compra", "La factura seleccionada esta archivada.")
             if proveedor and factura.proveedor_id != proveedor.pk:
-                self.add_error("factura_compra", "La factura no corresponde al proveedor seleccionado.")
+                self.add_error(
+                    "factura_compra", "La factura no corresponde al proveedor seleccionado."
+                )
             if empresa and factura.empresa_id != empresa.pk:
-                self.add_error("factura_compra", "La factura no corresponde a la empresa seleccionada.")
+                self.add_error(
+                    "factura_compra", "La factura no corresponde a la empresa seleccionada."
+                )
             if not proveedor:
                 cleaned_data["proveedor"] = factura.proveedor
             if not empresa:
@@ -602,10 +649,9 @@ class EventoActivoAdminForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         if "nuevo_estado_activo" in self.fields:
-            self.fields["nuevo_estado_activo"].queryset = (
-                EstadoActivo.objects.filter(activo=True)
-                .order_by("nombre")
-            )
+            self.fields["nuevo_estado_activo"].queryset = EstadoActivo.objects.filter(
+                activo=True
+            ).order_by("nombre")
 
         etiquetas = {
             "activo": "Activo afectado",

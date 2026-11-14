@@ -69,7 +69,9 @@ def build_activos_export_workbook(activos):
             activo=True,
             atributo__activo=True,
             mostrar_reportes=True,
-        ).select_related("atributo").order_by("atributo__nombre", "tipo_activo__nombre")
+        )
+        .select_related("atributo")
+        .order_by("atributo__nombre", "tipo_activo__nombre")
     )
     atributos_reporte = []
     vistos = set()
@@ -98,20 +100,24 @@ def build_activos_export_workbook(activos):
             config.atributo_id: valor.valor_formateado
             for config, valor in valores_visibles(activo, destino="reportes")
         }
-        worksheet.append([
-            *_activo_to_row(activo),
-            *[valores.get(atributo.pk, "") for atributo in atributos_reporte],
-        ])
+        worksheet.append(
+            [
+                *_activo_to_row(activo),
+                *[valores.get(atributo.pk, "") for atributo in atributos_reporte],
+            ]
+        )
 
     for row in worksheet.iter_rows(min_row=2, max_row=worksheet.max_row):
         row[12].number_format = "dd/mm/yyyy"
-        row[13].number_format = '#,##0.00'
+        row[13].number_format = "#,##0.00"
         row[19].number_format = "dd/mm/yyyy hh:mm"
         row[20].number_format = "dd/mm/yyyy hh:mm"
 
     for index, header in enumerate(encabezados, start=1):
         max_length = len(header)
-        for cell in worksheet.iter_cols(min_col=index, max_col=index, min_row=2, max_row=worksheet.max_row):
+        for cell in worksheet.iter_cols(
+            min_col=index, max_col=index, min_row=2, max_row=worksheet.max_row
+        ):
             for inner_cell in cell:
                 cell_value = "" if inner_cell.value is None else str(inner_cell.value)
                 max_length = max(max_length, len(cell_value))

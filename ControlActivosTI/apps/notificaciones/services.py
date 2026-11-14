@@ -54,7 +54,10 @@ class NotificationService:
         else:
             query |= Q(is_staff=True)
         return list(
-            User.objects.filter(is_active=True).filter(query).values_list("pk", flat=True).distinct()
+            User.objects.filter(is_active=True)
+            .filter(query)
+            .values_list("pk", flat=True)
+            .distinct()
         )
 
     @classmethod
@@ -285,9 +288,7 @@ class NotificationService:
         cls.notificar_actividad(
             actor=actor,
             tipo=(
-                Notificacion.Tipo.FACTURA_CREADA
-                if creada
-                else Notificacion.Tipo.FACTURA_CAMBIADA
+                Notificacion.Tipo.FACTURA_CREADA if creada else Notificacion.Tipo.FACTURA_CAMBIADA
             ),
             titulo=f"Factura {factura.numero_factura}",
             mensaje=f"{nombre} {accion} la factura {factura.numero_factura}.",
@@ -322,7 +323,9 @@ def prepare_notifications(notifications, user):
         permissions[entity_type] = not permission or user.has_perm(permission)
         if permissions[entity_type]:
             model = apps.get_model(model_label)
-            existing[entity_type] = set(model.objects.filter(pk__in=ids).values_list("pk", flat=True))
+            existing[entity_type] = set(
+                model.objects.filter(pk__in=ids).values_list("pk", flat=True)
+            )
 
     for notification in items:
         notification.related_missing = bool(

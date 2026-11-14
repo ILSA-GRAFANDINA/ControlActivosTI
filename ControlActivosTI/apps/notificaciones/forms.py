@@ -10,4 +10,3 @@ class NotificacionFiltroForm(forms.Form):
     )
     fecha_desde = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
     fecha_hasta = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
-

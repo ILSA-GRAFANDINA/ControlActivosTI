@@ -63,7 +63,7 @@ class ColaboradorListViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Andes Corp")
         self.assertContains(response, "Beta Tech")
-        self.assertContains(response, 'text-[11px] font-semibold uppercase')
+        self.assertContains(response, "text-[11px] font-semibold uppercase")
         self.assertContains(response, "data-scroll-to-results")
         self.assertContains(response, 'id="resultados"')
         self.assertLess(
@@ -150,7 +150,7 @@ class ColaboradorListViewTests(TestCase):
         self.assertEqual(second_page.context["page_obj"].number, 2)
         self.assertFalse(second_page.context["page_obj"].has_next())
         self.assertContains(second_page, "Mostrando 11 a 11 de 11 colaboradores")
-    
+
     def test_company_tabs_filter_and_paginate_each_company_independently(self):
         self.client.force_login(self.user)
         for indice in range(1, 11):
@@ -516,9 +516,7 @@ class ColaboradorUpdateViewTests(TestCase):
     def test_update_view_uses_prefilled_custom_form(self):
         self.client.force_login(self.user)
 
-        response = self.client.get(
-            reverse("colaboradores:editar", args=[self.colaborador.pk])
-        )
+        response = self.client.get(reverse("colaboradores:editar", args=[self.colaborador.pk]))
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "colaboradores/formulario.html")

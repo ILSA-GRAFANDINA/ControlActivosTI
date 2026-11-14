@@ -231,7 +231,9 @@ class AsignacionCreateFormTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Filtrar por estado", html=False)
-        self.assertContains(response, "Buscar por nombre, cédula, correo, empresa, área, cargo o CECO")
+        self.assertContains(
+            response, "Buscar por nombre, cédula, correo, empresa, área, cargo o CECO"
+        )
         self.assertContains(response, "data-colaborador-picker", html=False)
         self.assertContains(response, "activos-resultados-contador")
         self.assertContains(response, "Seleccionar visibles")
@@ -240,7 +242,7 @@ class AsignacionCreateFormTests(TestCase):
         self.assertContains(response, f'value="{self.activo_disponible.pk}"', html=False)
         self.assertContains(response, self.activo_disponible.codigo_sap)
         self.assertContains(response, "Todos los estados")
-        self.assertContains(response, 'selected', html=False)
+        self.assertContains(response, "selected", html=False)
         self.assertNotContains(response, f'data-id="{self.activo_reparacion.pk}"', html=False)
         self.assertNotContains(response, f'data-id="{self.activo_no_disponible.pk}"', html=False)
         self.assertContains(response, "Confirmar asignación múltiple")
@@ -299,9 +301,7 @@ class AsignacionCreateFormTests(TestCase):
 
     def test_create_view_genera_y_permite_descargar_acta_entrega(self):
         media_root = make_test_media_root()
-        permisos = Permission.objects.filter(
-            codename__in=["view_actaentrega", "view_asignacion"]
-        )
+        permisos = Permission.objects.filter(codename__in=["view_actaentrega", "view_asignacion"])
         self.user.user_permissions.add(*permisos)
         self.client.force_login(self.user)
         licencia = AtributoActivo.objects.create(
@@ -415,7 +415,10 @@ class AsignacionCreateFormTests(TestCase):
         self.assertEqual(self.activo_disponible.estado_activo, self.estado_no_disponible)
         devolucion = Devolucion.objects.get(asignacion=asignacion)
         self.assertEqual(devolucion.codigo_devolucion, f"DEV-{devolucion.pk:05d}")
-        self.assertEqual(post_response["Location"], reverse("asignaciones:devolucion_detalle", args=[devolucion.pk]))
+        self.assertEqual(
+            post_response["Location"],
+            reverse("asignaciones:devolucion_detalle", args=[devolucion.pk]),
+        )
         self.assertTrue(
             ActaEntrega.objects.filter(
                 asignacion=asignacion,
@@ -514,7 +517,9 @@ class AsignacionCreateFormTests(TestCase):
         self.assertEqual(devolucion.codigo_devolucion, f"DEV-{devolucion.pk:05d}")
         self.assertEqual(devolucion.detalles.count(), 1)
 
-        detalle_response = self.client.get(reverse("asignaciones:devolucion_detalle", args=[devolucion.pk]))
+        detalle_response = self.client.get(
+            reverse("asignaciones:devolucion_detalle", args=[devolucion.pk])
+        )
 
         self.assertEqual(detalle_response.status_code, 200)
         self.assertContains(detalle_response, devolucion.codigo_devolucion)
@@ -714,7 +719,9 @@ class AsignacionListViewTests(TestCase):
     def test_list_view_filters_by_estado(self):
         self.client.force_login(self.user)
 
-        response = self.client.get(reverse("asignaciones:lista"), {"estado": Asignacion.EstadoAsignacion.CERRADA})
+        response = self.client.get(
+            reverse("asignaciones:lista"), {"estado": Asignacion.EstadoAsignacion.CERRADA}
+        )
 
         self.assertEqual(response.status_code, 200)
         asignaciones = list(response.context["asignaciones"])
@@ -835,7 +842,9 @@ class AsignacionListViewTests(TestCase):
 
         remembered = self.client.get(reverse("asignaciones:lista"))
 
-        self.assertEqual(remembered.context["estados_seleccionados"], [Asignacion.EstadoAsignacion.CERRADA])
+        self.assertEqual(
+            remembered.context["estados_seleccionados"], [Asignacion.EstadoAsignacion.CERRADA]
+        )
         self.assertEqual(remembered.context["actas_seleccionadas"], ["con"])
 
         self.client.get(reverse("asignaciones:lista"), {"reset": "1"})
@@ -951,6 +960,7 @@ class EvidenciasFotograficasTests(TestCase):
         from io import BytesIO
 
         from PIL import Image
+
         buffer = BytesIO()
         image = Image.new("RGB", (200, 200), color="green")
         image.save(buffer, format="PNG")
@@ -966,7 +976,11 @@ class EvidenciasFotograficasTests(TestCase):
         )
 
         self.assertEqual(evidencia.orden, 1)
-        self.assertTrue(evidencia.imagen.name.startswith(f"actas/{self.asignacion.codigo_asignacion}/entrega/evidencias/"))
+        self.assertTrue(
+            evidencia.imagen.name.startswith(
+                f"actas/{self.asignacion.codigo_asignacion}/entrega/evidencias/"
+            )
+        )
         self.assertTrue(evidencia.imagen.name.endswith(".webp"))
         self.assertTrue(default_storage.exists(evidencia.imagen.name))
         self.assertTrue(default_storage.exists(evidencia._variant_name("thumb")))
@@ -1038,9 +1052,17 @@ class EvidenciasFotograficasTests(TestCase):
         response = self.client.post(reverse("asignaciones:nueva"), post_data)
         self.assertEqual(response.status_code, 302)
 
-        nueva_asg = Asignacion.objects.filter(colaborador=self.colaborador).exclude(pk=self.asignacion.pk).first()
+        nueva_asg = (
+            Asignacion.objects.filter(colaborador=self.colaborador)
+            .exclude(pk=self.asignacion.pk)
+            .first()
+        )
         self.assertIsNotNone(nueva_asg)
         self.assertEqual(nueva_asg.evidencias.count(), 1)
         evidencia = nueva_asg.evidencias.first()
         self.assertEqual(evidencia.descripcion, "Foto entrega 1")
-        self.assertTrue(evidencia.imagen.name.startswith(f"actas/{nueva_asg.codigo_asignacion}/entrega/evidencias/"))
+        self.assertTrue(
+            evidencia.imagen.name.startswith(
+                f"actas/{nueva_asg.codigo_asignacion}/entrega/evidencias/"
+            )
+        )

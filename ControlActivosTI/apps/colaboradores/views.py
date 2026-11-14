@@ -98,10 +98,7 @@ class ColaboradorListView(LoginRequiredMixin, ListView):
 
     def _default_filters(self):
         return {
-            **{
-                field: "nombre_asc" if field == "orden" else ""
-                for field in self.FILTER_FIELDS
-            },
+            **{field: "nombre_asc" if field == "orden" else "" for field in self.FILTER_FIELDS},
             **{field: [] for field in self.FILTER_MULTI_FIELDS},
         }
 
@@ -140,10 +137,7 @@ class ColaboradorListView(LoginRequiredMixin, ListView):
 
     def _filters_from_request(self):
         source = self.request.GET
-        filtros = {
-            field: (source.get(field, "") or "").strip()
-            for field in self.FILTER_FIELDS
-        }
+        filtros = {field: (source.get(field, "") or "").strip() for field in self.FILTER_FIELDS}
         filtros["orden"] = filtros["orden"] or "nombre_asc"
         for field in self.FILTER_MULTI_FIELDS:
             filtros[field] = source.getlist(field)
@@ -151,8 +145,7 @@ class ColaboradorListView(LoginRequiredMixin, ListView):
 
     def _has_filter_params(self):
         return any(
-            field in self.request.GET
-            for field in (*self.FILTER_FIELDS, *self.FILTER_MULTI_FIELDS)
+            field in self.request.GET for field in (*self.FILTER_FIELDS, *self.FILTER_MULTI_FIELDS)
         )
 
     def get_active_filters(self):
@@ -182,9 +175,7 @@ class ColaboradorListView(LoginRequiredMixin, ListView):
         return seleccionadas or self.COLUMNAS_POR_DEFECTO
 
     def get_company_tab_summary(self, queryset):
-        colaboradores_filtrados = Colaborador.objects.filter(
-            pk__in=queryset.values("pk")
-        )
+        colaboradores_filtrados = Colaborador.objects.filter(pk__in=queryset.values("pk"))
         return list(
             colaboradores_filtrados.values("empresa_id", "empresa__nombre")
             .annotate(total=Count("pk"))
@@ -215,9 +206,7 @@ class ColaboradorListView(LoginRequiredMixin, ListView):
             }
         ]
         for item in summary:
-            empresa_id = (
-                "sin_empresa" if item["empresa_id"] is None else str(item["empresa_id"])
-            )
+            empresa_id = "sin_empresa" if item["empresa_id"] is None else str(item["empresa_id"])
             tabs.append(
                 {
                     "id": empresa_id,
@@ -251,17 +240,16 @@ class ColaboradorListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         filtros = self.get_active_filters()
-        queryset = (
-            Colaborador.objects.select_related("empresa", "area", "cargo", "ubicacion")
-            .annotate(
-                activos_asignados_count=Count(
-                    "asignaciones__detalles",
-                    filter=Q(
-                        asignaciones__estado_asignacion__in=ASIGNACIONES_ABIERTAS,
-                        asignaciones__detalles__activa=True,
-                    ),
-                    distinct=True,
-                )
+        queryset = Colaborador.objects.select_related(
+            "empresa", "area", "cargo", "ubicacion"
+        ).annotate(
+            activos_asignados_count=Count(
+                "asignaciones__detalles",
+                filter=Q(
+                    asignaciones__estado_asignacion__in=ASIGNACIONES_ABIERTAS,
+                    asignaciones__detalles__activa=True,
+                ),
+                distinct=True,
             )
         )
 
@@ -476,10 +464,9 @@ class ColaboradorDetailView(LoginRequiredMixin, DetailView):
             .order_by("-fecha_asignacion", "-id")
         )
 
-        return (
-            Colaborador.objects.select_related("empresa", "area", "cargo", "ubicacion", "centro_costo")
-            .prefetch_related(Prefetch("asignaciones", queryset=asignaciones_qs))
-        )
+        return Colaborador.objects.select_related(
+            "empresa", "area", "cargo", "ubicacion", "centro_costo"
+        ).prefetch_related(Prefetch("asignaciones", queryset=asignaciones_qs))
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -506,10 +493,7 @@ class ColaboradorDetailView(LoginRequiredMixin, DetailView):
         context["historial_asignaciones"] = historial_detalles
         context["total_activos_asignados"] = len(detalles_activos_actuales)
         context["valor_total_activos_asignados"] = sum(
-            (
-                detalle.activo.valor or Decimal("0.00")
-                for detalle in detalles_activos_actuales
-            ),
+            (detalle.activo.valor or Decimal("0.00") for detalle in detalles_activos_actuales),
             Decimal("0.00"),
         )
         context["puede_generar_acta"] = bool(detalles_activos_actuales)

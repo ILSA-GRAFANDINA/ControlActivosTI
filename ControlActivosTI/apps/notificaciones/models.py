@@ -97,7 +97,10 @@ class Notificacion(models.Model):
             )
         ]
         permissions = [
-            ("view_all_notificacion", "Puede consultar el historial administrativo de notificaciones"),
+            (
+                "view_all_notificacion",
+                "Puede consultar el historial administrativo de notificaciones",
+            ),
         ]
 
     def __str__(self):

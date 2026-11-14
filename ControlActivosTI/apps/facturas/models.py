@@ -40,7 +40,9 @@ class FacturaCompra(models.Model):
     )
     numero_factura = models.CharField(max_length=80, db_index=True)
     fecha_emision = models.DateField(db_index=True)
-    archivo = models.FileField(storage=almacenamiento_facturas, upload_to=ruta_factura, max_length=255)
+    archivo = models.FileField(
+        storage=almacenamiento_facturas, upload_to=ruta_factura, max_length=255
+    )
     nombre_original = models.CharField(max_length=255, editable=False)
     tamano_original = models.PositiveBigIntegerField(default=0, editable=False)
     tamano_almacenado = models.PositiveBigIntegerField(default=0, editable=False)
@@ -98,12 +100,16 @@ class FacturaCompra(models.Model):
         if self.fecha_emision and self.fecha_emision > timezone.localdate():
             errores["fecha_emision"] = "La fecha de emision no puede ser futura."
         if self.pk:
-            anterior = type(self).objects.filter(pk=self.pk).only("proveedor_id", "empresa_id").first()
+            anterior = (
+                type(self).objects.filter(pk=self.pk).only("proveedor_id", "empresa_id").first()
+            )
             if anterior and self.activos.exists():
                 if anterior.proveedor_id != self.proveedor_id:
                     errores["proveedor"] = "Desvincula los activos antes de cambiar el proveedor."
                 if anterior.empresa_id != self.empresa_id:
-                    errores["empresa"] = "Desvincula los activos antes de cambiar la empresa compradora."
+                    errores["empresa"] = (
+                        "Desvincula los activos antes de cambiar la empresa compradora."
+                    )
         if errores:
             raise ValidationError(errores)
 

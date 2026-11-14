@@ -12,20 +12,35 @@ class ProveedorForm(forms.ModelForm):
     class Meta:
         model = Proveedor
         fields = [
-            "tipo_proveedor", "tipo_identificacion", "identificacion", "razon_social",
-            "nombre_comercial", "nombre_contacto", "correo_electronico", "telefono",
-            "direccion", "ciudad", "pais", "observaciones",
+            "tipo_proveedor",
+            "tipo_identificacion",
+            "identificacion",
+            "razon_social",
+            "nombre_comercial",
+            "nombre_contacto",
+            "correo_electronico",
+            "telefono",
+            "direccion",
+            "ciudad",
+            "pais",
+            "observaciones",
         ]
         widgets = {"observaciones": forms.Textarea(attrs={"rows": 4})}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         etiquetas = {
-            "tipo_proveedor": "Tipo de proveedor", "tipo_identificacion": "Tipo de identificacion",
-            "identificacion": "Numero de identificacion", "razon_social": "Razon social",
-            "nombre_comercial": "Nombre comercial", "nombre_contacto": "Nombre del contacto",
-            "correo_electronico": "Correo electronico", "telefono": "Telefono",
-            "direccion": "Direccion", "ciudad": "Ciudad", "pais": "Pais",
+            "tipo_proveedor": "Tipo de proveedor",
+            "tipo_identificacion": "Tipo de identificacion",
+            "identificacion": "Numero de identificacion",
+            "razon_social": "Razon social",
+            "nombre_comercial": "Nombre comercial",
+            "nombre_contacto": "Nombre del contacto",
+            "correo_electronico": "Correo electronico",
+            "telefono": "Telefono",
+            "direccion": "Direccion",
+            "ciudad": "Ciudad",
+            "pais": "Pais",
             "observaciones": "Observaciones",
         }
         for nombre, campo in self.fields.items():

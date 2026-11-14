@@ -13,4 +13,3 @@ def notifications_context(request):
         "recent_notifications": recent,
         "unread_notifications_count": queryset.filter(read_at__isnull=True).count(),
     }
-

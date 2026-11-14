@@ -18,7 +18,9 @@ from .models import Activo, FotoActivo, ValorAtributoActivo
 class ActivoCopyFlowTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user("copiador", password="testpass123")
-        self.estado = EstadoActivo.objects.create(nombre="Disponible copia", permite_asignacion=True)
+        self.estado = EstadoActivo.objects.create(
+            nombre="Disponible copia", permite_asignacion=True
+        )
         self.tipo = TipoActivo.objects.create(nombre="Laptop copia")
         self.otro_tipo = TipoActivo.objects.create(nombre="Monitor copia")
         self.ubicacion_fisica = UbicacionFisicaActivo.objects.create(nombre="Logistica copia")

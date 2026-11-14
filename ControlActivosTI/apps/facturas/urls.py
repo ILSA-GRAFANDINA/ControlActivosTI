@@ -11,7 +11,12 @@ urlpatterns = [
     path("<int:pk>/editar/", views.FacturaUpdateView.as_view(), name="editar"),
     path("<int:pk>/activos/", views.FacturaAsociarActivosView.as_view(), name="asociar_activos"),
     path("<int:pk>/documento/", views.FacturaDocumentoView.as_view(), name="documento"),
-    path("<int:pk>/descargar/", views.FacturaDocumentoView.as_view(), {"descargar": True}, name="descargar"),
+    path(
+        "<int:pk>/descargar/",
+        views.FacturaDocumentoView.as_view(),
+        {"descargar": True},
+        name="descargar",
+    ),
     path("<int:pk>/reemplazar/", views.FacturaReemplazarView.as_view(), name="reemplazar"),
     path("<int:pk>/estado/", views.FacturaEstadoView.as_view(), name="estado"),
     path("<int:pk>/eliminar/", views.FacturaDeleteView.as_view(), name="eliminar"),

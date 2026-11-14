@@ -252,7 +252,9 @@ class ActaEntregaExcelTests(TestCase):
             PILImage.new("RGB", (300, 200), color=(10 * i, 50, 100)).save(buf, format="PNG")
             EvidenciaEntrega.objects.create(
                 asignacion=self.asignacion,
-                imagen=SimpleUploadedFile(f"test_{i}.png", buf.getvalue(), content_type="image/png"),
+                imagen=SimpleUploadedFile(
+                    f"test_{i}.png", buf.getvalue(), content_type="image/png"
+                ),
                 orden=i,
             )
 
@@ -273,7 +275,9 @@ class ActaEntregaExcelTests(TestCase):
             PILImage.new("RGB", (200, 200), color=(20 * i, 30, 40)).save(buf, format="PNG")
             EvidenciaEntrega.objects.create(
                 asignacion=self.asignacion,
-                imagen=SimpleUploadedFile(f"extra_{i}.png", buf.getvalue(), content_type="image/png"),
+                imagen=SimpleUploadedFile(
+                    f"extra_{i}.png", buf.getvalue(), content_type="image/png"
+                ),
                 orden=i,
             )
 
@@ -389,11 +393,7 @@ class ActaRecepcionExcelTests(ActaEntregaExcelTests):
 
         xmlns = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
         xml_hoja = ET.fromstring(hoja)
-        celda_e22 = next(
-            celda
-            for celda in xml_hoja.iter(f"{xmlns}c")
-            if celda.get("r") == "E22"
-        )
+        celda_e22 = next(celda for celda in xml_hoja.iter(f"{xmlns}c") if celda.get("r") == "E22")
         xfs = list(ET.fromstring(estilos).find(f"{xmlns}cellXfs"))
         estilo_e22 = xfs[int(celda_e22.get("s"))]
         self.assertIn(b"xfComplement", ET.tostring(estilo_e22))
@@ -463,8 +463,7 @@ class ActaRecepcionExcelTests(ActaEntregaExcelTests):
 
     def test_reception_expands_rows_and_keeps_following_section(self):
         detalles = [
-            (self.crear_detalle(orden=orden, serie=f"REC-{orden:03d}"), "")
-            for orden in range(1, 9)
+            (self.crear_detalle(orden=orden, serie=f"REC-{orden:03d}"), "") for orden in range(1, 9)
         ]
         devolucion = self.crear_devolucion(detalles, observaciones="")
 

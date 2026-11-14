@@ -35,7 +35,9 @@ def ruta_evidencia_entrega(instance, filename):
 def ruta_evidencia_devolucion(instance, filename):
     codigo_asg = (
         instance.devolucion.asignacion.codigo_asignacion
-        if instance.devolucion_id and instance.devolucion.asignacion_id and instance.devolucion.asignacion.codigo_asignacion
+        if instance.devolucion_id
+        and instance.devolucion.asignacion_id
+        and instance.devolucion.asignacion.codigo_asignacion
         else "sin-asignacion"
     )
     codigo_dev = (
@@ -131,20 +133,28 @@ class Asignacion(models.Model):
             ceco = ceco or getattr(self.colaborador, "centro_costo", None)
             if not ceco:
                 raise ValidationError(
-                    {"colaborador": "El colaborador debe tener un CECO vigente antes de asignar activos."}
+                    {
+                        "colaborador": "El colaborador debe tener un CECO vigente antes de asignar activos."
+                    }
                 )
 
         if esta_activa and ceco and (not ceco.activo or not ceco.acepta_asignaciones):
-            raise ValidationError({"centro_costo": "El CECO del colaborador no esta habilitado para asignaciones."})
+            raise ValidationError(
+                {"centro_costo": "El CECO del colaborador no esta habilitado para asignaciones."}
+            )
 
         if esta_abierta:
             if self.fecha_devolucion:
                 raise ValidationError(
-                    {"fecha_devolucion": "Una asignación activa no puede tener fecha de devolución."}
+                    {
+                        "fecha_devolucion": "Una asignación activa no puede tener fecha de devolución."
+                    }
                 )
             if self.usuario_recepcion_id:
                 raise ValidationError(
-                    {"usuario_recepcion": "Una asignación activa no debe tener usuario de recepción."}
+                    {
+                        "usuario_recepcion": "Una asignación activa no debe tener usuario de recepción."
+                    }
                 )
         elif self.estado_asignacion == self.EstadoAsignacion.CERRADA:
             if not self.fecha_devolucion:
@@ -161,7 +171,11 @@ class Asignacion(models.Model):
         with transaction.atomic():
             super().save(*args, **kwargs)
             if not self.codigo_asignacion:
-                anio = self.fecha_asignacion.year if self.fecha_asignacion else timezone.localdate().year
+                anio = (
+                    self.fecha_asignacion.year
+                    if self.fecha_asignacion
+                    else timezone.localdate().year
+                )
                 codigo = f"ASG-{anio}-{self.pk:05d}"
                 Asignacion.objects.filter(pk=self.pk).update(codigo_asignacion=codigo)
                 self.codigo_asignacion = codigo
@@ -302,9 +316,13 @@ class AsignacionDetalle(models.Model):
                 raise ValidationError({"activo": "El activo seleccionado está deshabilitado."})
 
             if self.activo_id and not self.activo.estado_activo.es_asignable_para_nueva_asignacion:
-                raise ValidationError({"activo": "El activo seleccionado no está disponible para asignación."})
+                raise ValidationError(
+                    {"activo": "El activo seleccionado no está disponible para asignación."}
+                )
 
-            existe_otra_activa = AsignacionDetalle.objects.filter(activo_id=self.activo_id, activa=True)
+            existe_otra_activa = AsignacionDetalle.objects.filter(
+                activo_id=self.activo_id, activa=True
+            )
             if self.pk:
                 existe_otra_activa = existe_otra_activa.exclude(pk=self.pk)
             if existe_otra_activa.exists():
@@ -312,7 +330,9 @@ class AsignacionDetalle(models.Model):
 
             if self.estado_activo_devolucion_id:
                 raise ValidationError(
-                    {"estado_activo_devolucion": "Un detalle activo no puede tener estado de devolución."}
+                    {
+                        "estado_activo_devolucion": "Un detalle activo no puede tener estado de devolución."
+                    }
                 )
         else:
             if not self.estado_activo_devolucion_id:
@@ -351,6 +371,7 @@ class AsignacionDetalle(models.Model):
         if self.activo.serie:
             partes.append(f"Serie: {self.activo.serie}")
         from apps.activos.attribute_services import caracteristicas_para_acta
+
         dinamicas = caracteristicas_para_acta(self.activo)
         if dinamicas:
             partes.extend(dinamicas)
@@ -418,7 +439,9 @@ class Devolucion(models.Model):
         super().clean()
         if self.asignacion_id and self.fecha_devolucion < self.asignacion.fecha_asignacion:
             raise ValidationError(
-                {"fecha_devolucion": "La fecha de devolucion no puede ser anterior a la fecha de asignacion."}
+                {
+                    "fecha_devolucion": "La fecha de devolucion no puede ser anterior a la fecha de asignacion."
+                }
             )
 
     def save(self, *args, **kwargs):
@@ -479,7 +502,9 @@ class DevolucionDetalle(models.Model):
         if self.detalle_asignacion_id and self.devolucion_id:
             if self.detalle_asignacion.asignacion_id != self.devolucion.asignacion_id:
                 raise ValidationError(
-                    {"detalle_asignacion": "El activo no pertenece a la asignacion de esta devolucion."}
+                    {
+                        "detalle_asignacion": "El activo no pertenece a la asignacion de esta devolucion."
+                    }
                 )
 
         if self.detalle_asignacion_id and not self.pk and not self.detalle_asignacion.activa:
@@ -580,7 +605,9 @@ class EvidenciaBase(models.Model):
         base_dir = posixpath.dirname(source_name)
         for variant in EVIDENCIA_VARIANTS:
             variant_filename = f"{base_name}_{variant}.webp"
-            variant_name = posixpath.join(base_dir, variant_filename) if base_dir else variant_filename
+            variant_name = (
+                posixpath.join(base_dir, variant_filename) if base_dir else variant_filename
+            )
             default_storage.delete(variant_name)
 
     def _best_available_image_name(self):
@@ -653,9 +680,7 @@ class EvidenciaBase(models.Model):
         old_imagen_name = None
         if self.pk:
             old_imagen_name = (
-                self.__class__.objects.filter(pk=self.pk)
-                .values_list("imagen", flat=True)
-                .first()
+                self.__class__.objects.filter(pk=self.pk).values_list("imagen", flat=True).first()
             )
 
         if self.imagen and not getattr(self.imagen, "_committed", True):

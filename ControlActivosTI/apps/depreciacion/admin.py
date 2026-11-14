@@ -31,9 +31,7 @@ class EventoNotificacionDepreciacionAdmin(admin.ModelAdmin):
     )
     list_filter = ("tipo", "omitido", "fecha_programada")
     search_fields = ("activo__codigo",)
-    readonly_fields = tuple(
-        field.name for field in EventoNotificacionDepreciacion._meta.fields
-    )
+    readonly_fields = tuple(field.name for field in EventoNotificacionDepreciacion._meta.fields)
 
     def has_add_permission(self, request):
         return False

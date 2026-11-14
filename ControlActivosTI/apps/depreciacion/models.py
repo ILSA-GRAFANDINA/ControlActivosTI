@@ -17,8 +17,7 @@ class ConfiguracionAlertasDepreciacion(models.Model):
         default=False,
         verbose_name="Mostrar valor residual",
         help_text=(
-            "Muestra el valor residual en el bloque de depreciación del detalle "
-            "de cada activo."
+            "Muestra el valor residual en el bloque de depreciación del detalle de cada activo."
         ),
     )
     updated_at = models.DateTimeField(auto_now=True)

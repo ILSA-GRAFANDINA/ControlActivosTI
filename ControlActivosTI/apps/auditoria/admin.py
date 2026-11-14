@@ -8,7 +8,15 @@ class RegistroAuditoriaAdmin(admin.ModelAdmin):
     list_display = ("created_at", "entidad", "objeto_id", "accion", "resumen", "usuario")
     list_filter = ("accion", "entidad", "created_at")
     search_fields = ("entidad", "objeto_id", "resumen", "usuario__username")
-    readonly_fields = ("entidad", "objeto_id", "accion", "resumen", "detalle", "usuario", "created_at")
+    readonly_fields = (
+        "entidad",
+        "objeto_id",
+        "accion",
+        "resumen",
+        "detalle",
+        "usuario",
+        "created_at",
+    )
     date_hierarchy = "created_at"
 
     def has_add_permission(self, request):

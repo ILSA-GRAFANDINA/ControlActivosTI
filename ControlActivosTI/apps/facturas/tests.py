@@ -61,7 +61,9 @@ class FacturaBaseTests(TestCase):
         )
         self.override.enable()
         self._factura_storage = FacturaCompra._meta.get_field("archivo").storage
-        self._reemplazo_storage = ReemplazoDocumentoFactura._meta.get_field("archivo_anterior").storage
+        self._reemplazo_storage = ReemplazoDocumentoFactura._meta.get_field(
+            "archivo_anterior"
+        ).storage
         storage_pruebas = FileSystemStorage(location=self.media_dir)
         FacturaCompra._meta.get_field("archivo").storage = storage_pruebas
         ReemplazoDocumentoFactura._meta.get_field("archivo_anterior").storage = storage_pruebas
@@ -77,7 +79,9 @@ class FacturaBaseTests(TestCase):
 
     def tearDown(self):
         FacturaCompra._meta.get_field("archivo").storage = self._factura_storage
-        ReemplazoDocumentoFactura._meta.get_field("archivo_anterior").storage = self._reemplazo_storage
+        ReemplazoDocumentoFactura._meta.get_field(
+            "archivo_anterior"
+        ).storage = self._reemplazo_storage
         self.override.disable()
         shutil.rmtree(self.media_dir, ignore_errors=True)
 
@@ -128,8 +132,14 @@ class FacturaModelFormTests(FacturaBaseTests):
     def test_rechaza_numero_duplicado_por_proveedor_y_empresa(self):
         self.crear_factura("FAC-001")
         form = FacturaCompraForm(
-            data={"proveedor": self.proveedor.pk, "empresa": self.empresa.pk, "numero_factura": " fac-001 ", "fecha_emision": timezone.localdate()},
-            files={"archivo": pdf_valido("otra.pdf", paginas=2)}, user=self.user,
+            data={
+                "proveedor": self.proveedor.pk,
+                "empresa": self.empresa.pk,
+                "numero_factura": " fac-001 ",
+                "fecha_emision": timezone.localdate(),
+            },
+            files={"archivo": pdf_valido("otra.pdf", paginas=2)},
+            user=self.user,
         )
         self.assertFalse(form.is_valid())
         self.assertIn("numero_factura", form.errors)
@@ -141,17 +151,44 @@ class FacturaModelFormTests(FacturaBaseTests):
 
     def test_rechaza_fecha_futura(self):
         form = FacturaCompraForm(
-            data={"proveedor": self.proveedor.pk, "empresa": self.empresa.pk, "numero_factura": "FUTURA", "fecha_emision": timezone.localdate() + timedelta(days=1)},
-            files={"archivo": pdf_valido()}, user=self.user,
+            data={
+                "proveedor": self.proveedor.pk,
+                "empresa": self.empresa.pk,
+                "numero_factura": "FUTURA",
+                "fecha_emision": timezone.localdate() + timedelta(days=1),
+            },
+            files={"archivo": pdf_valido()},
+            user=self.user,
         )
         self.assertFalse(form.is_valid())
         self.assertIn("fecha_emision", form.errors)
 
     def test_rechaza_archivo_falso_corrupto_y_sobre_limite(self):
-        base = {"proveedor": self.proveedor.pk, "empresa": self.empresa.pk, "numero_factura": "INVALIDA", "fecha_emision": timezone.localdate()}
-        falso = FacturaCompraForm(data=base, files={"archivo": SimpleUploadedFile("falso.pdf", b"no es pdf", content_type="application/pdf")}, user=self.user)
+        base = {
+            "proveedor": self.proveedor.pk,
+            "empresa": self.empresa.pk,
+            "numero_factura": "INVALIDA",
+            "fecha_emision": timezone.localdate(),
+        }
+        falso = FacturaCompraForm(
+            data=base,
+            files={
+                "archivo": SimpleUploadedFile(
+                    "falso.pdf", b"no es pdf", content_type="application/pdf"
+                )
+            },
+            user=self.user,
+        )
         self.assertFalse(falso.is_valid())
-        corrupto = FacturaCompraForm(data=base, files={"archivo": SimpleUploadedFile("corrupto.pdf", b"%PDF-1.4\nobjeto roto\n%%EOF", content_type="application/pdf")}, user=self.user)
+        corrupto = FacturaCompraForm(
+            data=base,
+            files={
+                "archivo": SimpleUploadedFile(
+                    "corrupto.pdf", b"%PDF-1.4\nobjeto roto\n%%EOF", content_type="application/pdf"
+                )
+            },
+            user=self.user,
+        )
         self.assertFalse(corrupto.is_valid())
         with override_settings(FACTURAS_PDF_MAX_SIZE=20):
             grande = FacturaCompraForm(data=base, files={"archivo": pdf_valido()}, user=self.user)
@@ -164,8 +201,18 @@ class FacturaModelFormTests(FacturaBaseTests):
         writer.encrypt("secreto")
         writer.write(buffer)
         form = FacturaCompraForm(
-            data={"proveedor": self.proveedor.pk, "empresa": self.empresa.pk, "numero_factura": "CIFRADA", "fecha_emision": timezone.localdate()},
-            files={"archivo": SimpleUploadedFile("cifrada.pdf", buffer.getvalue(), content_type="application/pdf")}, user=self.user,
+            data={
+                "proveedor": self.proveedor.pk,
+                "empresa": self.empresa.pk,
+                "numero_factura": "CIFRADA",
+                "fecha_emision": timezone.localdate(),
+            },
+            files={
+                "archivo": SimpleUploadedFile(
+                    "cifrada.pdf", buffer.getvalue(), content_type="application/pdf"
+                )
+            },
+            user=self.user,
         )
         self.assertFalse(form.is_valid())
         self.assertIn("cifradas", str(form.errors))
@@ -174,8 +221,18 @@ class FacturaModelFormTests(FacturaBaseTests):
         archivo = pdf_valido()
         contenido = archivo.read() + b"\n% /ByteRange /Type /Sig /SubFilter\n"
         form = FacturaCompraForm(
-            data={"proveedor": self.proveedor.pk, "empresa": self.empresa.pk, "numero_factura": "FIRMADA", "fecha_emision": timezone.localdate()},
-            files={"archivo": SimpleUploadedFile("firmada.pdf", contenido, content_type="application/pdf")}, user=self.user,
+            data={
+                "proveedor": self.proveedor.pk,
+                "empresa": self.empresa.pk,
+                "numero_factura": "FIRMADA",
+                "fecha_emision": timezone.localdate(),
+            },
+            files={
+                "archivo": SimpleUploadedFile(
+                    "firmada.pdf", contenido, content_type="application/pdf"
+                )
+            },
+            user=self.user,
         )
         self.assertTrue(form.is_valid(), form.errors)
         factura = form.save()
@@ -186,14 +243,34 @@ class FacturaModelFormTests(FacturaBaseTests):
         archivo = pdf_valido()
         contenido = archivo.read()
         primero = FacturaCompraForm(
-            data={"proveedor": self.proveedor.pk, "empresa": self.empresa.pk, "numero_factura": "DUP-1", "fecha_emision": timezone.localdate()},
-            files={"archivo": SimpleUploadedFile("primero.pdf", contenido, content_type="application/pdf")}, user=self.user,
+            data={
+                "proveedor": self.proveedor.pk,
+                "empresa": self.empresa.pk,
+                "numero_factura": "DUP-1",
+                "fecha_emision": timezone.localdate(),
+            },
+            files={
+                "archivo": SimpleUploadedFile(
+                    "primero.pdf", contenido, content_type="application/pdf"
+                )
+            },
+            user=self.user,
         )
         self.assertTrue(primero.is_valid(), primero.errors)
         primero.save()
         segundo = FacturaCompraForm(
-            data={"proveedor": self.proveedor.pk, "empresa": self.empresa.pk, "numero_factura": "DUP-2", "fecha_emision": timezone.localdate()},
-            files={"archivo": SimpleUploadedFile("segundo.pdf", contenido, content_type="application/pdf")}, user=self.user,
+            data={
+                "proveedor": self.proveedor.pk,
+                "empresa": self.empresa.pk,
+                "numero_factura": "DUP-2",
+                "fecha_emision": timezone.localdate(),
+            },
+            files={
+                "archivo": SimpleUploadedFile(
+                    "segundo.pdf", contenido, content_type="application/pdf"
+                )
+            },
+            user=self.user,
         )
         self.assertFalse(segundo.is_valid())
         self.assertIn("mismo documento", str(segundo.errors))
@@ -204,7 +281,11 @@ class FacturaActivoTests(FacturaBaseTests):
         factura = self.crear_factura()
         primero = self.crear_activo(factura_compra=factura)
         segundo = self.crear_activo(
-            serie="SER-002", codigo_sap="SAP-002", proveedor=None, empresa=None, factura_compra=factura
+            serie="SER-002",
+            codigo_sap="SAP-002",
+            proveedor=None,
+            empresa=None,
+            factura_compra=factura,
         )
         self.assertEqual(primero.factura_compra, factura)
         self.assertEqual(segundo.proveedor, self.proveedor)
@@ -258,7 +339,9 @@ class FacturaViewsTests(FacturaBaseTests):
     def test_listado_busqueda_filtros_y_detalle(self):
         factura = self.crear_factura()
         self.crear_activo(factura_compra=factura)
-        response = self.client.get(reverse("facturas:lista"), {"q": "SER-001", "relaciones": "con_activos"})
+        response = self.client.get(
+            reverse("facturas:lista"), {"q": "SER-001", "relaciones": "con_activos"}
+        )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, factura.numero_factura)
         self.assertContains(response, "Listado de facturas")
@@ -369,7 +452,9 @@ class FacturaViewsTests(FacturaBaseTests):
         otro = get_user_model().objects.create_user("sin-permiso", password="testpass123")
         self.client.force_login(otro)
         self.assertEqual(self.client.get(reverse("facturas:lista")).status_code, 403)
-        self.assertEqual(self.client.get(reverse("facturas:documento", args=[factura.pk])).status_code, 403)
+        self.assertEqual(
+            self.client.get(reverse("facturas:documento", args=[factura.pk])).status_code, 403
+        )
 
     def test_archiva_y_no_elimina_factura_con_activos(self):
         factura = self.crear_factura()
@@ -412,7 +497,10 @@ class FacturaViewsTests(FacturaBaseTests):
         checksum_anterior = factura.checksum_sha256
         response = self.client.post(
             reverse("facturas:reemplazar", args=[factura.pk]),
-            {"archivo": pdf_valido("corregida.pdf", paginas=2), "motivo": "Correccion autorizada del documento"},
+            {
+                "archivo": pdf_valido("corregida.pdf", paginas=2),
+                "motivo": "Correccion autorizada del documento",
+            },
         )
         self.assertRedirects(response, reverse("facturas:detalle", args=[factura.pk]))
         factura.refresh_from_db()

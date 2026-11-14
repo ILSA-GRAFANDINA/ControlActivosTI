@@ -82,10 +82,7 @@ class FacturaListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
     def _default_filters(self):
         return {
-            **{
-                field: "recientes" if field == "orden" else ""
-                for field in self.FILTER_FIELDS
-            },
+            **{field: "recientes" if field == "orden" else "" for field in self.FILTER_FIELDS},
             **{field: [] for field in self.FILTER_MULTI_FIELDS},
         }
 
@@ -93,9 +90,7 @@ class FacturaListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         filtros = {**self._default_filters(), **(filtros or {})}
         for field in ("q", "fecha_desde", "fecha_hasta"):
             filtros[field] = (filtros.get(field, "") or "").strip()
-        filtros["orden"] = (
-            filtros["orden"] if filtros.get("orden") in self.ORDENES else "recientes"
-        )
+        filtros["orden"] = filtros["orden"] if filtros.get("orden") in self.ORDENES else "recientes"
 
         estados_validos = {value for value, _ in self.ESTADOS_FILTRO}
         relaciones_validas = {value for value, _ in self.RELACIONES_FILTRO}
@@ -123,10 +118,7 @@ class FacturaListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
     def _filters_from_request(self):
         source = self.request.GET
-        filtros = {
-            field: (source.get(field, "") or "").strip()
-            for field in self.FILTER_FIELDS
-        }
+        filtros = {field: (source.get(field, "") or "").strip() for field in self.FILTER_FIELDS}
         filtros["orden"] = filtros["orden"] or "recientes"
         for field in self.FILTER_MULTI_FIELDS:
             filtros[field] = source.getlist(field)
@@ -134,8 +126,7 @@ class FacturaListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
     def _has_filter_params(self):
         return any(
-            field in self.request.GET
-            for field in (*self.FILTER_FIELDS, *self.FILTER_MULTI_FIELDS)
+            field in self.request.GET for field in (*self.FILTER_FIELDS, *self.FILTER_MULTI_FIELDS)
         )
 
     def get_active_filters(self):
@@ -183,9 +174,9 @@ class FacturaListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
     def get_queryset(self):
         filtros = self.get_active_filters()
-        queryset = FacturaCompra.objects.select_related("proveedor", "empresa", "cargado_por").annotate(
-            activos_count=Count("activos", distinct=True)
-        )
+        queryset = FacturaCompra.objects.select_related(
+            "proveedor", "empresa", "cargado_por"
+        ).annotate(activos_count=Count("activos", distinct=True))
         q = filtros["q"]
         if q:
             queryset = queryset.filter(
@@ -228,38 +219,46 @@ class FacturaListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         filtros = self.get_active_filters()
         columnas_seleccionadas = self.get_selected_columns()
-        context.update({
-            "busqueda": filtros["q"],
-            "proveedor_seleccionado": filtros["proveedor"][0] if filtros["proveedor"] else "",
-            "proveedores_seleccionados": filtros["proveedor"],
-            "empresa_seleccionada": filtros["empresa"][0] if filtros["empresa"] else "",
-            "empresas_seleccionadas": filtros["empresa"],
-            "estado_seleccionado": filtros["estado"][0] if filtros["estado"] else "",
-            "estados_seleccionados": filtros["estado"],
-            "relaciones_seleccionadas": filtros["relaciones"][0] if filtros["relaciones"] else "",
-            "relaciones_lista_seleccionadas": filtros["relaciones"],
-            "fecha_desde": filtros["fecha_desde"],
-            "fecha_hasta": filtros["fecha_hasta"],
-            "orden_seleccionado": filtros["orden"],
-            "proveedores": Proveedor.objects.order_by("razon_social"),
-            "empresas": Empresa.objects.order_by("nombre"),
-            "estados_filtro": self.ESTADOS_FILTRO,
-            "relaciones_filtro": self.RELACIONES_FILTRO,
-            "ordenes_disponibles": self.ORDENES_CHOICES,
-            "columnas_disponibles": self.COLUMNAS_DISPONIBLES,
-            "columnas_seleccionadas": columnas_seleccionadas,
-            "total_columnas_tabla": len(columnas_seleccionadas) + 1,
-            "cantidad_filtros_activos": (
-                bool(filtros["q"])
-                + sum(len(filtros[field]) for field in self.FILTER_MULTI_FIELDS if field != "cols")
-                + bool(filtros["fecha_desde"])
-                + bool(filtros["fecha_hasta"])
-                + (filtros["orden"] != "recientes")
-            ),
-        })
+        context.update(
+            {
+                "busqueda": filtros["q"],
+                "proveedor_seleccionado": filtros["proveedor"][0] if filtros["proveedor"] else "",
+                "proveedores_seleccionados": filtros["proveedor"],
+                "empresa_seleccionada": filtros["empresa"][0] if filtros["empresa"] else "",
+                "empresas_seleccionadas": filtros["empresa"],
+                "estado_seleccionado": filtros["estado"][0] if filtros["estado"] else "",
+                "estados_seleccionados": filtros["estado"],
+                "relaciones_seleccionadas": filtros["relaciones"][0]
+                if filtros["relaciones"]
+                else "",
+                "relaciones_lista_seleccionadas": filtros["relaciones"],
+                "fecha_desde": filtros["fecha_desde"],
+                "fecha_hasta": filtros["fecha_hasta"],
+                "orden_seleccionado": filtros["orden"],
+                "proveedores": Proveedor.objects.order_by("razon_social"),
+                "empresas": Empresa.objects.order_by("nombre"),
+                "estados_filtro": self.ESTADOS_FILTRO,
+                "relaciones_filtro": self.RELACIONES_FILTRO,
+                "ordenes_disponibles": self.ORDENES_CHOICES,
+                "columnas_disponibles": self.COLUMNAS_DISPONIBLES,
+                "columnas_seleccionadas": columnas_seleccionadas,
+                "total_columnas_tabla": len(columnas_seleccionadas) + 1,
+                "cantidad_filtros_activos": (
+                    bool(filtros["q"])
+                    + sum(
+                        len(filtros[field]) for field in self.FILTER_MULTI_FIELDS if field != "cols"
+                    )
+                    + bool(filtros["fecha_desde"])
+                    + bool(filtros["fecha_hasta"])
+                    + (filtros["orden"] != "recientes")
+                ),
+            }
+        )
         context["query_string"] = self.build_filter_querydict(filtros).urlencode()
         if context.get("is_paginated"):
-            context["page_numbers"] = context["paginator"].get_elided_page_range(context["page_obj"].number)
+            context["page_numbers"] = context["paginator"].get_elided_page_range(
+                context["page_obj"].number
+            )
         return context
 
 
@@ -296,9 +295,7 @@ class FacturaCreateView(LoginRequiredMixin, PermissionRequiredMixin, FacturaForm
                         "checksum_sha256": self.object.checksum_sha256,
                     },
                 )
-                NotificationService.factura_guardada(
-                    self.object, self.request.user, creada=True
-                )
+                NotificationService.factura_guardada(self.object, self.request.user, creada=True)
         except Exception:
             archivo = getattr(form.instance, "archivo", None)
             if archivo and archivo.name:
@@ -316,7 +313,9 @@ class FacturaUpdateView(LoginRequiredMixin, PermissionRequiredMixin, FacturaForm
     raise_exception = True
 
     def get_queryset(self):
-        return FacturaCompra.objects.select_related("proveedor", "empresa").prefetch_related("activos")
+        return FacturaCompra.objects.select_related("proveedor", "empresa").prefetch_related(
+            "activos"
+        )
 
     def form_valid(self, form):
         cambios = set(form.changed_data) & {
@@ -328,12 +327,12 @@ class FacturaUpdateView(LoginRequiredMixin, PermissionRequiredMixin, FacturaForm
         with transaction.atomic():
             response = super().form_valid(form)
             registrar_evento(
-                self.object, EventoFactura.Accion.EDICION, self.request.user,
+                self.object,
+                EventoFactura.Accion.EDICION,
+                self.request.user,
                 {"proveedor_id": self.object.proveedor_id, "empresa_id": self.object.empresa_id},
             )
-            NotificationService.factura_guardada(
-                self.object, self.request.user, cambios=cambios
-            )
+            NotificationService.factura_guardada(self.object, self.request.user, cambios=cambios)
         messages.success(self.request, "Metadatos de la factura actualizados correctamente.")
         return response
 
@@ -349,10 +348,16 @@ class FacturaDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView)
     context_object_name = "factura"
 
     def get_queryset(self):
-        return FacturaCompra.objects.select_related("proveedor", "empresa", "cargado_por").prefetch_related(
-            "activos__tipo_activo", "activos__estado_activo", "reemplazos__reemplazado_por",
-            "eventos__usuario",
-        ).annotate(activos_count=Count("activos", distinct=True))
+        return (
+            FacturaCompra.objects.select_related("proveedor", "empresa", "cargado_por")
+            .prefetch_related(
+                "activos__tipo_activo",
+                "activos__estado_activo",
+                "reemplazos__reemplazado_por",
+                "eventos__usuario",
+            )
+            .annotate(activos_count=Count("activos", distinct=True))
+        )
 
 
 class FacturaAsociarActivosView(LoginRequiredMixin, PermissionRequiredMixin, View):
@@ -362,7 +367,10 @@ class FacturaAsociarActivosView(LoginRequiredMixin, PermissionRequiredMixin, Vie
 
     def get_factura(self, pk):
         return get_object_or_404(
-            FacturaCompra.objects.select_related("proveedor", "empresa").prefetch_related("activos"), pk=pk
+            FacturaCompra.objects.select_related("proveedor", "empresa").prefetch_related(
+                "activos"
+            ),
+            pk=pk,
         )
 
     def get_context(self, factura, form):
@@ -370,17 +378,13 @@ class FacturaAsociarActivosView(LoginRequiredMixin, PermissionRequiredMixin, Vie
         if form.is_bound:
             activos_seleccionados = self.request.POST.getlist("activos")
         else:
-            activos_seleccionados = [
-                str(pk) for pk in factura.activos.values_list("pk", flat=True)
-            ]
+            activos_seleccionados = [str(pk) for pk in factura.activos.values_list("pk", flat=True)]
         return {
             "factura": factura,
             "form": form,
             "activos_disponibles": activos_disponibles,
             "activos_seleccionados": activos_seleccionados,
-            "activos_asociados_ids": set(
-                factura.activos.values_list("pk", flat=True)
-            ),
+            "activos_asociados_ids": set(factura.activos.values_list("pk", flat=True)),
             "tipos_disponibles": sorted(
                 {activo.tipo_activo for activo in activos_disponibles},
                 key=lambda tipo: tipo.nombre.lower(),
@@ -402,7 +406,9 @@ class FacturaAsociarActivosView(LoginRequiredMixin, PermissionRequiredMixin, Vie
         if not form.is_valid():
             return render(request, self.template_name, self.get_context(factura, form))
         if not factura.activa:
-            messages.error(request, "No se pueden crear asociaciones nuevas con una factura archivada.")
+            messages.error(
+                request, "No se pueden crear asociaciones nuevas con una factura archivada."
+            )
             return redirect("facturas:detalle", pk=pk)
         seleccionados = list(form.cleaned_data["activos"])
         ids_seleccionados = {activo.pk for activo in seleccionados}
@@ -414,7 +420,9 @@ class FacturaAsociarActivosView(LoginRequiredMixin, PermissionRequiredMixin, Vie
                 activo.factura_compra = factura
                 activo.save()
             registrar_evento(
-                factura, EventoFactura.Accion.ASOCIACION, request.user,
+                factura,
+                EventoFactura.Accion.ASOCIACION,
+                request.user,
                 {"activos_ids": sorted(ids_seleccionados)},
             )
         messages.success(request, "Asociaciones de activos actualizadas correctamente.")
@@ -437,10 +445,21 @@ class FacturaDocumentoView(LoginRequiredMixin, PermissionRequiredMixin, View):
             filename=nombre,
         )
         response["X-Content-Type-Options"] = "nosniff"
-        registrar_evento(factura, EventoFactura.Accion.DESCARGA, request.user, {
-            "ip": ip_cliente(request), "modo": "descarga" if descargar else "visualizacion",
-        })
-        logger.info("Documento factura consultado factura_id=%s usuario_id=%s ip=%s", pk, request.user.pk, ip_cliente(request))
+        registrar_evento(
+            factura,
+            EventoFactura.Accion.DESCARGA,
+            request.user,
+            {
+                "ip": ip_cliente(request),
+                "modo": "descarga" if descargar else "visualizacion",
+            },
+        )
+        logger.info(
+            "Documento factura consultado factura_id=%s usuario_id=%s ip=%s",
+            pk,
+            request.user.pk,
+            ip_cliente(request),
+        )
         return response
 
 
@@ -455,10 +474,13 @@ class FacturaEstadoView(LoginRequiredMixin, PermissionRequiredMixin, View):
         registrar_evento(
             factura, EventoFactura.Accion.ESTADO, request.user, {"activa": factura.activa}
         )
-        NotificationService.factura_guardada(
-            factura, request.user, cambios={"estado"}
+        NotificationService.factura_guardada(factura, request.user, cambios={"estado"})
+        messages.success(
+            request,
+            "Factura activada correctamente."
+            if factura.activa
+            else "Factura archivada correctamente.",
         )
-        messages.success(request, "Factura activada correctamente." if factura.activa else "Factura archivada correctamente.")
         return redirect("facturas:detalle", pk=pk)
 
 
@@ -469,7 +491,9 @@ class FacturaReemplazarView(LoginRequiredMixin, PermissionRequiredMixin, View):
 
     def get(self, request, pk):
         factura = get_object_or_404(FacturaCompra, pk=pk)
-        return render(request, self.template_name, {"factura": factura, "form": ReemplazarDocumentoForm()})
+        return render(
+            request, self.template_name, {"factura": factura, "form": ReemplazarDocumentoForm()}
+        )
 
     def post(self, request, pk):
         factura = get_object_or_404(FacturaCompra, pk=pk)
@@ -507,14 +531,20 @@ class FacturaReemplazarView(LoginRequiredMixin, PermissionRequiredMixin, View):
             reemplazo.archivo_nuevo = factura.archivo.name
             reemplazo.save(update_fields=["archivo_nuevo"])
             registrar_evento(
-                factura, EventoFactura.Accion.REEMPLAZO, request.user,
-                {"motivo": form.cleaned_data["motivo"], "checksum_anterior": reemplazo.checksum_anterior, "checksum_nuevo": reemplazo.checksum_nuevo},
+                factura,
+                EventoFactura.Accion.REEMPLAZO,
+                request.user,
+                {
+                    "motivo": form.cleaned_data["motivo"],
+                    "checksum_anterior": reemplazo.checksum_anterior,
+                    "checksum_nuevo": reemplazo.checksum_nuevo,
+                },
             )
-            NotificationService.factura_guardada(
-                factura, request.user, cambios={"documento"}
-            )
+            NotificationService.factura_guardada(factura, request.user, cambios={"documento"})
             transaction.on_commit(lambda: storage.delete(nombre_anterior))
-        messages.success(request, "Documento reemplazado y versión anterior conservada en el historial.")
+        messages.success(
+            request, "Documento reemplazado y versión anterior conservada en el historial."
+        )
         return redirect("facturas:detalle", pk=pk)
 
 
@@ -528,24 +558,33 @@ class FacturaDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView)
     def form_valid(self, form):
         factura = self.object
         if factura.activos.exists():
-            messages.error(self.request, "No se puede eliminar una factura con activos relacionados. Archivala en su lugar.")
+            messages.error(
+                self.request,
+                "No se puede eliminar una factura con activos relacionados. Archivala en su lugar.",
+            )
             return HttpResponseRedirect(reverse("facturas:detalle", args=[factura.pk]))
         storage = factura.archivo.storage
         archivos = [factura.archivo.name] if factura.archivo else []
         archivos.extend(
-            factura.reemplazos.exclude(archivo_anterior="").values_list("archivo_anterior", flat=True)
+            factura.reemplazos.exclude(archivo_anterior="").values_list(
+                "archivo_anterior", flat=True
+            )
         )
         try:
             with transaction.atomic():
                 registrar_evento(
-                    factura, EventoFactura.Accion.ELIMINACION, self.request.user,
+                    factura,
+                    EventoFactura.Accion.ELIMINACION,
+                    self.request.user,
                     {"proveedor_id": factura.proveedor_id, "empresa_id": factura.empresa_id},
                 )
                 response = super().form_valid(form)
                 if archivos:
                     transaction.on_commit(lambda: [storage.delete(nombre) for nombre in archivos])
         except ProtectedError:
-            messages.error(self.request, "La factura tiene relaciones protegidas y no puede eliminarse.")
+            messages.error(
+                self.request, "La factura tiene relaciones protegidas y no puede eliminarse."
+            )
             return HttpResponseRedirect(reverse("facturas:detalle", args=[factura.pk]))
         messages.success(self.request, "Factura eliminada correctamente.")
         return response

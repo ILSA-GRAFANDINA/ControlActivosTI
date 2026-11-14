@@ -64,7 +64,7 @@ class ActivoAdmin(admin.ModelAdmin):
         "sistema_operativo",
         "cantidad_fotos",
         "miniatura_principal",
-        "verificado_ti"
+        "verificado_ti",
     )
     search_fields = (
         "codigo",
@@ -97,7 +97,7 @@ class ActivoAdmin(admin.ModelAdmin):
         "marca",
         "sistema_operativo",
         "fecha_compra",
-        "verificado_ti"
+        "verificado_ti",
     )
     list_select_related = (
         "tipo_activo",
@@ -209,6 +209,10 @@ class EventoActivoAdmin(admin.ModelAdmin):
         if obj.nuevo_estado_activo_id:
             cambios.append(f"Estado final: {obj.nuevo_estado_activo}")
 
-        return " | ".join(cambios) if cambios else "Evento informativo: no modifica la ficha del activo."
+        return (
+            " | ".join(cambios)
+            if cambios
+            else "Evento informativo: no modifica la ficha del activo."
+        )
 
     resumen_impacto.short_description = "Resumen del impacto"

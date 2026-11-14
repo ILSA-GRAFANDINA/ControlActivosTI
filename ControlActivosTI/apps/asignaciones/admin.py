@@ -77,7 +77,12 @@ class AsignacionAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
-    list_select_related = ("colaborador", "centro_costo", "usuario_responsable", "usuario_recepcion")
+    list_select_related = (
+        "colaborador",
+        "centro_costo",
+        "usuario_responsable",
+        "usuario_recepcion",
+    )
     inlines = [AsignacionDetalleInline, EvidenciaEntregaInline]
 
     fieldsets = (

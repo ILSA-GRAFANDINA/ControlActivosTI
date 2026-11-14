@@ -658,7 +658,7 @@ class ActivoListViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Laptop")
         self.assertContains(response, "Mouse")
-        self.assertContains(response, 'text-[11px] font-semibold uppercase')
+        self.assertContains(response, "text-[11px] font-semibold uppercase")
         self.assertContains(response, "data-scroll-to-results")
         self.assertContains(response, "data-compact-filters")
         self.assertContains(response, 'id="resultados"')
@@ -884,7 +884,9 @@ class ActivoListViewTests(TestCase):
         contenido = response.content.decode()
         self.assertContains(response, "Laptop (Disponible)")
         self.assertContains(response, "Laptop (Asignado)")
-        self.assertLess(contenido.index("Laptop (Disponible)"), contenido.index("Laptop (Asignado)"))
+        self.assertLess(
+            contenido.index("Laptop (Disponible)"), contenido.index("Laptop (Asignado)")
+        )
         self.assertContains(response, activo_asignado.codigo)
 
     def test_new_filter_panel_does_not_offer_availability_controls(self):
@@ -903,7 +905,7 @@ class ActivoListViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'data-filter-option-search="proveedor"', html=False)
-        self.assertContains(response, 'data-invoice-filter-options', html=False)
+        self.assertContains(response, "data-invoice-filter-options", html=False)
         self.assertContains(response, reverse("activos:facturas-proveedor-json"))
 
     def test_multiple_filters_persist_until_reset(self):
@@ -920,7 +922,9 @@ class ActivoListViewTests(TestCase):
             remembered_response.context["estados_seleccionados"],
             [str(self.estado.pk), str(estado_baja.pk)],
         )
-        self.assertEqual(remembered_response.context["empresas_seleccionadas"], [str(self.empresa_acme.pk)])
+        self.assertEqual(
+            remembered_response.context["empresas_seleccionadas"], [str(self.empresa_acme.pk)]
+        )
         self.client.get(reverse("activos:lista"), {"reset": "1"})
         cleared_response = self.client.get(reverse("activos:lista"))
         self.assertEqual(cleared_response.context["estados_seleccionados"], [])
@@ -1107,7 +1111,9 @@ class ActivoListViewTests(TestCase):
             },
         )
 
-        laptop_tab = next(tab for tab in response.context["tabs_tipo"] if tab["id"] == str(self.tipo_laptop.pk))
+        laptop_tab = next(
+            tab for tab in response.context["tabs_tipo"] if tab["id"] == str(self.tipo_laptop.pk)
+        )
         self.assertIn(f"estado={estado_asignado.pk}", laptop_tab["url"])
         self.assertIn(f"tipo={self.tipo_laptop.pk}", laptop_tab["url"])
         self.assertIn(f"tab_tipo={self.tipo_laptop.pk}", laptop_tab["url"])
@@ -1146,7 +1152,9 @@ class ActivoListViewTests(TestCase):
     def test_list_view_recuerda_ultimo_filtro_y_puede_restablecerlo(self):
         self.client.force_login(self.user)
 
-        filtered_response = self.client.get(reverse("activos:lista"), {"empresa": str(self.empresa_acme.pk)})
+        filtered_response = self.client.get(
+            reverse("activos:lista"), {"empresa": str(self.empresa_acme.pk)}
+        )
         self.assertEqual(filtered_response.status_code, 200)
         self.assertContains(filtered_response, "Empresa: Acme")
 
@@ -1214,7 +1222,7 @@ class ActivoExportViewTests(TestCase):
         self.assertContains(response, "asset-filter-popover")
         self.assertNotContains(response, 'data-filter-prefix="Disponibilidad"', html=False)
         self.assertContains(response, 'data-filter-option-search="proveedor"', html=False)
-        self.assertContains(response, 'data-invoice-filter-options', html=False)
+        self.assertContains(response, "data-invoice-filter-options", html=False)
         self.assertContains(response, "Selección actual")
         self.assertContains(response, self.activo_laptop.codigo)
         self.assertNotContains(response, self.activo_mouse.codigo)
@@ -1302,13 +1310,24 @@ class ActivoExportViewTests(TestCase):
 
         response = self.client.get(
             reverse("activos:exportar"),
-            {"estado": [self.estado.pk, estado_baja.pk], "tipo": [self.tipo_laptop.pk, self.tipo_pc.pk]},
+            {
+                "estado": [self.estado.pk, estado_baja.pk],
+                "tipo": [self.tipo_laptop.pk, self.tipo_pc.pk],
+            },
         )
 
-        self.assertContains(response, f'<input type="hidden" name="estado" value="{self.estado.pk}">')
-        self.assertContains(response, f'<input type="hidden" name="estado" value="{estado_baja.pk}">')
-        self.assertContains(response, f'<input type="hidden" name="tipo" value="{self.tipo_laptop.pk}">')
-        self.assertContains(response, f'<input type="hidden" name="tipo" value="{self.tipo_pc.pk}">')
+        self.assertContains(
+            response, f'<input type="hidden" name="estado" value="{self.estado.pk}">'
+        )
+        self.assertContains(
+            response, f'<input type="hidden" name="estado" value="{estado_baja.pk}">'
+        )
+        self.assertContains(
+            response, f'<input type="hidden" name="tipo" value="{self.tipo_laptop.pk}">'
+        )
+        self.assertContains(
+            response, f'<input type="hidden" name="tipo" value="{self.tipo_pc.pk}">'
+        )
 
     def test_export_view_requires_at_least_one_selected_asset(self):
         self.client.force_login(self.user)
@@ -1408,20 +1427,22 @@ class ActivoCreateViewTests(TestCase):
         self.assertContains(response, "Empresa")
         self.assertContains(response, "Incluir en depreciaci")
         self.assertContains(response, 'id="id_incluir_en_depreciacion" checked')
-        self.assertContains(response, 'data-provider-search', html=False)
-        self.assertContains(response, 'data-invoice-search', html=False)
-        self.assertContains(response, 'data-provider-results', html=False)
-        self.assertContains(response, 'data-invoice-results', html=False)
+        self.assertContains(response, "data-provider-search", html=False)
+        self.assertContains(response, "data-invoice-search", html=False)
+        self.assertContains(response, "data-provider-results", html=False)
+        self.assertContains(response, "data-invoice-results", html=False)
         self.assertContains(response, reverse("activos:facturas-proveedor-json"))
         self.assertContains(response, 'data-draft-enabled="true"', html=False)
         self.assertContains(response, 'data-draft-restore="true"', html=False)
         self.assertContains(
             response,
-            f'control-activos:nuevo-activo:v1:usuario-{self.user.pk}',
+            f"control-activos:nuevo-activo:v1:usuario-{self.user.pk}",
             html=False,
         )
         self.assertContains(response, "Borrador automatico activo")
-        self.assertContains(response, 'type="password" autocomplete="new-password" data-draft-sensitive', html=False)
+        self.assertContains(
+            response, 'type="password" autocomplete="new-password" data-draft-sensitive', html=False
+        )
 
     def test_copy_view_defaults_estado_to_disponible(self):
         estado_asignado = EstadoActivo.objects.create(nombre="Asignado", permite_asignacion=False)
@@ -1466,7 +1487,9 @@ class ActivoCreateViewTests(TestCase):
     def test_attributes_json_view_returns_without_name_error(self):
         self.client.force_login(self.user)
 
-        response = self.client.get(reverse("activos:atributos-tipo-json", args=[self.tipo_laptop.pk]))
+        response = self.client.get(
+            reverse("activos:atributos-tipo-json", args=[self.tipo_laptop.pk])
+        )
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["tipo"], self.tipo_laptop.nombre)
@@ -1558,8 +1581,12 @@ class ActivoCreateViewTests(TestCase):
         self.assertContains(response, 'data-draft-enabled="false"', html=False)
         self.assertNotContains(response, "Borrador automatico activo")
         contenido = response.content.decode()
-        self.assertLess(contenido.index("Fotos del activo"), contenido.index("Cambio del tipo de activo"))
-        self.assertLess(contenido.index("Cambio del tipo de activo"), contenido.index("Guardar cambios"))
+        self.assertLess(
+            contenido.index("Fotos del activo"), contenido.index("Cambio del tipo de activo")
+        )
+        self.assertLess(
+            contenido.index("Cambio del tipo de activo"), contenido.index("Guardar cambios")
+        )
 
         data = self._datos_base()
         data.update(
@@ -1681,7 +1708,9 @@ class ActivoDetailViewTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="detalle", password="testpass123")
         self.estado = EstadoActivo.objects.create(nombre="Disponible", permite_asignacion=True)
-        self.estado_asignado = EstadoActivo.objects.create(nombre="Asignado", permite_asignacion=False)
+        self.estado_asignado = EstadoActivo.objects.create(
+            nombre="Asignado", permite_asignacion=False
+        )
         self.estado_devuelto = EstadoActivo.objects.create(nombre="Bodega", permite_asignacion=True)
         self.tipo_laptop = TipoActivo.objects.create(nombre="Laptop")
         self.area = Area.objects.create(nombre="TI")
@@ -1759,8 +1788,12 @@ class ActivoDetailViewTests(TestCase):
         self.assertContains(response, "LAP-001")
         self.assertContains(response, "Acme")
         self.assertContains(response, f"{reverse('activos:nuevo')}?editar={self.activo.pk}")
-        self.assertContains(response, reverse("asignaciones:detalle", args=[self.asignacion_activa.pk]))
-        self.assertContains(response, reverse("asignaciones:detalle", args=[self.historial_asignaciones[0].pk]))
+        self.assertContains(
+            response, reverse("asignaciones:detalle", args=[self.asignacion_activa.pk])
+        )
+        self.assertContains(
+            response, reverse("asignaciones:detalle", args=[self.historial_asignaciones[0].pk])
+        )
 
     def test_detail_view_blocks_quarantine_from_available_message(self):
         cuarentena = EstadoActivo.objects.create(nombre="Cuarentena", permite_asignacion=False)
@@ -1910,13 +1943,9 @@ class ActivoVigenciaViewTests(TestCase):
         self.assertIn("activo", ActivoAdminForm(instance=self.activo).fields)
 
     def test_eliminar_requires_change_permission(self):
-        unauthorized = User.objects.create_user(
-            username="sin-permiso", password="testpass123"
-        )
+        unauthorized = User.objects.create_user(username="sin-permiso", password="testpass123")
         self.client.force_login(unauthorized)
-        response = self.client.post(
-            reverse("activos:vigencia", args=[self.activo.pk, "eliminar"])
-        )
+        response = self.client.post(reverse("activos:vigencia", args=[self.activo.pk, "eliminar"]))
         self.assertEqual(response.status_code, 403)
         self.activo.refresh_from_db()
         self.assertTrue(self.activo.activo)
@@ -1973,9 +2002,7 @@ class ActivoVigenciaViewTests(TestCase):
         )
 
         self.client.force_login(self.user)
-        response = self.client.post(
-            reverse("activos:vigencia", args=[self.activo.pk, "eliminar"])
-        )
+        response = self.client.post(reverse("activos:vigencia", args=[self.activo.pk, "eliminar"]))
         self.assertRedirects(
             response,
             reverse("activos:detalle", args=[self.activo.pk]),

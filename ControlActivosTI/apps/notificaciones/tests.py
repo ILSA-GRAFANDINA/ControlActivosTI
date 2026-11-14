@@ -211,12 +211,8 @@ class RelevantFlowTests(NotificationBaseTests):
         super().setUp()
         self.empresa = Empresa.objects.create(nombre="Acme")
         self.tipo = TipoActivo.objects.create(nombre="Laptop")
-        self.disponible = EstadoActivo.objects.create(
-            nombre="Disponible", permite_asignacion=True
-        )
-        self.asignado = EstadoActivo.objects.create(
-            nombre="Asignado", permite_asignacion=False
-        )
+        self.disponible = EstadoActivo.objects.create(nombre="Disponible", permite_asignacion=True)
+        self.asignado = EstadoActivo.objects.create(nombre="Asignado", permite_asignacion=False)
         self.ubicacion_inicial = UbicacionFisicaActivo.objects.create(nombre="Administracion")
         self.ubicacion_nueva = UbicacionFisicaActivo.objects.create(nombre="Produccion")
 
@@ -259,18 +255,14 @@ class RelevantFlowTests(NotificationBaseTests):
 
         unchanged = self.asset_data(activo)
         with self.captureOnCommitCallbacks(execute=True):
-            response = self.client.post(
-                f"{reverse('activos:nuevo')}?editar={activo.pk}", unchanged
-            )
+            response = self.client.post(f"{reverse('activos:nuevo')}?editar={activo.pk}", unchanged)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(Notificacion.objects.count(), 1)
 
         changed = self.asset_data(activo)
         changed["modelo"] = "Latitude 5420 renovada"
         with self.captureOnCommitCallbacks(execute=True):
-            response = self.client.post(
-                f"{reverse('activos:nuevo')}?editar={activo.pk}", changed
-            )
+            response = self.client.post(f"{reverse('activos:nuevo')}?editar={activo.pk}", changed)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(
             Notificacion.objects.filter(tipo=Notificacion.Tipo.ACTIVO_CAMBIADO).count(), 1
@@ -286,9 +278,7 @@ class RelevantFlowTests(NotificationBaseTests):
         changed = self.asset_data(activo)
         changed["ubicacion_fisica"] = self.ubicacion_nueva.pk
         with self.captureOnCommitCallbacks(execute=True):
-            response = self.client.post(
-                f"{reverse('activos:nuevo')}?editar={activo.pk}", changed
-            )
+            response = self.client.post(f"{reverse('activos:nuevo')}?editar={activo.pk}", changed)
 
         self.assertEqual(response.status_code, 302)
         activo.refresh_from_db()
@@ -337,9 +327,7 @@ class RelevantFlowTests(NotificationBaseTests):
             )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(Asignacion.objects.count(), 1)
-        notification = Notificacion.objects.get(
-            tipo=Notificacion.Tipo.ASIGNACION_CREADA
-        )
+        notification = Notificacion.objects.get(tipo=Notificacion.Tipo.ASIGNACION_CREADA)
         self.assertIn(activo.codigo, notification.mensaje)
         self.assertEqual(
             notification.ruta,
@@ -414,6 +402,4 @@ class NotificationAdminTests(NotificationBaseTests):
         self.client.force_login(admin)
         response = self.client.get(reverse("admin2-auditoria"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(
-            response, reverse("admin:notificaciones_notificacion_changelist")
-        )
+        self.assertContains(response, reverse("admin:notificaciones_notificacion_changelist"))

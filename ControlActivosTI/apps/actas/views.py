@@ -38,7 +38,12 @@ class DescargarActaPorAsignacionView(LoginRequiredMixin, PermissionRequiredMixin
 
         archivo = acta.archivo.open("rb")
         nombre = acta.nombre_archivo or f"acta_entrega_{acta.asignacion.codigo_asignacion}.xlsx"
-        logger.info("Acta descargada acta_id=%s usuario_id=%s ip=%s", acta.pk, request.user.pk, request.META.get("REMOTE_ADDR", ""))
+        logger.info(
+            "Acta descargada acta_id=%s usuario_id=%s ip=%s",
+            acta.pk,
+            request.user.pk,
+            request.META.get("REMOTE_ADDR", ""),
+        )
         return FileResponse(
             archivo,
             as_attachment=True,
@@ -65,7 +70,12 @@ class DescargarActaPorDevolucionView(LoginRequiredMixin, PermissionRequiredMixin
 
         archivo = acta.archivo.open("rb")
         nombre = acta.nombre_archivo or f"Acta_Recepcion_{acta.devolucion.codigo_devolucion}.xlsx"
-        logger.info("Acta devolucion descargada acta_id=%s usuario_id=%s ip=%s", acta.pk, request.user.pk, request.META.get("REMOTE_ADDR", ""))
+        logger.info(
+            "Acta devolucion descargada acta_id=%s usuario_id=%s ip=%s",
+            acta.pk,
+            request.user.pk,
+            request.META.get("REMOTE_ADDR", ""),
+        )
         return FileResponse(
             archivo,
             as_attachment=True,

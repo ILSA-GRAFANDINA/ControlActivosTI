@@ -73,11 +73,7 @@ class ActivoFilterMixin:
             if field == "disponibilidad":
                 values = [value for value in values if value in {"disponibles", "asignados"}]
             elif field == "modalidad_tenencia":
-                values = [
-                    value
-                    for value in values
-                    if value in Activo.ModalidadTenencia.values
-                ]
+                values = [value for value in values if value in Activo.ModalidadTenencia.values]
             elif field == "factura":
                 values = [value for value in values if value.isdigit() or value == "sin_factura"]
             else:
@@ -111,7 +107,9 @@ class ActivoFilterMixin:
 
         filtros_guardados = self.request.session.get(self.FILTER_SESSION_KEY, {})
         if isinstance(filtros_guardados, dict):
-            filtros = {field: (filtros_guardados.get(field, "") or "") for field in self.FILTER_FIELDS}
+            filtros = {
+                field: (filtros_guardados.get(field, "") or "") for field in self.FILTER_FIELDS
+            }
             for field in self.FILTER_MULTI_FIELDS:
                 saved_values = filtros_guardados.get(field, [])
                 if isinstance(saved_values, str):
@@ -156,7 +154,9 @@ class ActivoFilterMixin:
                 valores_atributos__atributo__tipo_dato__in=tipos_buscables,
                 valores_atributos__atributo__configuraciones_tipo__filtrable=True,
                 valores_atributos__atributo__configuraciones_tipo__activo=True,
-                valores_atributos__atributo__configuraciones_tipo__tipo_activo_id=F("tipo_activo_id"),
+                valores_atributos__atributo__configuraciones_tipo__tipo_activo_id=F(
+                    "tipo_activo_id"
+                ),
             )
             coincidencia_valor = (
                 Q(valores_atributos__valor_texto__icontains=busqueda)
@@ -171,9 +171,8 @@ class ActivoFilterMixin:
             if numero is not None and numero.is_finite():
                 if abs(numero) < Decimal("1e14"):
                     coincidencia_valor |= Q(valores_atributos__valor_decimal=numero)
-                if (
-                    numero == numero.to_integral_value()
-                    and abs(numero) <= Decimal("9223372036854775807")
+                if numero == numero.to_integral_value() and abs(numero) <= Decimal(
+                    "9223372036854775807"
                 ):
                     coincidencia_valor |= Q(valores_atributos__valor_entero=int(numero))
 
@@ -278,18 +277,26 @@ class ActivoFilterMixin:
             "busqueda": filtros["q"],
             "estado_seleccionado": filtros["estado"][0] if filtros["estado"] else "",
             "estados_seleccionados": filtros["estado"],
-            "disponibilidad_seleccionada": filtros["disponibilidad"][0] if filtros["disponibilidad"] else "",
+            "disponibilidad_seleccionada": filtros["disponibilidad"][0]
+            if filtros["disponibilidad"]
+            else "",
             "disponibilidades_seleccionadas": filtros["disponibilidad"],
             "tipos_seleccionados": filtros["tipo"],
             "empresa_seleccionada": filtros["empresa"][0] if filtros["empresa"] else "",
             "empresas_seleccionadas": filtros["empresa"],
-            "ubicacion_fisica_seleccionada": filtros["ubicacion_fisica"][0] if filtros["ubicacion_fisica"] else "",
+            "ubicacion_fisica_seleccionada": filtros["ubicacion_fisica"][0]
+            if filtros["ubicacion_fisica"]
+            else "",
             "ubicaciones_fisicas_seleccionadas": filtros["ubicacion_fisica"],
             "proveedor_seleccionado": filtros["proveedor"][0] if filtros["proveedor"] else "",
             "proveedores_seleccionados": filtros["proveedor"],
-            "modalidad_tenencia_seleccionada": filtros["modalidad_tenencia"][0] if filtros["modalidad_tenencia"] else "",
+            "modalidad_tenencia_seleccionada": filtros["modalidad_tenencia"][0]
+            if filtros["modalidad_tenencia"]
+            else "",
             "modalidades_tenencia_seleccionadas": filtros["modalidad_tenencia"],
-            "proveedor_propietario_seleccionado": filtros["proveedor_propietario"][0] if filtros["proveedor_propietario"] else "",
+            "proveedor_propietario_seleccionado": filtros["proveedor_propietario"][0]
+            if filtros["proveedor_propietario"]
+            else "",
             "proveedores_propietarios_seleccionados": filtros["proveedor_propietario"],
             "factura_seleccionada": filtros["factura"][0] if filtros["factura"] else "",
             "facturas_seleccionadas": filtros["factura"],
@@ -302,11 +309,15 @@ class ActivoFilterMixin:
             "estados_activo": EstadoActivo.objects.filter(activo=True).order_by("nombre"),
             "tipos_activo": TipoActivo.objects.filter(activo=True).order_by("nombre"),
             "empresas_activo": Empresa.objects.filter(activo=True).order_by("nombre"),
-            "ubicaciones_fisicas_activo": UbicacionFisicaActivo.objects.filter(activo=True).order_by("nombre"),
+            "ubicaciones_fisicas_activo": UbicacionFisicaActivo.objects.filter(
+                activo=True
+            ).order_by("nombre"),
             "proveedores": Proveedor.objects.order_by("razon_social"),
             "modalidades_tenencia": Activo.ModalidadTenencia.choices,
             "proveedores_propietarios": Proveedor.objects.order_by("razon_social"),
-            "facturas_compra": FacturaCompra.objects.select_related("proveedor").order_by("-fecha_emision"),
+            "facturas_compra": FacturaCompra.objects.select_related("proveedor").order_by(
+                "-fecha_emision"
+            ),
         }
 
     def get_export_querystring(self):
@@ -427,10 +438,7 @@ class ActivoListView(LoginRequiredMixin, ActivoFilterMixin, ListView):
 
     def get_selected_columns(self):
         columnas_validas = {key for key, _ in self.COLUMNAS_DISPONIBLES}
-        seleccionadas = [
-            col for col in self.request.GET.getlist("cols")
-            if col in columnas_validas
-        ]
+        seleccionadas = [col for col in self.request.GET.getlist("cols") if col in columnas_validas]
         return seleccionadas or self.COLUMNAS_POR_DEFECTO
 
     def get_queryset(self):
@@ -511,7 +519,9 @@ class ActivoExportView(LoginRequiredMixin, ActivoFilterMixin, TemplateView):
     def get_filtered_export_queryset(self):
         queryset = self.get_filtered_queryset()
         self.tab_type_summary = self.get_tab_summary(queryset)
-        self.available_tab_type_ids = {str(item["tipo_activo_id"]) for item in self.tab_type_summary}
+        self.available_tab_type_ids = {
+            str(item["tipo_activo_id"]) for item in self.tab_type_summary
+        }
         self.active_tab_type_id = self.get_active_tab_type_id()
         if self.active_tab_type_id:
             queryset = queryset.filter(tipo_activo_id=self.active_tab_type_id)
@@ -553,7 +563,10 @@ class ActivoExportView(LoginRequiredMixin, ActivoFilterMixin, TemplateView):
         if not activos:
             if is_async_download:
                 return JsonResponse(
-                    {"ok": False, "message": "Los activos seleccionados ya no están disponibles con estos filtros."},
+                    {
+                        "ok": False,
+                        "message": "Los activos seleccionados ya no están disponibles con estos filtros.",
+                    },
                     status=400,
                 )
             context = self.get_context_data(
@@ -597,10 +610,10 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
                 "tipo_activo",
                 "estado_activo",
                 "empresa",
-                  "ubicacion_fisica",
-                  "proveedor",
-                  "proveedor_propietario",
-                  "factura_compra",
+                "ubicacion_fisica",
+                "proveedor",
+                "proveedor_propietario",
+                "factura_compra",
             )
             .prefetch_related("fotos")
             .filter(pk=raw_pk)
@@ -622,10 +635,10 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
                 "tipo_activo",
                 "estado_activo",
                 "empresa",
-                  "ubicacion_fisica",
-                  "proveedor",
-                  "proveedor_propietario",
-                  "factura_compra",
+                "ubicacion_fisica",
+                "proveedor",
+                "proveedor_propietario",
+                "factura_compra",
             )
             .prefetch_related("valores_atributos__atributo", "valores_atributos__valor_opcion")
             .filter(pk=raw_pk)
@@ -639,7 +652,11 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
-        if not self.activo_en_edicion and not self.activo_base and request.GET.get("modo") != "cero":
+        if (
+            not self.activo_en_edicion
+            and not self.activo_base
+            and request.GET.get("modo") != "cero"
+        ):
             return render(
                 request,
                 "activos/nuevo_opcion.html",
@@ -706,7 +723,11 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
         context["es_copia"] = bool(activo_base and not activo_contextual)
         context["activo_base"] = activo_base
         context["titulo_formulario"] = (
-            "Editar activo" if activo_contextual else "Nuevo activo basado en otro" if activo_base else "Nuevo activo"
+            "Editar activo"
+            if activo_contextual
+            else "Nuevo activo basado en otro"
+            if activo_base
+            else "Nuevo activo"
         )
         context["subtitulo_formulario"] = (
             "Actualiza la ficha del equipo y, si quieres, sus imagenes asociadas."
@@ -734,9 +755,13 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
             )
         )
         context["activo_edicion_id"] = activo_contextual.pk if activo_contextual else None
-        context["activo_edicion_tipo_id"] = activo_contextual.tipo_activo_id if activo_contextual else None
+        context["activo_edicion_tipo_id"] = (
+            activo_contextual.tipo_activo_id if activo_contextual else None
+        )
         context["borrador_activo_habilitado"] = not activo_contextual and not activo_base
-        context["restaurar_borrador_activo"] = not activo_contextual and not activo_base and self.request.method == "GET"
+        context["restaurar_borrador_activo"] = (
+            not activo_contextual and not activo_base and self.request.method == "GET"
+        )
         return context
 
     def post(self, request, *args, **kwargs):
@@ -752,6 +777,7 @@ class ActivoCreateView(LoginRequiredMixin, CreateView):
     def forms_valid(self, form, formset):
         es_edicion = bool(self.activo_en_edicion)
         tipo_anterior_id = self.activo_en_edicion.tipo_activo_id if self.activo_en_edicion else None
+
         def _resumir_cambio(valor):
             if valor in (None, ""):
                 return ""
@@ -889,8 +915,12 @@ class TipoActivoAtributosJsonView(LoginRequiredMixin, View):
                     "ayuda": ayuda,
                     "unidad": unidad,
                     "valor_predeterminado": configuracion.valor_predeterminado,
-                    "minimo": str(configuracion.valor_minimo) if configuracion.valor_minimo is not None else None,
-                    "maximo": str(configuracion.valor_maximo) if configuracion.valor_maximo is not None else None,
+                    "minimo": str(configuracion.valor_minimo)
+                    if configuracion.valor_minimo is not None
+                    else None,
+                    "maximo": str(configuracion.valor_maximo)
+                    if configuracion.valor_maximo is not None
+                    else None,
                     "longitud_maxima": configuracion.longitud_maxima,
                     "opciones": [
                         {"id": opcion.pk, "nombre": opcion.nombre}
@@ -905,22 +935,20 @@ class TipoActivoAtributosJsonView(LoginRequiredMixin, View):
 class FacturasProveedorJsonView(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
         proveedor_ids = [
-            value
-            for value in request.GET.getlist("proveedor")
-            if str(value).isdigit()
+            value for value in request.GET.getlist("proveedor") if str(value).isdigit()
         ]
-        factura_ids = [
-            value
-            for value in request.GET.getlist("factura")
-            if str(value).isdigit()
-        ]
+        factura_ids = [value for value in request.GET.getlist("factura") if str(value).isdigit()]
         if not proveedor_ids:
             return JsonResponse({"facturas": []})
 
-        facturas = FacturaCompra.objects.filter(
-            Q(activa=True) | Q(pk__in=factura_ids),
-            proveedor_id__in=proveedor_ids,
-        ).select_related("proveedor", "empresa").order_by("-fecha_emision", "numero_factura")
+        facturas = (
+            FacturaCompra.objects.filter(
+                Q(activa=True) | Q(pk__in=factura_ids),
+                proveedor_id__in=proveedor_ids,
+            )
+            .select_related("proveedor", "empresa")
+            .order_by("-fecha_emision", "numero_factura")
+        )
         return JsonResponse(
             {
                 "facturas": [
@@ -945,47 +973,44 @@ class ActivoDetailView(LoginRequiredMixin, DetailView):
     context_object_name = "activo"
 
     def get_queryset(self):
-        return (
-            Activo.objects.select_related(
-                "tipo_activo",
-                "estado_activo",
-                "empresa",
-                  "ubicacion_fisica",
-                  "proveedor",
-                  "proveedor_propietario",
-                  "factura_compra",
-                "factura_compra__proveedor",
-                "factura_compra__empresa",
-            )
-            .prefetch_related(
-                Prefetch(
-                    "valores_atributos",
-                    queryset=ValorAtributoActivo.objects.select_related(
-                        "atributo", "valor_opcion", "tipo_activo_origen"
-                    ).order_by("atributo__nombre"),
-                ),
-                Prefetch(
-                    "fotos",
-                    queryset=FotoActivo.objects.order_by("orden", "id"),
-                ),
-                Prefetch(
-                    "eventos",
-                    queryset=EventoActivo.objects.select_related(
-                        "tipo_evento",
-                        "usuario_responsable",
-                    ).order_by("-fecha_evento", "-id"),
-                ),
-                Prefetch(
-                    "detalles_asignacion",
-                    queryset=AsignacionDetalle.objects.select_related(
-                        "asignacion",
-                        "asignacion__colaborador",
-                        "asignacion__usuario_responsable",
-                        "asignacion__usuario_recepcion",
-                        "estado_activo_devolucion",
-                    ).order_by("-asignacion__fecha_asignacion", "-id"),
-                ),
-            )
+        return Activo.objects.select_related(
+            "tipo_activo",
+            "estado_activo",
+            "empresa",
+            "ubicacion_fisica",
+            "proveedor",
+            "proveedor_propietario",
+            "factura_compra",
+            "factura_compra__proveedor",
+            "factura_compra__empresa",
+        ).prefetch_related(
+            Prefetch(
+                "valores_atributos",
+                queryset=ValorAtributoActivo.objects.select_related(
+                    "atributo", "valor_opcion", "tipo_activo_origen"
+                ).order_by("atributo__nombre"),
+            ),
+            Prefetch(
+                "fotos",
+                queryset=FotoActivo.objects.order_by("orden", "id"),
+            ),
+            Prefetch(
+                "eventos",
+                queryset=EventoActivo.objects.select_related(
+                    "tipo_evento",
+                    "usuario_responsable",
+                ).order_by("-fecha_evento", "-id"),
+            ),
+            Prefetch(
+                "detalles_asignacion",
+                queryset=AsignacionDetalle.objects.select_related(
+                    "asignacion",
+                    "asignacion__colaborador",
+                    "asignacion__usuario_responsable",
+                    "asignacion__usuario_recepcion",
+                    "estado_activo_devolucion",
+                ).order_by("-asignacion__fecha_asignacion", "-id"),
+            ),
         )
 
     def get_context_data(self, **kwargs):
@@ -1002,22 +1027,23 @@ class ActivoDetailView(LoginRequiredMixin, DetailView):
 
         context["asignacion_activa"] = detalle_activo.asignacion if detalle_activo else None
         context["detalle_asignacion_activa"] = detalle_activo
-        context["editar_url"] = f"{reverse('activos:nuevo')}?{ActivoCreateView.edit_param_name}={activo.pk}"
+        context["editar_url"] = (
+            f"{reverse('activos:nuevo')}?{ActivoCreateView.edit_param_name}={activo.pk}"
+        )
         context["fotos_activo"] = list(activo.fotos.all())
         context["historial_asignaciones"] = historial_reciente
         context["historial_asignaciones_completo"] = historial_completo
         context["total_historial_asignaciones"] = len(detalles_asignacion)
         context["historial_eventos"] = list(activo.eventos.all())
         from .attribute_services import atributos_para_detalle
+
         context["atributos_configurables"] = atributos_para_detalle(activo)
         context["valores_atributos_historicos"] = [
             valor for valor in activo.valores_atributos.all() if not valor.vigente
         ]
         configuracion_depreciacion = DepreciationService.configuracion()
         context["calculo_depreciacion"] = DepreciationService.calcular(activo)
-        context["mostrar_valor_residual"] = (
-            configuracion_depreciacion.mostrar_valor_residual
-        )
+        context["mostrar_valor_residual"] = configuracion_depreciacion.mostrar_valor_residual
         context["vida_util_texto"] = "3 años"
         return context
 
@@ -1070,9 +1096,7 @@ class ActivoVigenciaView(LoginRequiredMixin, PermissionRequiredMixin, View):
     def post(self, request, *args, **kwargs):
         with transaction.atomic():
             activo = get_object_or_404(
-                Activo.objects.select_for_update().select_related(
-                    "tipo_activo", "estado_activo"
-                ),
+                Activo.objects.select_for_update().select_related("tipo_activo", "estado_activo"),
                 pk=self.kwargs["pk"],
             )
             estado_anterior = activo.activo
@@ -1100,10 +1124,7 @@ class ActivoVigenciaView(LoginRequiredMixin, PermissionRequiredMixin, View):
                     "No se puede restaurar el activo porque su estado de catálogo está inactivo.",
                 )
                 return redirect("activos:detalle", pk=activo.pk)
-            if (
-                self.accion == "restaurar"
-                and activo.estado_activo.nombre_normalizado == "asignado"
-            ):
+            if self.accion == "restaurar" and activo.estado_activo.nombre_normalizado == "asignado":
                 messages.error(
                     request,
                     "No se puede restaurar un activo con estado “Asignado” sin una "

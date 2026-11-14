@@ -46,7 +46,11 @@ class OpcionAtributoActivoAdmin2Form(forms.ModelForm):
 
     def has_changed(self):
         # Los valores predeterminados de orden/activo no convierten una fila extra vacia en obligatoria.
-        if not self.instance.pk and not self.data.get(self.add_prefix("clave"), "").strip() and not self.data.get(self.add_prefix("nombre"), "").strip():
+        if (
+            not self.instance.pk
+            and not self.data.get(self.add_prefix("clave"), "").strip()
+            and not self.data.get(self.add_prefix("nombre"), "").strip()
+        ):
             return False
         return super().has_changed()
 
@@ -64,11 +68,21 @@ class TipoActivoAtributoAdmin2Form(forms.ModelForm):
     class Meta:
         model = TipoActivoAtributo
         fields = (
-            "tipo_activo", "atributo", "orden", "obligatorio",
-            "valor_predeterminado", "texto_ayuda", "unidad",
-            "mostrar_detalle", "mostrar_actas", "mostrar_reportes",
-            "activo", "longitud_maxima", "valor_minimo",
-            "valor_maximo", "validaciones",
+            "tipo_activo",
+            "atributo",
+            "orden",
+            "obligatorio",
+            "valor_predeterminado",
+            "texto_ayuda",
+            "unidad",
+            "mostrar_detalle",
+            "mostrar_actas",
+            "mostrar_reportes",
+            "activo",
+            "longitud_maxima",
+            "valor_minimo",
+            "valor_maximo",
+            "validaciones",
         )
         widgets = {
             "texto_ayuda": forms.Textarea(attrs={"rows": 3}),
@@ -77,21 +91,25 @@ class TipoActivoAtributoAdmin2Form(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        self.creando = kwargs.pop("creando", not bool(kwargs.get("instance") and kwargs["instance"].pk))
+        self.creando = kwargs.pop(
+            "creando", not bool(kwargs.get("instance") and kwargs["instance"].pk)
+        )
         super().__init__(*args, **kwargs)
         if self.creando:
             self.fields.pop("orden", None)
         else:
             self.fields["tipo_activo"].disabled = True
             self.fields["atributo"].disabled = True
-        self.fields["tipo_activo"].queryset = TipoActivo.objects.filter(activo=True).order_by("nombre")
+        self.fields["tipo_activo"].queryset = TipoActivo.objects.filter(activo=True).order_by(
+            "nombre"
+        )
         atributos = AtributoActivo.objects.filter(activo=True)
         if self.instance.pk:
             atributos = AtributoActivo.objects.filter(pk=self.instance.atributo_id) | atributos
         self.fields["atributo"].queryset = atributos.distinct().order_by("nombre")
-        self.fields["valor_predeterminado"].help_text = (
-            "Opcional. Debe respetar el tipo de dato; para listas use el ID de la opcion."
-        )
+        self.fields[
+            "valor_predeterminado"
+        ].help_text = "Opcional. Debe respetar el tipo de dato; para listas use el ID de la opcion."
         self.fields["validaciones"].help_text = "Objeto JSON opcional. Ejemplo: {}"
         aplicar_estilo_admin2(self)
 
@@ -101,8 +119,9 @@ class TipoActivoAtributoAdmin2Form(forms.ModelForm):
             tipo_activo = cleaned.get("tipo_activo")
             if tipo_activo:
                 ultimo = (
-                    TipoActivoAtributo.objects.filter(tipo_activo=tipo_activo, activo=True)
-                    .aggregate(maximo=Max("orden"))["maximo"]
+                    TipoActivoAtributo.objects.filter(
+                        tipo_activo=tipo_activo, activo=True
+                    ).aggregate(maximo=Max("orden"))["maximo"]
                     or 0
                 )
                 self.instance.orden = ultimo + 1

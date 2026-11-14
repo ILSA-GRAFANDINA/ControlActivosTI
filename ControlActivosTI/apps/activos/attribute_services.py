@@ -85,9 +85,13 @@ def validar_valor(configuracion, valor):
 
     if tipo in {AtributoActivo.TipoDato.ENTERO, AtributoActivo.TipoDato.DECIMAL}:
         if configuracion.valor_minimo is not None and Decimal(valor) < configuracion.valor_minimo:
-            raise ValidationError(f"{atributo.nombre} no puede ser menor que {configuracion.valor_minimo}.")
+            raise ValidationError(
+                f"{atributo.nombre} no puede ser menor que {configuracion.valor_minimo}."
+            )
         if configuracion.valor_maximo is not None and Decimal(valor) > configuracion.valor_maximo:
-            raise ValidationError(f"{atributo.nombre} no puede ser mayor que {configuracion.valor_maximo}.")
+            raise ValidationError(
+                f"{atributo.nombre} no puede ser mayor que {configuracion.valor_maximo}."
+            )
     return valor
 
 
@@ -131,7 +135,9 @@ def guardar_valores_atributos(activo, valores_por_clave, *, usuario=None):
     claves_configuradas = {config.atributo.clave for config in configuraciones}
     desconocidas = set(valores_por_clave) - claves_configuradas
     if desconocidas:
-        raise ValidationError(f"Atributos no permitidos para el tipo: {', '.join(sorted(desconocidas))}.")
+        raise ValidationError(
+            f"Atributos no permitidos para el tipo: {', '.join(sorted(desconocidas))}."
+        )
 
     ValorAtributoActivo.objects.filter(activo=activo).exclude(
         atributo_id__in=[config.atributo_id for config in configuraciones]
@@ -157,10 +163,12 @@ def guardar_valores_atributos(activo, valores_por_clave, *, usuario=None):
                 detalle = {"atributo": clave, "anterior": anterior, "nuevo": ""}
                 existente.delete()
                 registrar_evento(
-                    entidad="ValorAtributoActivo", objeto_id=activo.pk,
+                    entidad="ValorAtributoActivo",
+                    objeto_id=activo.pk,
                     accion=RegistroAuditoria.Accion.MODIFICAR,
                     resumen=f"Se limpio {configuracion.atributo.nombre} de {activo.codigo}",
-                    usuario=usuario, detalle=detalle,
+                    usuario=usuario,
+                    detalle=detalle,
                 )
             continue
 
@@ -179,7 +187,8 @@ def guardar_valores_atributos(activo, valores_por_clave, *, usuario=None):
         nuevo = instancia.valor_formateado
         if anterior != nuevo:
             registrar_evento(
-                entidad="ValorAtributoActivo", objeto_id=activo.pk,
+                entidad="ValorAtributoActivo",
+                objeto_id=activo.pk,
                 accion=RegistroAuditoria.Accion.MODIFICAR,
                 resumen=f"Se actualizo {configuracion.atributo.nombre} de {activo.codigo}",
                 usuario=usuario,
@@ -225,9 +234,7 @@ def atributos_para_detalle(activo):
         if config.mostrar_detalle
     ]
     valores = {
-        valor.atributo_id: valor
-        for valor in activo.valores_atributos.all()
-        if valor.vigente
+        valor.atributo_id: valor for valor in activo.valores_atributos.all() if valor.vigente
     }
     resultado = []
     for configuracion in configuraciones:
@@ -257,9 +264,7 @@ def instantanea_activo(activo):
         "modalidad_tenencia": activo.modalidad_tenencia,
         "modalidad_tenencia_display": activo.get_modalidad_tenencia_display(),
         "proveedor_propietario": (
-            str(activo.proveedor_propietario)
-            if activo.proveedor_propietario_id
-            else None
+            str(activo.proveedor_propietario) if activo.proveedor_propietario_id else None
         ),
         "observaciones": activo.observaciones,
         "atributos": [

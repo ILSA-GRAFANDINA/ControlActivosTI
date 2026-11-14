@@ -17,8 +17,7 @@ class ConfiguracionAlertasForm(forms.ModelForm):
         for field in self.fields.values():
             if isinstance(field.widget, forms.CheckboxInput):
                 field.widget.attrs["class"] = (
-                    "h-5 w-5 rounded border-slate-300 text-cyan-600 "
-                    "focus:ring-cyan-500"
+                    "h-5 w-5 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
                 )
                 continue
             field.widget.attrs["class"] = (

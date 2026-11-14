@@ -36,7 +36,9 @@ def _abrir_pdf(contenido, max_paginas):
     try:
         reader = PdfReader(BytesIO(contenido), strict=False)
         if reader.is_encrypted:
-            raise ValidationError("No se permiten facturas PDF cifradas o protegidas con contrasena.")
+            raise ValidationError(
+                "No se permiten facturas PDF cifradas o protegidas con contrasena."
+            )
         paginas = len(reader.pages)
     except ValidationError:
         raise
@@ -107,4 +109,3 @@ def validar_y_optimizar_pdf(archivo):
         paginas=paginas,
         estado_compresion=estado,
     )
-

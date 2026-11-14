@@ -106,7 +106,7 @@ class Activo(models.Model):
     verificado_ti = models.BooleanField(
         default=False,
         verbose_name="Verificado por TIc's",
-        help_text="Marca si el activo ya fue revisado por el departamento de TIC'S"
+        help_text="Marca si el activo ya fue revisado por el departamento de TIC'S",
     )
 
     ubicacion_fisica = models.ForeignKey(
@@ -151,10 +151,10 @@ class Activo(models.Model):
     marca = models.CharField(max_length=80)
     modelo = models.CharField(max_length=80)
     serie = models.CharField(
-    max_length=120,
-    db_index=True,
-    blank=True,
-    default="S/N",
+        max_length=120,
+        db_index=True,
+        blank=True,
+        default="S/N",
     )
     codigo_sap = models.CharField(
         max_length=30,
@@ -214,7 +214,11 @@ class Activo(models.Model):
     def etiqueta_tenencia(self):
         if not self.es_arrendado:
             return self.get_modalidad_tenencia_display()
-        propietario = str(self.proveedor_propietario) if self.proveedor_propietario_id else "proveedor no definido"
+        propietario = (
+            str(self.proveedor_propietario)
+            if self.proveedor_propietario_id
+            else "proveedor no definido"
+        )
         return f"Arrendado · Propiedad de {propietario}"
 
     @property
@@ -228,6 +232,7 @@ class Activo(models.Model):
         if hasattr(self, "_caracteristicas_resumen_cache"):
             return self._caracteristicas_resumen_cache
         from .attribute_services import valores_visibles
+
         dinamicas = [
             f"{config.atributo.nombre}: {valor.valor_formateado}"
             for config, valor in valores_visibles(self)
@@ -260,9 +265,7 @@ class Activo(models.Model):
         base_prefijo = obtener_base_prefijo(nombre_tipo)
         longitud_inicial = min(3, len(base_prefijo))
         prefijos_reservados = {
-            prefijo
-            for tipo, prefijo in PREFIJOS_TIPOS_ACTIVO.items()
-            if tipo != nombre_normalizado
+            prefijo for tipo, prefijo in PREFIJOS_TIPOS_ACTIVO.items() if tipo != nombre_normalizado
         }
         prefijos_reservados.add("ACT")
 
@@ -270,9 +273,13 @@ class Activo(models.Model):
             prefijo = base_prefijo[:longitud]
             if prefijo in prefijos_reservados:
                 continue
-            existe_en_otro_tipo = Activo.objects.filter(
-                codigo__startswith=f"{prefijo}-",
-            ).exclude(tipo_activo_id=self.tipo_activo_id).exists()
+            existe_en_otro_tipo = (
+                Activo.objects.filter(
+                    codigo__startswith=f"{prefijo}-",
+                )
+                .exclude(tipo_activo_id=self.tipo_activo_id)
+                .exists()
+            )
             if not existe_en_otro_tipo:
                 return prefijo
 
@@ -280,9 +287,13 @@ class Activo(models.Model):
         prefijo_base = base_prefijo[:13]
         while True:
             prefijo = f"{prefijo_base}{contador}"
-            existe_en_otro_tipo = Activo.objects.filter(
-                codigo__startswith=f"{prefijo}-",
-            ).exclude(tipo_activo_id=self.tipo_activo_id).exists()
+            existe_en_otro_tipo = (
+                Activo.objects.filter(
+                    codigo__startswith=f"{prefijo}-",
+                )
+                .exclude(tipo_activo_id=self.tipo_activo_id)
+                .exists()
+            )
             if prefijo not in prefijos_reservados and not existe_en_otro_tipo:
                 return prefijo
             contador += 1
@@ -325,15 +336,22 @@ class Activo(models.Model):
         if self.factura_compra_id:
             factura = self.factura_compra
             if self.proveedor_id and self.proveedor_id != factura.proveedor_id:
-                errores["factura_compra"] = "La factura pertenece a un proveedor diferente al del activo."
+                errores["factura_compra"] = (
+                    "La factura pertenece a un proveedor diferente al del activo."
+                )
             if self.empresa_id and self.empresa_id != factura.empresa_id:
-                errores["factura_compra"] = "La factura pertenece a una empresa compradora diferente."
+                errores["factura_compra"] = (
+                    "La factura pertenece a una empresa compradora diferente."
+                )
             if not factura.activa:
                 factura_anterior_id = None
                 if self.pk:
-                    factura_anterior_id = type(self).objects.filter(pk=self.pk).values_list(
-                        "factura_compra_id", flat=True
-                    ).first()
+                    factura_anterior_id = (
+                        type(self)
+                        .objects.filter(pk=self.pk)
+                        .values_list("factura_compra_id", flat=True)
+                        .first()
+                    )
                 if factura_anterior_id != factura.pk:
                     errores["factura_compra"] = "La factura seleccionada esta archivada."
 
@@ -347,11 +365,7 @@ class Activo(models.Model):
 
     def _generar_codigo(self):
         prefijo = self._obtener_prefijo_tipo()
-        ultimo = (
-            Activo.objects.filter(codigo__startswith=f"{prefijo}-")
-            .order_by("-codigo")
-            .first()
-        )
+        ultimo = Activo.objects.filter(codigo__startswith=f"{prefijo}-").order_by("-codigo").first()
 
         if ultimo and ultimo.codigo:
             try:
@@ -503,10 +517,14 @@ class ValorAtributoActivo(models.Model):
             texto = str(valor) if valor not in (None, "") else ""
         configuracion = getattr(self, "_configuracion_actual", None)
         if configuracion is None:
-            configuracion = TipoActivoAtributo.objects.filter(
-                tipo_activo_id=self.activo.tipo_activo_id,
-                atributo_id=self.atributo_id,
-            ).select_related("atributo").first()
+            configuracion = (
+                TipoActivoAtributo.objects.filter(
+                    tipo_activo_id=self.activo.tipo_activo_id,
+                    atributo_id=self.atributo_id,
+                )
+                .select_related("atributo")
+                .first()
+            )
         unidad = configuracion.unidad_efectiva if configuracion else self.atributo.unidad
         if (
             unidad
@@ -522,8 +540,14 @@ class ValorAtributoActivo(models.Model):
     def clean(self):
         super().clean()
         errores = {}
-        if self.activo_id and self.tipo_activo_origen_id != self.activo.tipo_activo_id and self.vigente:
-            errores["vigente"] = "Un valor de un tipo anterior debe conservarse como historico, no como vigente."
+        if (
+            self.activo_id
+            and self.tipo_activo_origen_id != self.activo.tipo_activo_id
+            and self.vigente
+        ):
+            errores["vigente"] = (
+                "Un valor de un tipo anterior debe conservarse como historico, no como vigente."
+            )
         if self.vigente and self.activo_id and self.atributo_id:
             configurado = TipoActivoAtributo.objects.filter(
                 tipo_activo_id=self.activo.tipo_activo_id,
@@ -557,7 +581,9 @@ class ValorAtributoActivo(models.Model):
             AtributoActivo.TipoDato.LISTA: "valor_opcion",
         }.get(self.atributo.tipo_dato if self.atributo_id else None)
         if presentes and esperado not in presentes:
-            errores[esperado or "valor_texto"] = "El valor no corresponde al tipo de dato del atributo."
+            errores[esperado or "valor_texto"] = (
+                "El valor no corresponde al tipo de dato del atributo."
+            )
         if self.valor_opcion_id and self.valor_opcion.atributo_id != self.atributo_id:
             errores["valor_opcion"] = "La opcion seleccionada pertenece a otro atributo."
         if errores:
@@ -669,7 +695,9 @@ class FotoActivo(models.Model):
         base_dir = posixpath.dirname(source_name)
         for variant in FOTO_VARIANTS:
             variant_filename = f"{base_name}_{variant}.webp"
-            variant_name = posixpath.join(base_dir, variant_filename) if base_dir else variant_filename
+            variant_name = (
+                posixpath.join(base_dir, variant_filename) if base_dir else variant_filename
+            )
             default_storage.delete(variant_name)
 
     def _best_available_image_name(self):
@@ -753,23 +781,27 @@ class FotoActivo(models.Model):
 
         if self.orden is not None:
             if fotos_existentes.filter(orden=self.orden).exists():
-                raise ValidationError({"orden": "Ya existe una foto con ese orden para este activo."})
+                raise ValidationError(
+                    {"orden": "Ya existe una foto con ese orden para este activo."}
+                )
 
     def save(self, *args, **kwargs):
         old_imagen_name = None
         if self.pk:
-            old_imagen_name = FotoActivo.objects.filter(pk=self.pk).values_list("imagen", flat=True).first()
+            old_imagen_name = (
+                FotoActivo.objects.filter(pk=self.pk).values_list("imagen", flat=True).first()
+            )
 
         if self.imagen and not getattr(self.imagen, "_committed", True):
             self.imagen = self._normalize_image_file()
 
         if self.activo_id and not self.orden:
             ultimo_orden = (
-                FotoActivo.objects
-                .filter(activo_id=self.activo_id)
+                FotoActivo.objects.filter(activo_id=self.activo_id)
                 .exclude(pk=self.pk)
                 .aggregate(max_orden=Max("orden"))
-                .get("max_orden") or 0
+                .get("max_orden")
+                or 0
             )
             self.orden = ultimo_orden + 1
 
@@ -861,10 +893,14 @@ class EventoActivo(models.Model):
             errores["valor_nuevo"] = "Ingresa el nuevo valor tecnico que se aplicara al activo."
 
         if afecta_campo and self.activo_id and not self.activo.requiere_especificaciones_tecnicas():
-            errores["campo_afectado"] = "Este tipo de activo no maneja especificaciones tecnicas editables."
+            errores["campo_afectado"] = (
+                "Este tipo de activo no maneja especificaciones tecnicas editables."
+            )
 
         if self.sumar_costo_al_valor and self.costo_adicional in (None, ""):
-            errores["costo_adicional"] = "Ingresa el costo adicional que se sumara al valor del activo."
+            errores["costo_adicional"] = (
+                "Ingresa el costo adicional que se sumara al valor del activo."
+            )
 
         if self.costo_adicional is not None and self.costo_adicional < 0:
             errores["costo_adicional"] = "El costo adicional no puede ser negativo."
@@ -902,7 +938,11 @@ class EventoActivo(models.Model):
     def save(self, *args, **kwargs):
         es_nuevo = self._state.adding
 
-        if es_nuevo and self.campo_afectado != self.CampoAfectado.NINGUNO and not self.valor_anterior:
+        if (
+            es_nuevo
+            and self.campo_afectado != self.CampoAfectado.NINGUNO
+            and not self.valor_anterior
+        ):
             self.valor_anterior = self._obtener_valor_actual()
 
         self.full_clean()

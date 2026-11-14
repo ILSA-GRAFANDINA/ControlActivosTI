@@ -204,7 +204,9 @@ class CentroCosto(models.Model):
             raise ValidationError({"padre": "Un CECO no puede ser padre de si mismo."})
 
         if self.fecha_inicio and self.fecha_fin and self.fecha_fin < self.fecha_inicio:
-            raise ValidationError({"fecha_fin": "La fecha fin no puede ser anterior a la fecha inicio."})
+            raise ValidationError(
+                {"fecha_fin": "La fecha fin no puede ser anterior a la fecha inicio."}
+            )
 
         if self.padre_id and self.padre and not self.padre.activo:
             raise ValidationError({"padre": "El CECO padre debe estar activo."})
@@ -309,12 +311,20 @@ class AtributoActivo(models.Model):
     unidad = models.CharField(max_length=30, blank=True)
     activo = models.BooleanField(default=True)
     created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-        related_name="atributos_activo_creados", null=True, blank=True, editable=False,
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="atributos_activo_creados",
+        null=True,
+        blank=True,
+        editable=False,
     )
     updated_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-        related_name="atributos_activo_modificados", null=True, blank=True, editable=False,
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="atributos_activo_modificados",
+        null=True,
+        blank=True,
+        editable=False,
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -342,22 +352,40 @@ class AtributoActivo(models.Model):
         self.clave = self.normalizar_clave(self.clave)
         if not re.fullmatch(r"[a-z][a-z0-9_]*", self.clave):
             raise ValidationError(
-                {"clave": "Usa letras minusculas, numeros y guion bajo; debe iniciar con una letra."}
+                {
+                    "clave": "Usa letras minusculas, numeros y guion bajo; debe iniciar con una letra."
+                }
             )
         if self.pk:
             anterior = type(self).objects.filter(pk=self.pk).values("clave", "tipo_dato").first()
             if anterior:
                 if anterior["clave"] != self.clave:
-                    raise ValidationError({"clave": "La clave interna no puede cambiar despues de crear el atributo."})
+                    raise ValidationError(
+                        {"clave": "La clave interna no puede cambiar despues de crear el atributo."}
+                    )
                 if anterior["tipo_dato"] != self.tipo_dato and self.valores.exists():
                     raise ValidationError(
-                        {"tipo_dato": "No se puede cambiar el tipo de dato porque el atributo ya contiene valores."}
+                        {
+                            "tipo_dato": "No se puede cambiar el tipo de dato porque el atributo ya contiene valores."
+                        }
                     )
         texto_sensible = f"{self.nombre} {self.clave}".lower()
-        prohibidas = ("password", "contrasena", "contraseña", "token", "clave_privada", "api_key", "secreto")
-        if self.tipo_dato != self.TipoDato.TEXTO_PROTEGIDO and any(palabra in texto_sensible for palabra in prohibidas):
+        prohibidas = (
+            "password",
+            "contrasena",
+            "contraseña",
+            "token",
+            "clave_privada",
+            "api_key",
+            "secreto",
+        )
+        if self.tipo_dato != self.TipoDato.TEXTO_PROTEGIDO and any(
+            palabra in texto_sensible for palabra in prohibidas
+        ):
             raise ValidationError(
-                {"nombre": "Los atributos normales no pueden almacenar contrasenas, tokens ni secretos."}
+                {
+                    "nombre": "Los atributos normales no pueden almacenar contrasenas, tokens ni secretos."
+                }
             )
 
     @staticmethod
@@ -373,13 +401,17 @@ class AtributoActivo(models.Model):
 
     def delete(self, *args, **kwargs):
         if self.valores.exists():
-            raise ValidationError("El atributo contiene valores historicos; desactivalo en lugar de eliminarlo.")
+            raise ValidationError(
+                "El atributo contiene valores historicos; desactivalo en lugar de eliminarlo."
+            )
         return super().delete(*args, **kwargs)
 
 
 class OpcionAtributoActivo(models.Model):
     atributo = models.ForeignKey(
-        AtributoActivo, on_delete=models.PROTECT, related_name="opciones",
+        AtributoActivo,
+        on_delete=models.PROTECT,
+        related_name="opciones",
     )
     clave = models.SlugField(max_length=80)
     nombre = models.CharField(max_length=100)
@@ -393,7 +425,9 @@ class OpcionAtributoActivo(models.Model):
         verbose_name_plural = "Opciones de atributos"
         ordering = ["atributo", "orden", "nombre"]
         constraints = [
-            models.UniqueConstraint(fields=["atributo", "clave"], name="unique_clave_opcion_por_atributo"),
+            models.UniqueConstraint(
+                fields=["atributo", "clave"], name="unique_clave_opcion_por_atributo"
+            ),
         ]
 
     def __str__(self):
@@ -403,7 +437,9 @@ class OpcionAtributoActivo(models.Model):
         super().clean()
         self.clave = (self.clave or "").strip().lower().replace("-", "_")
         if self.atributo_id and self.atributo.tipo_dato != AtributoActivo.TipoDato.LISTA:
-            raise ValidationError({"atributo": "Solo los atributos de tipo lista pueden tener opciones."})
+            raise ValidationError(
+                {"atributo": "Solo los atributos de tipo lista pueden tener opciones."}
+            )
 
     def save(self, *args, **kwargs):
         self.clave = AtributoActivo.normalizar_clave(self.clave)
@@ -412,16 +448,22 @@ class OpcionAtributoActivo(models.Model):
 
     def delete(self, *args, **kwargs):
         if self.valores.exists():
-            raise ValidationError("La opcion contiene valores historicos; desactivala en lugar de eliminarla.")
+            raise ValidationError(
+                "La opcion contiene valores historicos; desactivala en lugar de eliminarla."
+            )
         return super().delete(*args, **kwargs)
 
 
 class TipoActivoAtributo(models.Model):
     tipo_activo = models.ForeignKey(
-        TipoActivo, on_delete=models.PROTECT, related_name="configuraciones_atributos",
+        TipoActivo,
+        on_delete=models.PROTECT,
+        related_name="configuraciones_atributos",
     )
     atributo = models.ForeignKey(
-        AtributoActivo, on_delete=models.PROTECT, related_name="configuraciones_tipo",
+        AtributoActivo,
+        on_delete=models.PROTECT,
+        related_name="configuraciones_tipo",
     )
     obligatorio = models.BooleanField(default=False)
     orden = models.PositiveSmallIntegerField(default=1)
@@ -438,12 +480,20 @@ class TipoActivoAtributo(models.Model):
     valor_maximo = models.DecimalField(max_digits=18, decimal_places=4, null=True, blank=True)
     validaciones = models.JSONField(default=dict, blank=True)
     created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-        related_name="configuraciones_atributos_creadas", null=True, blank=True, editable=False,
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="configuraciones_atributos_creadas",
+        null=True,
+        blank=True,
+        editable=False,
     )
     updated_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-        related_name="configuraciones_atributos_modificadas", null=True, blank=True, editable=False,
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="configuraciones_atributos_modificadas",
+        null=True,
+        blank=True,
+        editable=False,
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -453,9 +503,12 @@ class TipoActivoAtributo(models.Model):
         verbose_name_plural = "Configuraciones de atributos por tipo"
         ordering = ["tipo_activo", "orden", "atributo__nombre"]
         constraints = [
-            models.UniqueConstraint(fields=["tipo_activo", "atributo"], name="unique_atributo_por_tipo_activo"),
             models.UniqueConstraint(
-                fields=["tipo_activo", "orden"], condition=Q(activo=True),
+                fields=["tipo_activo", "atributo"], name="unique_atributo_por_tipo_activo"
+            ),
+            models.UniqueConstraint(
+                fields=["tipo_activo", "orden"],
+                condition=Q(activo=True),
                 name="unique_orden_activo_por_tipo",
             ),
         ]
@@ -485,11 +538,16 @@ class TipoActivoAtributo(models.Model):
         if self.valor_minimo is not None and self.valor_maximo is not None:
             if Decimal(self.valor_minimo) > Decimal(self.valor_maximo):
                 errores["valor_maximo"] = "El valor maximo no puede ser menor al valor minimo."
-        if self.longitud_maxima and self.atributo_id and self.atributo.tipo_dato not in {
-            AtributoActivo.TipoDato.TEXTO_CORTO,
-            AtributoActivo.TipoDato.TEXTO_LARGO,
-            AtributoActivo.TipoDato.TEXTO_PROTEGIDO,
-        }:
+        if (
+            self.longitud_maxima
+            and self.atributo_id
+            and self.atributo.tipo_dato
+            not in {
+                AtributoActivo.TipoDato.TEXTO_CORTO,
+                AtributoActivo.TipoDato.TEXTO_LARGO,
+                AtributoActivo.TipoDato.TEXTO_PROTEGIDO,
+            }
+        ):
             errores["longitud_maxima"] = "La longitud maxima solo aplica a atributos de texto."
         if not isinstance(self.validaciones, dict):
             errores["validaciones"] = "Las validaciones adicionales deben ser un objeto JSON."
@@ -505,7 +563,9 @@ class TipoActivoAtributo(models.Model):
                     Decimal(str(predeterminado))
                 elif tipo == AtributoActivo.TipoDato.FECHA:
                     date.fromisoformat(str(predeterminado))
-                elif tipo == AtributoActivo.TipoDato.BOOLEANO and not isinstance(predeterminado, bool):
+                elif tipo == AtributoActivo.TipoDato.BOOLEANO and not isinstance(
+                    predeterminado, bool
+                ):
                     raise ValueError
                 elif tipo == AtributoActivo.TipoDato.LISTA:
                     if not self.atributo.opciones.filter(pk=predeterminado, activo=True).exists():
@@ -516,7 +576,9 @@ class TipoActivoAtributo(models.Model):
                         "Los atributos protegidos no pueden tener valor predeterminado."
                     )
                 else:
-                    errores["valor_predeterminado"] = "El valor predeterminado no corresponde al tipo de dato."
+                    errores["valor_predeterminado"] = (
+                        "El valor predeterminado no corresponde al tipo de dato."
+                    )
         if errores:
             raise ValidationError(errores)
 

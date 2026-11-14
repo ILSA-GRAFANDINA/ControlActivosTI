@@ -76,10 +76,7 @@ class ProveedorListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
     def _default_filters(self):
         return {
-            **{
-                field: "nombre_asc" if field == "orden" else ""
-                for field in self.FILTER_FIELDS
-            },
+            **{field: "nombre_asc" if field == "orden" else "" for field in self.FILTER_FIELDS},
             **{field: [] for field in self.FILTER_MULTI_FIELDS},
         }
 
@@ -91,9 +88,7 @@ class ProveedorListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         )
         estados_validos = {value for value, _ in self.ESTADOS_FILTRO}
         tipos_proveedor_validos = {value for value, _ in Proveedor.TipoProveedor.choices}
-        tipos_identificacion_validos = {
-            value for value, _ in Proveedor.TipoIdentificacion.choices
-        }
+        tipos_identificacion_validos = {value for value, _ in Proveedor.TipoIdentificacion.choices}
         relaciones_validas = {value for value, _ in self.RELACIONES_FILTRO}
         columnas_validas = {key for key, _ in self.COLUMNAS_DISPONIBLES}
         validadores = {
@@ -119,10 +114,7 @@ class ProveedorListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
     def _filters_from_request(self):
         source = self.request.GET
-        filtros = {
-            field: (source.get(field, "") or "").strip()
-            for field in self.FILTER_FIELDS
-        }
+        filtros = {field: (source.get(field, "") or "").strip() for field in self.FILTER_FIELDS}
         filtros["orden"] = filtros["orden"] or "nombre_asc"
         for field in self.FILTER_MULTI_FIELDS:
             filtros[field] = source.getlist(field)
@@ -130,8 +122,7 @@ class ProveedorListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
     def _has_filter_params(self):
         return any(
-            field in self.request.GET
-            for field in (*self.FILTER_FIELDS, *self.FILTER_MULTI_FIELDS)
+            field in self.request.GET for field in (*self.FILTER_FIELDS, *self.FILTER_MULTI_FIELDS)
         )
 
     def get_active_filters(self):
@@ -183,8 +174,10 @@ class ProveedorListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         q = filtros["q"]
         if q:
             queryset = queryset.filter(
-                Q(identificacion__icontains=q) | Q(razon_social__icontains=q)
-                | Q(nombre_comercial__icontains=q) | Q(nombre_contacto__icontains=q)
+                Q(identificacion__icontains=q)
+                | Q(razon_social__icontains=q)
+                | Q(nombre_comercial__icontains=q)
+                | Q(nombre_contacto__icontains=q)
             )
 
         estados = filtros["estado"]
@@ -242,7 +235,9 @@ class ProveedorListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         )
         context["query_string"] = self.build_filter_querydict(filtros).urlencode()
         if context.get("is_paginated"):
-            context["page_numbers"] = context["paginator"].get_elided_page_range(context["page_obj"].number)
+            context["page_numbers"] = context["paginator"].get_elided_page_range(
+                context["page_obj"].number
+            )
         return context
 
 
@@ -256,9 +251,7 @@ class ProveedorCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateVie
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        NotificationService.proveedor_guardado(
-            self.object, self.request.user, creado=True
-        )
+        NotificationService.proveedor_guardado(self.object, self.request.user, creado=True)
         messages.success(self.request, "Proveedor registrado correctamente.")
         return response
 
@@ -283,9 +276,7 @@ class ProveedorUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateVie
             "pais",
         }
         response = super().form_valid(form)
-        NotificationService.proveedor_guardado(
-            self.object, self.request.user, cambios=cambios
-        )
+        NotificationService.proveedor_guardado(self.object, self.request.user, cambios=cambios)
         messages.success(self.request, "Proveedor actualizado correctamente.")
         return response
 
@@ -315,9 +306,7 @@ class ProveedorEstadoView(LoginRequiredMixin, PermissionRequiredMixin, View):
         proveedor = get_object_or_404(Proveedor, pk=pk)
         proveedor.activo = not proveedor.activo
         proveedor.save(update_fields=["activo", "updated_at"])
-        NotificationService.proveedor_guardado(
-            proveedor, request.user, cambios={"activo"}
-        )
+        NotificationService.proveedor_guardado(proveedor, request.user, cambios={"activo"})
         accion = "activado" if proveedor.activo else "desactivado"
         messages.success(request, f"Proveedor {accion} correctamente.")
         return HttpResponseRedirect(reverse("proveedores:detalle", args=[pk]))
@@ -334,7 +323,10 @@ class ProveedorDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteVie
         try:
             response = super().form_valid(form)
         except ProtectedError:
-            messages.error(self.request, "No se puede eliminar el proveedor porque tiene activos o facturas relacionados. Desactivalo en su lugar.")
+            messages.error(
+                self.request,
+                "No se puede eliminar el proveedor porque tiene activos o facturas relacionados. Desactivalo en su lugar.",
+            )
             return HttpResponseRedirect(reverse("proveedores:detalle", args=[self.object.pk]))
         messages.success(self.request, "Proveedor eliminado correctamente.")
         return response

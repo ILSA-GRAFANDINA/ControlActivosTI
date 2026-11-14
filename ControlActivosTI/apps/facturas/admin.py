@@ -5,13 +5,27 @@ from .models import EventoFactura, FacturaCompra, ReemplazoDocumentoFactura
 
 @admin.register(FacturaCompra)
 class FacturaCompraAdmin(admin.ModelAdmin):
-    list_display = ("numero_factura", "proveedor", "empresa", "fecha_emision", "activa", "tamano_almacenado")
+    list_display = (
+        "numero_factura",
+        "proveedor",
+        "empresa",
+        "fecha_emision",
+        "activa",
+        "tamano_almacenado",
+    )
     list_filter = ("activa", "empresa", "proveedor", "estado_compresion", "fecha_emision")
     search_fields = ("numero_factura", "proveedor__razon_social", "proveedor__identificacion")
     list_select_related = ("proveedor", "empresa", "cargado_por")
     readonly_fields = (
-        "nombre_original", "tamano_original", "tamano_almacenado", "estado_compresion",
-        "checksum_sha256", "numero_paginas", "cargado_por", "created_at", "updated_at",
+        "nombre_original",
+        "tamano_original",
+        "tamano_almacenado",
+        "estado_compresion",
+        "checksum_sha256",
+        "numero_paginas",
+        "cargado_por",
+        "created_at",
+        "updated_at",
     )
 
 

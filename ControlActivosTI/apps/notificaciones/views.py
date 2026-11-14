@@ -18,9 +18,9 @@ class HistorialNotificacionesView(LoginRequiredMixin, ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        queryset = Notificacion.objects.filter(
-            destinatario=self.request.user
-        ).select_related("actor")
+        queryset = Notificacion.objects.filter(destinatario=self.request.user).select_related(
+            "actor"
+        )
         self.filter_form = NotificacionFiltroForm(self.request.GET)
         if self.filter_form.is_valid():
             data = self.filter_form.cleaned_data
@@ -34,7 +34,9 @@ class HistorialNotificacionesView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["notificaciones"] = prepare_notifications(context["notificaciones"], self.request.user)
+        context["notificaciones"] = prepare_notifications(
+            context["notificaciones"], self.request.user
+        )
         context["filter_form"] = self.filter_form
         params = self.request.GET.copy()
         params.pop("page", None)
@@ -69,4 +71,3 @@ class AbrirNotificacionView(LoginRequiredMixin, View):
             notification.save(update_fields=["read_at"])
         prepare_notifications([notification], request.user)
         return redirect(notification.display_url or reverse("notificaciones:historial"))
-

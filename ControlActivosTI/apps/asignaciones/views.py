@@ -73,14 +73,27 @@ class AsignacionListView(LoginRequiredMixin, ListView):
 
         estado_validos = {value for value, _ in self.ESTADOS_FILTRO}
         acta_validos = {value for value, _ in self.ACTAS_FILTRO}
-        filtros["estado"] = list(dict.fromkeys(value for value in source.getlist("estado") if value in estado_validos))
-        filtros["acta"] = list(dict.fromkeys(value for value in source.getlist("acta") if value in acta_validos))
+        filtros["estado"] = list(
+            dict.fromkeys(value for value in source.getlist("estado") if value in estado_validos)
+        )
+        filtros["acta"] = list(
+            dict.fromkeys(value for value in source.getlist("acta") if value in acta_validos)
+        )
         columnas_validas = {key for key, _ in self.COLUMNAS_DISPONIBLES}
-        filtros["cols"] = list(dict.fromkeys(value for value in source.getlist("cols") if value in columnas_validas)) or self.COLUMNAS_POR_DEFECTO
+        filtros["cols"] = (
+            list(
+                dict.fromkeys(
+                    value for value in source.getlist("cols") if value in columnas_validas
+                )
+            )
+            or self.COLUMNAS_POR_DEFECTO
+        )
         return filtros
 
     def _has_filter_params(self):
-        return any(field in self.request.GET for field in (*self.FILTER_FIELDS, *self.FILTER_MULTI_FIELDS))
+        return any(
+            field in self.request.GET for field in (*self.FILTER_FIELDS, *self.FILTER_MULTI_FIELDS)
+        )
 
     def get_active_filters(self):
         if self.request.GET.get("reset") == "1":
@@ -88,7 +101,10 @@ class AsignacionListView(LoginRequiredMixin, ListView):
             self.request.session.modified = True
             return {
                 **{field: "recientes" if field == "orden" else "" for field in self.FILTER_FIELDS},
-                **{field: self.COLUMNAS_POR_DEFECTO if field == "cols" else [] for field in self.FILTER_MULTI_FIELDS},
+                **{
+                    field: self.COLUMNAS_POR_DEFECTO if field == "cols" else []
+                    for field in self.FILTER_MULTI_FIELDS
+                },
             }
 
         if self._has_filter_params():
@@ -100,8 +116,7 @@ class AsignacionListView(LoginRequiredMixin, ListView):
         filtros_guardados = self.request.session.get(self.FILTER_SESSION_KEY, {})
         if isinstance(filtros_guardados, dict):
             filtros = {
-                field: (filtros_guardados.get(field, "") or "")
-                for field in self.FILTER_FIELDS
+                field: (filtros_guardados.get(field, "") or "") for field in self.FILTER_FIELDS
             }
             if filtros.get("orden") not in self.ORDENES_FECHA:
                 filtros["orden"] = "recientes"
@@ -111,12 +126,17 @@ class AsignacionListView(LoginRequiredMixin, ListView):
                     saved_values = [value for value in saved_values.split(",") if value]
                 filtros[field] = [str(value) for value in saved_values if str(value).strip()]
             columnas_validas = {key for key, _ in self.COLUMNAS_DISPONIBLES}
-            filtros["cols"] = [col for col in filtros["cols"] if col in columnas_validas] or self.COLUMNAS_POR_DEFECTO
+            filtros["cols"] = [
+                col for col in filtros["cols"] if col in columnas_validas
+            ] or self.COLUMNAS_POR_DEFECTO
             return filtros
 
         return {
             **{field: "recientes" if field == "orden" else "" for field in self.FILTER_FIELDS},
-            **{field: self.COLUMNAS_POR_DEFECTO if field == "cols" else [] for field in self.FILTER_MULTI_FIELDS},
+            **{
+                field: self.COLUMNAS_POR_DEFECTO if field == "cols" else []
+                for field in self.FILTER_MULTI_FIELDS
+            },
         }
 
     def build_filter_querystring(self):
@@ -160,24 +180,21 @@ class AsignacionListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         filtros = self.get_active_filters()
-        queryset = (
-            Asignacion.objects.select_related(
-                "colaborador",
-                "centro_costo",
-                "usuario_responsable",
-                "usuario_recepcion",
-            )
-            .prefetch_related(
-                "actas",
-                "evidencias",
-                "devoluciones__actas",
-                "devoluciones__evidencias",
-                "devoluciones__usuario_recepcion",
-                "devoluciones__detalles__detalle_asignacion__activo__tipo_activo",
-                "devoluciones__detalles__estado_activo_devolucion",
-                "detalles__activo__tipo_activo",
-                "detalles__activo__estado_activo",
-            )
+        queryset = Asignacion.objects.select_related(
+            "colaborador",
+            "centro_costo",
+            "usuario_responsable",
+            "usuario_recepcion",
+        ).prefetch_related(
+            "actas",
+            "evidencias",
+            "devoluciones__actas",
+            "devoluciones__evidencias",
+            "devoluciones__usuario_recepcion",
+            "devoluciones__detalles__detalle_asignacion__activo__tipo_activo",
+            "devoluciones__detalles__estado_activo_devolucion",
+            "detalles__activo__tipo_activo",
+            "detalles__activo__estado_activo",
         )
 
         busqueda = filtros["q"]
@@ -255,29 +272,26 @@ class AsignacionDetailView(LoginRequiredMixin, DetailView):
     context_object_name = "asignacion"
 
     def get_queryset(self):
-        return (
-            Asignacion.objects.select_related(
-                "colaborador",
-                "colaborador__empresa",
-                "colaborador__area",
-                "colaborador__cargo",
-                "colaborador__ubicacion",
-                "centro_costo",
-                "usuario_responsable",
-                "usuario_recepcion",
-            )
-            .prefetch_related(
-                "actas",
-                "evidencias",
-                "devoluciones__actas",
-                "devoluciones__evidencias",
-                "devoluciones__usuario_recepcion",
-                "devoluciones__detalles__detalle_asignacion__activo__tipo_activo",
-                "devoluciones__detalles__estado_activo_devolucion",
-                "detalles__activo__tipo_activo",
-                "detalles__activo__estado_activo",
-                "detalles__activo__fotos",
-            )
+        return Asignacion.objects.select_related(
+            "colaborador",
+            "colaborador__empresa",
+            "colaborador__area",
+            "colaborador__cargo",
+            "colaborador__ubicacion",
+            "centro_costo",
+            "usuario_responsable",
+            "usuario_recepcion",
+        ).prefetch_related(
+            "actas",
+            "evidencias",
+            "devoluciones__actas",
+            "devoluciones__evidencias",
+            "devoluciones__usuario_recepcion",
+            "devoluciones__detalles__detalle_asignacion__activo__tipo_activo",
+            "devoluciones__detalles__estado_activo_devolucion",
+            "detalles__activo__tipo_activo",
+            "detalles__activo__estado_activo",
+            "detalles__activo__fotos",
         )
 
 
@@ -287,22 +301,19 @@ class DevolucionDetailView(LoginRequiredMixin, DetailView):
     context_object_name = "devolucion"
 
     def get_queryset(self):
-        return (
-            Devolucion.objects.select_related(
-                "asignacion",
-                "asignacion__colaborador",
-                "asignacion__colaborador__empresa",
-                "asignacion__colaborador__area",
-                "asignacion__colaborador__cargo",
-                "usuario_recepcion",
-            )
-            .prefetch_related(
-                "actas",
-                "evidencias",
-                "detalles__detalle_asignacion__activo__tipo_activo",
-                "detalles__detalle_asignacion__activo__estado_activo",
-                "detalles__estado_activo_devolucion",
-            )
+        return Devolucion.objects.select_related(
+            "asignacion",
+            "asignacion__colaborador",
+            "asignacion__colaborador__empresa",
+            "asignacion__colaborador__area",
+            "asignacion__colaborador__cargo",
+            "usuario_recepcion",
+        ).prefetch_related(
+            "actas",
+            "evidencias",
+            "detalles__detalle_asignacion__activo__tipo_activo",
+            "detalles__detalle_asignacion__activo__estado_activo",
+            "detalles__estado_activo_devolucion",
         )
 
 
@@ -333,7 +344,9 @@ class AsignacionCreateView(LoginRequiredMixin, CreateView):
         context = super().get_context_data(**kwargs)
         form = context["form"]
         raw_activos = form["activos"].value() or self.request.GET.getlist("activos") or []
-        activos_seleccionados = [raw_activos] if isinstance(raw_activos, (int, str)) else raw_activos
+        activos_seleccionados = (
+            [raw_activos] if isinstance(raw_activos, (int, str)) else raw_activos
+        )
         activos_disponibles = form.fields["activos"].queryset
         activos_asignables = (
             activos_disponibles.filter(estado_activo__permite_asignacion=True)
@@ -363,9 +376,7 @@ class AsignacionCreateView(LoginRequiredMixin, CreateView):
                 activos_asignables.order_by("-created_at", "-id")[: self.ACTIVOS_RECIENTES_LIMIT]
             )
             activos_recientes_ids = [activo.pk for activo in activos_recientes]
-            activos_restantes = activos_asignables.exclude(
-                pk__in=activos_recientes_ids
-            )
+            activos_restantes = activos_asignables.exclude(pk__in=activos_recientes_ids)
         activos_paginator = Paginator(activos_restantes, self.ACTIVOS_POR_PAGINA)
         activos_page_obj = activos_paginator.get_page(self.request.GET.get("activos_page"))
         context["q_activo"] = q_activo
@@ -381,7 +392,9 @@ class AsignacionCreateView(LoginRequiredMixin, CreateView):
         )
         context["activos_query_string"] = self.build_activos_page_querystring()
         context["activos_seleccionados"] = [int(activo_id) for activo_id in activos_seleccionados]
-        context["estados_activo_filtro"] = EstadoActivo.objects.filter(activo=True).order_by("nombre")
+        context["estados_activo_filtro"] = EstadoActivo.objects.filter(activo=True).order_by(
+            "nombre"
+        )
         context["tipos_activo_filtro"] = TipoActivo.objects.filter(activo=True).order_by("nombre")
         context["empresas_activo_filtro"] = Empresa.objects.filter(activo=True).order_by("nombre")
         context["proveedores_activo_filtro"] = Proveedor.objects.order_by("razon_social")
@@ -406,7 +419,9 @@ class AsignacionCreateView(LoginRequiredMixin, CreateView):
         self.object = None
         form = self.get_form()
         has_evidencias = "evidencias-TOTAL_FORMS" in request.POST
-        evidencias_formset = self.get_evidencias_formset(request.POST, request.FILES) if has_evidencias else None
+        evidencias_formset = (
+            self.get_evidencias_formset(request.POST, request.FILES) if has_evidencias else None
+        )
         if form.is_valid() and (evidencias_formset is None or evidencias_formset.is_valid()):
             return self.forms_valid(form, evidencias_formset)
         return self.forms_invalid(form, evidencias_formset)
@@ -529,9 +544,15 @@ class AsignacionDevolucionView(LoginRequiredMixin, UpdateView):
             prefix="detalles",
         )
         has_evidencias = "evidencias-TOTAL_FORMS" in request.POST
-        evidencias_formset = self.get_evidencias_formset(request.POST, request.FILES) if has_evidencias else None
+        evidencias_formset = (
+            self.get_evidencias_formset(request.POST, request.FILES) if has_evidencias else None
+        )
 
-        if form.is_valid() and formset.is_valid() and (evidencias_formset is None or evidencias_formset.is_valid()):
+        if (
+            form.is_valid()
+            and formset.is_valid()
+            and (evidencias_formset is None or evidencias_formset.is_valid())
+        ):
             seleccionados = [
                 detalle_form
                 for detalle_form in formset.forms
@@ -582,7 +603,9 @@ class AsignacionDevolucionView(LoginRequiredMixin, UpdateView):
             )
 
         messages.success(self.request, "La devolución fue registrada correctamente.")
-        return HttpResponseRedirect(reverse("asignaciones:devolucion_detalle", args=[devolucion.pk]))
+        return HttpResponseRedirect(
+            reverse("asignaciones:devolucion_detalle", args=[devolucion.pk])
+        )
 
     def forms_invalid(self, form, formset, evidencias_formset=None):
         return self.render_to_response(

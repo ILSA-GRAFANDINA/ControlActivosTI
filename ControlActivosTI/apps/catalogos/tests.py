@@ -178,9 +178,7 @@ class TipoActivoAtributoAdminTests(TestCase):
         self.assertEqual(form.instance.orden, 2)
 
         self.client.force_login(usuario)
-        respuesta = self.client.get(
-            reverse("admin:catalogos_tipoactivoatributo_add")
-        )
+        respuesta = self.client.get(reverse("admin:catalogos_tipoactivoatributo_add"))
         self.assertEqual(respuesta.status_code, 200)
 
     def test_quitar_del_tipo_desactiva_y_conserva_la_asociacion(self):

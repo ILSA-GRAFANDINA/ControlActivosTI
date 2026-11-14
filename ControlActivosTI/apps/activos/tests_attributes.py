@@ -26,7 +26,9 @@ from .models import Activo, ValorAtributoActivo
 class AtributosConfigurablesModelTests(TestCase):
     def setUp(self):
         self.tipo = TipoActivo.objects.create(nombre="Laptop configurable")
-        self.estado = EstadoActivo.objects.create(nombre="Disponible atributos", permite_asignacion=True)
+        self.estado = EstadoActivo.objects.create(
+            nombre="Disponible atributos", permite_asignacion=True
+        )
         self.ram, _ = AtributoActivo.objects.update_or_create(
             clave="memoria_ram",
             defaults={
@@ -85,12 +87,8 @@ class AtributosConfigurablesModelTests(TestCase):
         opcion = OpcionAtributoActivo.objects.create(
             atributo=panel, clave="ips", nombre="IPS", orden=1
         )
-        TipoActivoAtributo.objects.create(
-            tipo_activo=self.tipo, atributo=panel, orden=2
-        )
-        guardar_valores_atributos(
-            self.activo, {"memoria_ram": 16, "tipo_panel": opcion}
-        )
+        TipoActivoAtributo.objects.create(tipo_activo=self.tipo, atributo=panel, orden=2)
+        guardar_valores_atributos(self.activo, {"memoria_ram": 16, "tipo_panel": opcion})
         self.assertEqual(
             ValorAtributoActivo.objects.get(activo=self.activo, atributo=panel).valor_opcion,
             opcion,
@@ -143,28 +141,35 @@ class AtributosConfigurablesModelTests(TestCase):
     @override_settings(MAX_ATRIBUTOS_ACTIVOS_POR_TIPO=1)
     def test_limite_de_atributos_es_configurable(self):
         segundo = AtributoActivo.objects.create(
-            nombre="Procesador limite", clave="procesador_limite",
+            nombre="Procesador limite",
+            clave="procesador_limite",
             tipo_dato=AtributoActivo.TipoDato.TEXTO_CORTO,
         )
         with self.assertRaises(ValidationError):
-            TipoActivoAtributo.objects.create(
-                tipo_activo=self.tipo, atributo=segundo, orden=2
-            )
+            TipoActivoAtributo.objects.create(tipo_activo=self.tipo, atributo=segundo, orden=2)
 
 
 class ActivoDynamicFormTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user("atributos-user", password="x")
         self.tipo = TipoActivo.objects.create(nombre="Monitor dinamico")
-        self.estado = EstadoActivo.objects.create(nombre="Disponible dinamico", permite_asignacion=True)
+        self.estado = EstadoActivo.objects.create(
+            nombre="Disponible dinamico", permite_asignacion=True
+        )
         self.ubicacion_fisica = UbicacionFisicaActivo.objects.create(nombre="Produccion")
         self.tamano = AtributoActivo.objects.create(
-            nombre="Tamano de pantalla", clave="tamano_pantalla",
-            tipo_dato=AtributoActivo.TipoDato.DECIMAL, unidad="pulgadas",
+            nombre="Tamano de pantalla",
+            clave="tamano_pantalla",
+            tipo_dato=AtributoActivo.TipoDato.DECIMAL,
+            unidad="pulgadas",
         )
         TipoActivoAtributo.objects.create(
-            tipo_activo=self.tipo, atributo=self.tamano, obligatorio=True,
-            orden=1, valor_minimo=10, valor_maximo=100,
+            tipo_activo=self.tipo,
+            atributo=self.tamano,
+            obligatorio=True,
+            orden=1,
+            valor_minimo=10,
+            valor_maximo=100,
         )
 
     def data(self, valor="24"):
@@ -192,7 +197,9 @@ class ActivoDynamicFormTests(TestCase):
         self.assertTrue(RegistroAuditoria.objects.filter(objeto_id=str(activo.pk)).exists())
 
     def test_formulario_conserva_error_junto_al_atributo(self):
-        form = ActivoAdminForm(data=self.data("5"), usuario=self.user, permitir_cambio_vigencia=False)
+        form = ActivoAdminForm(
+            data=self.data("5"), usuario=self.user, permitir_cambio_vigencia=False
+        )
         self.assertFalse(form.is_valid())
         self.assertIn("atributo__tamano_pantalla", form.errors)
 
@@ -254,8 +261,12 @@ class ActivoDynamicFormTests(TestCase):
         self.assertContains(response, "Tamano de pantalla")
         self.assertContains(response, "Sin registrar")
         contenido = response.content.decode()
-        self.assertLess(contenido.index("Asignación actual"), contenido.index("caracteristicas-titulo"))
-        self.assertLess(contenido.index("caracteristicas-titulo"), contenido.index("Fotos del activo"))
+        self.assertLess(
+            contenido.index("Asignación actual"), contenido.index("caracteristicas-titulo")
+        )
+        self.assertLess(
+            contenido.index("caracteristicas-titulo"), contenido.index("Fotos del activo")
+        )
 
         guardar_valores_atributos(activo, {"tamano_pantalla": "24"}, usuario=self.user)
         response = self.client.get(reverse("activos:detalle", args=[activo.pk]))
@@ -284,6 +295,7 @@ class ActivoDynamicFormTests(TestCase):
             "Este tipo de activo no tiene características configuradas para mostrar en el detalle.",
         )
 
+
 class LegacyAttributeMigrationCommandTests(TestCase):
     def test_dry_run_es_repetible_y_no_escribe(self):
         tipo = TipoActivo.objects.create(nombre="Laptop comando")
@@ -297,14 +309,23 @@ class LegacyAttributeMigrationCommandTests(TestCase):
         for orden, (clave, tipo_dato, unidad) in enumerate(definiciones, 1):
             atributo, _ = AtributoActivo.objects.update_or_create(
                 clave=clave,
-                defaults={"nombre": clave, "tipo_dato": tipo_dato, "unidad": unidad, "activo": True},
+                defaults={
+                    "nombre": clave,
+                    "tipo_dato": tipo_dato,
+                    "unidad": unidad,
+                    "activo": True,
+                },
             )
-            TipoActivoAtributo.objects.create(
-                tipo_activo=tipo, atributo=atributo, orden=orden
-            )
+            TipoActivoAtributo.objects.create(tipo_activo=tipo, atributo=atributo, orden=orden)
         Activo.objects.create(
-            tipo_activo=tipo, estado_activo=estado, marca="Dell", modelo="X",
-            serie="CMD-1", cpu="Intel i7", ram="16 GB", disco="512 GB SSD",
+            tipo_activo=tipo,
+            estado_activo=estado,
+            marca="Dell",
+            modelo="X",
+            serie="CMD-1",
+            cpu="Intel i7",
+            ram="16 GB",
+            disco="512 GB SSD",
             sistema_operativo="Windows 11",
         )
         salida = StringIO()

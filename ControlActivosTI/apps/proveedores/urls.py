@@ -1,12 +1,12 @@
 from django.urls import path
 
 from .views import (
-                    ProveedorCreateView,
-                    ProveedorDeleteView,
-                    ProveedorDetailView,
-                    ProveedorEstadoView,
-                    ProveedorListView,
-                    ProveedorUpdateView,
+    ProveedorCreateView,
+    ProveedorDeleteView,
+    ProveedorDetailView,
+    ProveedorEstadoView,
+    ProveedorListView,
+    ProveedorUpdateView,
 )
 
 app_name = "proveedores"

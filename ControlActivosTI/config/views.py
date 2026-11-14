@@ -55,7 +55,11 @@ class ProtectedImageView(LoginRequiredMixin, View):
         if ".." in normalized.split("/") or not normalized.startswith(self.allowed_prefixes):
             raise Http404
         content_type, _ = mimetypes.guess_type(normalized)
-        if not content_type or not content_type.startswith("image/") or not default_storage.exists(normalized):
+        if (
+            not content_type
+            or not content_type.startswith("image/")
+            or not default_storage.exists(normalized)
+        ):
             raise Http404
         response = FileResponse(default_storage.open(normalized, "rb"), content_type=content_type)
         response["X-Content-Type-Options"] = "nosniff"
@@ -82,7 +86,9 @@ class ProtectedImageView(LoginRequiredMixin, View):
         ).count()
         activos_disponibles = activos_vigentes.filter(ESTADO_ASIGNABLE_Q).count()
         activos_asignados = activos_vigentes.filter(ESTADO_ASIGNADO_Q).count()
-        valor_total_activos = activos_propios_vigentes.aggregate(total=Sum("valor")).get("total") or 0
+        valor_total_activos = (
+            activos_propios_vigentes.aggregate(total=Sum("valor")).get("total") or 0
+        )
 
         activos_por_estado = list(
             activos_vigentes.values("estado_activo_id", "estado_activo__nombre")
@@ -171,27 +177,19 @@ class ProtectedImageView(LoginRequiredMixin, View):
                 "ultimas_asignaciones": ultimas_asignaciones,
                 "alertas": alertas,
                 "activos_estado_labels": [
-                    item["estado_activo__nombre"] or "Sin estado"
-                    for item in activos_por_estado
+                    item["estado_activo__nombre"] or "Sin estado" for item in activos_por_estado
                 ],
                 "activos_estado_data": [item["total"] for item in activos_por_estado],
                 "activos_estado_ids": [item["estado_activo_id"] for item in activos_por_estado],
-                "activos_tipo_labels": [
-                    item["tipo_activo__nombre"] for item in activos_por_tipo
-                ],
+                "activos_tipo_labels": [item["tipo_activo__nombre"] for item in activos_por_tipo],
                 "activos_tipo_data": [item["total"] for item in activos_por_tipo],
                 "activos_tipo_resumen": activos_por_tipo_resumen,
-                "cecos_labels": [
-                    self._formatear_ceco_label(item) for item in activos_por_ceco
-                ],
+                "cecos_labels": [self._formatear_ceco_label(item) for item in activos_por_ceco],
                 "cecos_data": [item["total"] for item in activos_por_ceco],
                 "activos_empresa_labels": [
-                    item["empresa__nombre"] or "Sin empresa"
-                    for item in activos_por_empresa
+                    item["empresa__nombre"] or "Sin empresa" for item in activos_por_empresa
                 ],
-                "activos_empresa_data": [
-                    item["total"] for item in activos_por_empresa
-                ],
+                "activos_empresa_data": [item["total"] for item in activos_por_empresa],
             }
         )
         return context

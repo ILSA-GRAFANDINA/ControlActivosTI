@@ -57,9 +57,7 @@ class Command(BaseCommand):
                     "tipo": example["tipo"],
                     "titulo": example["titulo"],
                     "mensaje": example["mensaje"],
-                    "entidad_tipo": example.get(
-                        "entidad_tipo", Notificacion.Entidad.NINGUNA
-                    ),
+                    "entidad_tipo": example.get("entidad_tipo", Notificacion.Entidad.NINGUNA),
                     "entidad_id": example.get("entidad_id"),
                     "ruta": example.get("ruta", ""),
                     "read_at": None,

@@ -185,9 +185,7 @@ class DepreciationService:
             for numero in range(frecuencia, meses + 1, frecuencia):
                 programada = fin + relativedelta(months=numero)
                 if programada <= fecha:
-                    eventos.append(
-                        (EventoNotificacionDepreciacion.Tipo.RECORDATORIO, programada)
-                    )
+                    eventos.append((EventoNotificacionDepreciacion.Tipo.RECORDATORIO, programada))
         return eventos
 
 

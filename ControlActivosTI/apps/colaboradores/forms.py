@@ -53,21 +53,15 @@ class ColaboradorForm(forms.ModelForm):
                 filtro |= Q(pk=actual_id)
             return model.objects.filter(filtro)
 
-        self.fields["empresa"].queryset = activos_o_actuales(
-            Empresa, "empresa"
-        ).order_by("nombre")
-        self.fields["cargo"].queryset = activos_o_actuales(
-            Cargo, "cargo"
-        ).order_by("nombre")
-        self.fields["area"].queryset = activos_o_actuales(
-            Area, "area"
-        ).order_by("nombre")
-        self.fields["ubicacion"].queryset = activos_o_actuales(
-            Ubicacion, "ubicacion"
-        ).order_by("nombre")
-        self.fields["centro_costo"].queryset = (
-            activos_o_actuales(CentroCosto, "centro_costo").order_by("codigo")
+        self.fields["empresa"].queryset = activos_o_actuales(Empresa, "empresa").order_by("nombre")
+        self.fields["cargo"].queryset = activos_o_actuales(Cargo, "cargo").order_by("nombre")
+        self.fields["area"].queryset = activos_o_actuales(Area, "area").order_by("nombre")
+        self.fields["ubicacion"].queryset = activos_o_actuales(Ubicacion, "ubicacion").order_by(
+            "nombre"
         )
+        self.fields["centro_costo"].queryset = activos_o_actuales(
+            CentroCosto, "centro_costo"
+        ).order_by("codigo")
         self.fields["estado"].initial = Colaborador.EstadoColaborador.ACTIVO
 
         etiquetas = {
@@ -105,9 +99,7 @@ class CentroCostoRapidoForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["empresa"].queryset = Empresa.objects.filter(activo=True).order_by(
-            "nombre"
-        )
+        self.fields["empresa"].queryset = Empresa.objects.filter(activo=True).order_by("nombre")
 
     def clean_codigo(self):
         return self.cleaned_data["codigo"].strip().upper()

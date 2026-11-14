@@ -8,7 +8,12 @@ logger = logging.getLogger("controlactivos")
 def _render(request, status, message, exception=None):
     if status >= 500:
         logger.error("Error HTTP %s en %s", status, request.path, exc_info=exception is not None)
-    return render(request, f"errors/{status}.html", {"status_code": status, "error_message": message}, status=status)
+    return render(
+        request,
+        f"errors/{status}.html",
+        {"status_code": status, "error_message": message},
+        status=status,
+    )
 
 
 def error_400(request, exception):

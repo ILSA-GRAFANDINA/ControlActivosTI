@@ -254,29 +254,34 @@ class Admin2ViewsTests(TestCase):
             response.status_code,
             302,
             (response.context["form"].errors, response.context["formset"].errors)
-            if response.status_code == 200 else None,
+            if response.status_code == 200
+            else None,
         )
         self.assertEqual(response.url, reverse("admin2-atributos-lista"))
         atributo = AtributoActivo.objects.get(clave="memoria_video_prueba")
         self.assertEqual(atributo.created_by, self.user)
         self.assertTrue(
             RegistroAuditoria.objects.filter(
-                entidad="AtributoActivo", objeto_id=str(atributo.pk),
-                accion=RegistroAuditoria.Accion.CREAR, usuario=self.user,
+                entidad="AtributoActivo",
+                objeto_id=str(atributo.pk),
+                accion=RegistroAuditoria.Accion.CREAR,
+                usuario=self.user,
             ).exists()
         )
 
     def test_admin2_configuration_assigns_next_order_automatically(self):
         self.grant_attribute_schema_permission()
         primero = AtributoActivo.objects.create(
-            nombre="Chip de prueba admin2", clave="chip_prueba_admin2", tipo_dato=AtributoActivo.TipoDato.TEXTO_CORTO
+            nombre="Chip de prueba admin2",
+            clave="chip_prueba_admin2",
+            tipo_dato=AtributoActivo.TipoDato.TEXTO_CORTO,
         )
         segundo = AtributoActivo.objects.create(
-            nombre="Capacidad de prueba admin2", clave="capacidad_prueba_admin2", tipo_dato=AtributoActivo.TipoDato.ENTERO
+            nombre="Capacidad de prueba admin2",
+            clave="capacidad_prueba_admin2",
+            tipo_dato=AtributoActivo.TipoDato.ENTERO,
         )
-        TipoActivoAtributo.objects.create(
-            tipo_activo=self.tipo_activo, atributo=primero, orden=1
-        )
+        TipoActivoAtributo.objects.create(tipo_activo=self.tipo_activo, atributo=primero, orden=1)
         self.client.force_login(self.user)
 
         response = self.client.post(
@@ -293,12 +298,15 @@ class Admin2ViewsTests(TestCase):
         )
 
         self.assertRedirects(response, reverse("admin2-configuraciones-atributos-lista"))
-        configuracion = TipoActivoAtributo.objects.get(tipo_activo=self.tipo_activo, atributo=segundo)
+        configuracion = TipoActivoAtributo.objects.get(
+            tipo_activo=self.tipo_activo, atributo=segundo
+        )
         self.assertEqual(configuracion.orden, 2)
         self.assertEqual(configuracion.created_by, self.user)
         self.assertTrue(
             RegistroAuditoria.objects.filter(
-                entidad="TipoActivoAtributo", objeto_id=str(configuracion.pk),
+                entidad="TipoActivoAtributo",
+                objeto_id=str(configuracion.pk),
                 accion=RegistroAuditoria.Accion.ASOCIAR,
             ).exists()
         )
@@ -354,7 +362,8 @@ class Admin2ViewsTests(TestCase):
         self.assertTrue(TipoActivoAtributo.objects.filter(pk=configuracion.pk).exists())
         self.assertTrue(
             RegistroAuditoria.objects.filter(
-                entidad="TipoActivoAtributo", objeto_id=str(configuracion.pk),
+                entidad="TipoActivoAtributo",
+                objeto_id=str(configuracion.pk),
                 accion=RegistroAuditoria.Accion.DESACTIVAR,
             ).exists()
         )
@@ -365,7 +374,9 @@ class Admin2ViewsTests(TestCase):
             with override_settings(MEDIA_ROOT=media_root):
                 profile = PerfilUsuario.objects.create(
                     user=self.user,
-                    foto=SimpleUploadedFile("staff-avatar.jpg", b"filecontent", content_type="image/jpeg"),
+                    foto=SimpleUploadedFile(
+                        "staff-avatar.jpg", b"filecontent", content_type="image/jpeg"
+                    ),
                 )
                 self.client.force_login(self.user)
 
@@ -383,7 +394,7 @@ class Admin2ViewsTests(TestCase):
         response = self.client.get(reverse("admin2-inicio"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'data-admin2-scroll-top')
+        self.assertContains(response, "data-admin2-scroll-top")
         self.assertContains(response, 'aria-label="Volver arriba"')
 
     def test_admin2_home_marks_scroll_sections_for_dynamic_navigation(self):
@@ -392,8 +403,8 @@ class Admin2ViewsTests(TestCase):
         response = self.client.get(reverse("admin2-inicio"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'data-admin2-anchor-link')
-        self.assertContains(response, 'data-admin2-section')
+        self.assertContains(response, "data-admin2-anchor-link")
+        self.assertContains(response, "data-admin2-section")
 
     def test_admin2_home_exposes_dynamic_module_search(self):
         self.client.force_login(self.user)
@@ -401,10 +412,10 @@ class Admin2ViewsTests(TestCase):
         response = self.client.get(reverse("admin2-inicio"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'data-admin2-search')
-        self.assertContains(response, 'data-admin2-search-input')
-        self.assertContains(response, 'data-admin2-search-results')
-        self.assertContains(response, 'data-admin2-search-source')
+        self.assertContains(response, "data-admin2-search")
+        self.assertContains(response, "data-admin2-search-input")
+        self.assertContains(response, "data-admin2-search-results")
+        self.assertContains(response, "data-admin2-search-source")
         self.assertContains(response, "Buscar módulo o función...")
         self.assertContains(response, "admin2-search--quick")
         self.assertNotContains(response, "¿Qué necesitas administrar?")
@@ -495,7 +506,7 @@ class PerfilUsuarioViewTests(TestCase):
         self.assertContains(response, "app-toast--success")
         self.assertContains(response, "Operación exitosa")
         self.assertContains(response, "Tu perfil fue actualizado correctamente.")
-        self.assertContains(response, 'data-toast-close')
+        self.assertContains(response, "data-toast-close")
         self.assertContains(response, "css/toasts.css")
         self.assertContains(response, "js/toasts.js")
 
@@ -617,7 +628,9 @@ class LoginViewTests(TestCase):
             with override_settings(MEDIA_ROOT=media_root):
                 profile = PerfilUsuario.objects.create(
                     user=self.user,
-                    foto=SimpleUploadedFile("avatar.jpg", b"filecontent", content_type="image/jpeg"),
+                    foto=SimpleUploadedFile(
+                        "avatar.jpg", b"filecontent", content_type="image/jpeg"
+                    ),
                 )
                 self.client.force_login(self.user)
 

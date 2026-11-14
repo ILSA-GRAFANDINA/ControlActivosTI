@@ -35,9 +35,7 @@ class Command(BaseCommand):
             fecha = timezone.localdate()
 
         revisados = creadas = omitidos = errores = eventos_omitidos = 0
-        queryset = Activo.objects.select_related(
-            "estado_activo", "tipo_activo"
-        ).order_by("pk")
+        queryset = Activo.objects.select_related("estado_activo", "tipo_activo").order_by("pk")
         for activo in queryset.iterator(chunk_size=options["batch_size"]):
             revisados += 1
             try:
@@ -79,8 +77,7 @@ class Command(BaseCommand):
                                 omitido=True,
                             )
                             for tipo_omitido, fecha_omitida in pendientes
-                            if (tipo_omitido, fecha_omitida)
-                            != (tipo, fecha_programada)
+                            if (tipo_omitido, fecha_omitida) != (tipo, fecha_programada)
                         ],
                         ignore_conflicts=True,
                     )

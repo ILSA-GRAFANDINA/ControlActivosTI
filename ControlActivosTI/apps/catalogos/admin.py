@@ -36,7 +36,9 @@ class CentroCostoAdminForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if "departamentos" in self.fields:
-            departamentos = DepartamentoEmpresa.objects.select_related("empresa").filter(activo=True)
+            departamentos = DepartamentoEmpresa.objects.select_related("empresa").filter(
+                activo=True
+            )
             empresa_id = self.data.get("empresa") if self.is_bound else None
 
             if empresa_id:
@@ -44,7 +46,9 @@ class CentroCostoAdminForm(forms.ModelForm):
             elif self.instance and self.instance.pk and self.instance.empresa_id:
                 departamentos = departamentos.filter(empresa_id=self.instance.empresa_id)
 
-            self.fields["departamentos"].queryset = departamentos.order_by("empresa__nombre", "nombre")
+            self.fields["departamentos"].queryset = departamentos.order_by(
+                "empresa__nombre", "nombre"
+            )
 
     def clean(self):
         cleaned_data = super().clean()
@@ -52,7 +56,9 @@ class CentroCostoAdminForm(forms.ModelForm):
         departamentos = cleaned_data.get("departamentos")
 
         if departamentos and not empresa:
-            self.add_error("empresa", "Debes seleccionar una empresa antes de asignar departamentos.")
+            self.add_error(
+                "empresa", "Debes seleccionar una empresa antes de asignar departamentos."
+            )
             return cleaned_data
 
         if empresa and departamentos:
@@ -86,8 +92,18 @@ class AtributoActivoAdminForm(forms.ModelForm):
         cleaned = super().clean()
         texto = f"{cleaned.get('nombre', '')} {cleaned.get('clave', '')}".lower()
         tipo_dato = cleaned.get("tipo_dato")
-        palabras_prohibidas = ("password", "contrasena", "contraseña", "token", "clave_privada", "api_key", "secreto")
-        if tipo_dato != AtributoActivo.TipoDato.TEXTO_PROTEGIDO and any(palabra in texto for palabra in palabras_prohibidas):
+        palabras_prohibidas = (
+            "password",
+            "contrasena",
+            "contraseña",
+            "token",
+            "clave_privada",
+            "api_key",
+            "secreto",
+        )
+        if tipo_dato != AtributoActivo.TipoDato.TEXTO_PROTEGIDO and any(
+            palabra in texto for palabra in palabras_prohibidas
+        ):
             raise forms.ValidationError(
                 "Los atributos normales no pueden almacenar contrasenas, tokens, claves privadas ni secretos."
             )
@@ -192,7 +208,12 @@ class CentroCostoAdmin(admin.ModelAdmin):
     )
     list_select_related = ("empresa", "padre", "responsable")
     autocomplete_fields = ("empresa", "padre", "responsable", "departamentos")
-    readonly_fields = ("created_at", "updated_at", "mostrar_ruta_jerarquia", "mostrar_departamentos")
+    readonly_fields = (
+        "created_at",
+        "updated_at",
+        "mostrar_ruta_jerarquia",
+        "mostrar_departamentos",
+    )
     fieldsets = (
         (
             "Datos maestros",
@@ -247,7 +268,9 @@ class TipoActivoAdmin(admin.ModelAdmin):
     list_filter = ("activo",)
 
     def has_module_permission(self, request):
-        return request.user.is_superuser or request.user.has_perm("catalogos.manage_asset_attribute_schema")
+        return request.user.is_superuser or request.user.has_perm(
+            "catalogos.manage_asset_attribute_schema"
+        )
 
     def has_view_permission(self, request, obj=None):
         return self.has_module_permission(request)
@@ -263,6 +286,7 @@ class TipoActivoAdmin(admin.ModelAdmin):
 
     def uso_atributos(self, obj):
         from django.conf import settings
+
         usados = obj.configuraciones_atributos.filter(activo=True).count()
         limite = int(getattr(settings, "MAX_ATRIBUTOS_ACTIVOS_POR_TIPO", 10))
         url = reverse("admin:catalogos_tipoactivoatributo_changelist")
@@ -290,6 +314,7 @@ class TipoEventoActivoAdmin(admin.ModelAdmin):
     search_fields = ("nombre",)
     list_filter = ("activo",)
 
+
 class OpcionAtributoActivoInline(admin.TabularInline):
     model = OpcionAtributoActivo
     extra = 1
@@ -299,7 +324,15 @@ class OpcionAtributoActivoInline(admin.TabularInline):
 @admin.register(AtributoActivo)
 class AtributoActivoAdmin(admin.ModelAdmin):
     form = AtributoActivoAdminForm
-    list_display = ("nombre", "clave", "tipo_dato", "unidad", "activo", "tipos_que_lo_usan", "updated_at")
+    list_display = (
+        "nombre",
+        "clave",
+        "tipo_dato",
+        "unidad",
+        "activo",
+        "tipos_que_lo_usan",
+        "updated_at",
+    )
     search_fields = ("nombre", "clave", "descripcion")
     list_filter = ("tipo_dato", "activo")
     readonly_fields = ("created_by", "updated_by", "created_at", "updated_at", "tipos_que_lo_usan")
@@ -308,13 +341,20 @@ class AtributoActivoAdmin(admin.ModelAdmin):
     def tipos_que_lo_usan(self, obj):
         if not obj or not obj.pk:
             return "-"
-        nombres = obj.configuraciones_tipo.filter(activo=True).select_related("tipo_activo").order_by("tipo_activo__nombre").values_list("tipo_activo__nombre", flat=True)
+        nombres = (
+            obj.configuraciones_tipo.filter(activo=True)
+            .select_related("tipo_activo")
+            .order_by("tipo_activo__nombre")
+            .values_list("tipo_activo__nombre", flat=True)
+        )
         return ", ".join(nombres) or "Sin tipos asociados"
 
     tipos_que_lo_usan.short_description = "Tipos que lo utilizan"
 
     def has_module_permission(self, request):
-        return request.user.is_superuser or request.user.has_perm("catalogos.manage_asset_attribute_schema")
+        return request.user.is_superuser or request.user.has_perm(
+            "catalogos.manage_asset_attribute_schema"
+        )
 
     def has_view_permission(self, request, obj=None):
         return self.has_module_permission(request)
@@ -331,17 +371,26 @@ class AtributoActivoAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         anterior_activo = None
         if change:
-            anterior_activo = AtributoActivo.objects.filter(pk=obj.pk).values_list("activo", flat=True).first()
+            anterior_activo = (
+                AtributoActivo.objects.filter(pk=obj.pk).values_list("activo", flat=True).first()
+            )
         if not obj.created_by_id:
             obj.created_by = request.user
         obj.updated_by = request.user
         super().save_model(request, obj, form, change)
         accion = RegistroAuditoria.Accion.MODIFICAR if change else RegistroAuditoria.Accion.CREAR
         if change and anterior_activo != obj.activo:
-            accion = RegistroAuditoria.Accion.ACTIVAR if obj.activo else RegistroAuditoria.Accion.DESACTIVAR
+            accion = (
+                RegistroAuditoria.Accion.ACTIVAR
+                if obj.activo
+                else RegistroAuditoria.Accion.DESACTIVAR
+            )
         registrar_evento(
-            entidad="AtributoActivo", objeto_id=obj.pk, accion=accion,
-            resumen=f"{obj.nombre} ({obj.clave})", usuario=request.user,
+            entidad="AtributoActivo",
+            objeto_id=obj.pk,
+            accion=accion,
+            resumen=f"{obj.nombre} ({obj.clave})",
+            usuario=request.user,
             detalle={"campos": form.changed_data},
         )
 
@@ -350,8 +399,14 @@ class AtributoActivoAdmin(admin.ModelAdmin):
 class TipoActivoAtributoAdmin(admin.ModelAdmin):
     form = TipoActivoAtributoAdminForm
     list_display = (
-        "tipo_activo", "atributo", "orden", "obligatorio", "activo",
-        "mostrar_detalle", "mostrar_actas", "filtrable",
+        "tipo_activo",
+        "atributo",
+        "orden",
+        "obligatorio",
+        "activo",
+        "mostrar_detalle",
+        "mostrar_actas",
+        "filtrable",
     )
     list_filter = ("tipo_activo", "obligatorio", "activo", "mostrar_actas", "filtrable")
     search_fields = ("tipo_activo__nombre", "atributo__nombre", "atributo__clave")
@@ -377,7 +432,9 @@ class TipoActivoAtributoAdmin(admin.ModelAdmin):
         return exclude
 
     def has_module_permission(self, request):
-        return request.user.is_superuser or request.user.has_perm("catalogos.manage_asset_attribute_schema")
+        return request.user.is_superuser or request.user.has_perm(
+            "catalogos.manage_asset_attribute_schema"
+        )
 
     has_view_permission = AtributoActivoAdmin.has_view_permission
     has_add_permission = AtributoActivoAdmin.has_add_permission
@@ -420,7 +477,9 @@ class TipoActivoAtributoAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         anterior_activo = None
         if change:
-            anterior_activo = type(obj).objects.filter(pk=obj.pk).values_list("activo", flat=True).first()
+            anterior_activo = (
+                type(obj).objects.filter(pk=obj.pk).values_list("activo", flat=True).first()
+            )
         if not obj.created_by_id:
             obj.created_by = request.user
         obj.updated_by = request.user
@@ -431,20 +490,32 @@ class TipoActivoAtributoAdmin(admin.ModelAdmin):
             with transaction.atomic():
                 TipoActivo.objects.select_for_update().get(pk=obj.tipo_activo_id)
                 ultimo_orden = (
-                    type(obj).objects.filter(
+                    type(obj)
+                    .objects.filter(
                         tipo_activo_id=obj.tipo_activo_id,
                         activo=True,
-                    ).aggregate(maximo=Max("orden"))["maximo"]
+                    )
+                    .aggregate(maximo=Max("orden"))["maximo"]
                     or 0
                 )
                 obj.orden = ultimo_orden + 1
                 super().save_model(request, obj, form, change)
         accion = RegistroAuditoria.Accion.MODIFICAR if change else RegistroAuditoria.Accion.ASOCIAR
         if change and anterior_activo != obj.activo:
-            accion = RegistroAuditoria.Accion.ACTIVAR if obj.activo else RegistroAuditoria.Accion.DESACTIVAR
+            accion = (
+                RegistroAuditoria.Accion.ACTIVAR
+                if obj.activo
+                else RegistroAuditoria.Accion.DESACTIVAR
+            )
         registrar_evento(
-            entidad="TipoActivoAtributo", objeto_id=obj.pk,
+            entidad="TipoActivoAtributo",
+            objeto_id=obj.pk,
             accion=accion,
-            resumen=f"{obj.atributo.nombre} en {obj.tipo_activo.nombre}", usuario=request.user,
-            detalle={"campos": form.changed_data, "orden": obj.orden, "obligatorio": obj.obligatorio},
+            resumen=f"{obj.atributo.nombre} en {obj.tipo_activo.nombre}",
+            usuario=request.user,
+            detalle={
+                "campos": form.changed_data,
+                "orden": obj.orden,
+                "obligatorio": obj.obligatorio,
+            },
         )

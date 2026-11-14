@@ -106,9 +106,7 @@ class DepreciacionReporteView(LoginRequiredMixin, ListView):
         filtros["solo_vigentes"] = (
             "0" if str(filtros.get("solo_vigentes", "1")).strip() == "0" else "1"
         )
-        filtros["orden"] = (
-            filtros["orden"] if filtros.get("orden") in self.ORDENES else "codigo"
-        )
+        filtros["orden"] = filtros["orden"] if filtros.get("orden") in self.ORDENES else "codigo"
         filtros[self.TAB_PARAM] = (filtros.get(self.TAB_PARAM, "") or "").strip()
 
         columnas_validas = {key for key, _ in self.COLUMNAS_DISPONIBLES}
@@ -132,10 +130,7 @@ class DepreciacionReporteView(LoginRequiredMixin, ListView):
 
     def _filters_from_request(self):
         source = self.request.GET
-        filtros = {
-            field: (source.get(field, "") or "").strip()
-            for field in self.FILTER_FIELDS
-        }
+        filtros = {field: (source.get(field, "") or "").strip() for field in self.FILTER_FIELDS}
         filtros["fecha"] = filtros["fecha"] or timezone.localdate().isoformat()
         filtros["solo_vigentes"] = filtros["solo_vigentes"] or "1"
         filtros["orden"] = filtros["orden"] or "codigo"
@@ -145,8 +140,7 @@ class DepreciacionReporteView(LoginRequiredMixin, ListView):
 
     def _has_filter_params(self):
         return any(
-            field in self.request.GET
-            for field in (*self.FILTER_FIELDS, *self.FILTER_MULTI_FIELDS)
+            field in self.request.GET for field in (*self.FILTER_FIELDS, *self.FILTER_MULTI_FIELDS)
         )
 
     def get_active_filters(self):
@@ -187,7 +181,11 @@ class DepreciacionReporteView(LoginRequiredMixin, ListView):
             params["orden"] = filtros["orden"]
         if self.TAB_PARAM not in exclude and filtros[self.TAB_PARAM]:
             params[self.TAB_PARAM] = filtros[self.TAB_PARAM]
-        if "cols" not in exclude and filtros["cols"] and filtros["cols"] != self.COLUMNAS_POR_DEFECTO:
+        if (
+            "cols" not in exclude
+            and filtros["cols"]
+            and filtros["cols"] != self.COLUMNAS_POR_DEFECTO
+        ):
             params.setlist("cols", filtros["cols"])
         return params
 
@@ -236,9 +234,7 @@ class DepreciacionReporteView(LoginRequiredMixin, ListView):
         )
 
         if estado == "Pendiente de configuración":
-            return queryset.filter(
-                Q(valor__isnull=True) | Q(fecha_compra__isnull=True)
-            )
+            return queryset.filter(Q(valor__isnull=True) | Q(fecha_compra__isnull=True))
 
         queryset = queryset.filter(configurado)
         if estado == "Retirado o dado de baja":
@@ -296,9 +292,7 @@ class DepreciacionReporteView(LoginRequiredMixin, ListView):
             .annotate(total=Count("id"))
             .order_by("tipo_activo__nombre")
         )
-        tipos_disponibles = {
-            str(item["tipo_activo_id"]) for item in self.resumen_tipos
-        }
+        tipos_disponibles = {str(item["tipo_activo_id"]) for item in self.resumen_tipos}
         tab_tipo = filtros[self.TAB_PARAM]
         self.tab_tipo_activa = tab_tipo if tab_tipo in tipos_disponibles else ""
         if self.tab_tipo_activa:

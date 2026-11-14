@@ -29,12 +29,8 @@ class DepreciacionAutomaticaTests(TestCase):
             username="admin", email="admin@example.com", password="secret"
         )
         self.tipo = TipoActivo.objects.create(nombre="Laptop")
-        self.operativo = EstadoActivo.objects.create(
-            nombre="Disponible", permite_asignacion=True
-        )
-        self.baja = EstadoActivo.objects.create(
-            nombre="Dado de baja", permite_asignacion=False
-        )
+        self.operativo = EstadoActivo.objects.create(nombre="Disponible", permite_asignacion=True)
+        self.baja = EstadoActivo.objects.create(nombre="Dado de baja", permite_asignacion=False)
         self.proveedor = Proveedor.objects.create(
             tipo_proveedor=Proveedor.TipoProveedor.EMPRESA,
             tipo_identificacion=Proveedor.TipoIdentificacion.EXTRANJERA,
@@ -71,9 +67,7 @@ class DepreciacionAutomaticaTests(TestCase):
 
     def test_fecha_final_usa_meses_calendario(self):
         activo = self.activo(fecha_compra=date(2024, 2, 29))
-        self.assertEqual(
-            DepreciationService.calcular(activo).fecha_fin, date(2027, 2, 28)
-        )
+        self.assertEqual(DepreciationService.calcular(activo).fecha_fin, date(2027, 2, 28))
 
     def test_antes_de_fecha_compra_es_cero(self):
         resultado = DepreciationService.calcular(self.activo(), date(2023, 1, 1))
@@ -200,9 +194,7 @@ class DepreciacionAutomaticaTests(TestCase):
                 evaluation_date="2027-01-31",
                 stdout=StringIO(),
             )
-        self.assertEqual(
-            EventoNotificacionDepreciacion.objects.filter(omitido=False).count(), 1
-        )
+        self.assertEqual(EventoNotificacionDepreciacion.objects.filter(omitido=False).count(), 1)
         self.assertEqual(Notificacion.objects.count(), 1)
 
     def test_activo_dado_de_baja_no_notifica(self):
@@ -304,7 +296,6 @@ class DepreciacionAutomaticaTests(TestCase):
         self.assertIn("fecha=2026-08-05", tab_monitor["url"])
         self.assertIn("solo_vigentes=0", tab_monitor["url"])
         self.assertIn(f"tab_tipo={tipo_monitor.pk}", tab_monitor["url"])
-
 
     def test_reporte_renderiza_nuevo_panel_de_filtros(self):
         self.activo()

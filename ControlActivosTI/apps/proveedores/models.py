@@ -78,10 +78,18 @@ class Proveedor(models.Model):
             errores["razon_social"] = "La razon social es obligatoria."
 
         if es_ecuador(self.pais):
-            if self.tipo_identificacion == self.TipoIdentificacion.RUC and not re.fullmatch(r"\d{13}", self.identificacion):
-                errores["identificacion"] = "El RUC ecuatoriano debe contener exactamente 13 digitos."
-            elif self.tipo_identificacion == self.TipoIdentificacion.CEDULA and not re.fullmatch(r"\d{10}", self.identificacion):
-                errores["identificacion"] = "La cedula ecuatoriana debe contener exactamente 10 digitos."
+            if self.tipo_identificacion == self.TipoIdentificacion.RUC and not re.fullmatch(
+                r"\d{13}", self.identificacion
+            ):
+                errores["identificacion"] = (
+                    "El RUC ecuatoriano debe contener exactamente 13 digitos."
+                )
+            elif self.tipo_identificacion == self.TipoIdentificacion.CEDULA and not re.fullmatch(
+                r"\d{10}", self.identificacion
+            ):
+                errores["identificacion"] = (
+                    "La cedula ecuatoriana debe contener exactamente 10 digitos."
+                )
 
         if errores:
             raise ValidationError(errores)

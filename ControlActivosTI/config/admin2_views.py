@@ -272,7 +272,10 @@ class Admin2BaseContextMixin:
             {"label": "Asignaciones", "url": get_admin_changelist_url(Asignacion)},
             {"label": "Colaboradores", "url": get_admin_changelist_url(Colaborador)},
             {"label": "Notificaciones", "url": get_admin_changelist_url(Notificacion)},
-            {"label": "Configuración", "url": reverse("admin:app_list", kwargs={"app_label": "catalogos"})},
+            {
+                "label": "Configuración",
+                "url": reverse("admin:app_list", kwargs={"app_label": "catalogos"}),
+            },
         ]
         return context
 
@@ -468,9 +471,11 @@ class Admin2HomeView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
                             filtrable=True,
                             tipo_activo__activo=True,
                             atributo__activo=True,
-                        ).exclude(
+                        )
+                        .exclude(
                             atributo__tipo_dato=AtributoActivo.TipoDato.TEXTO_PROTEGIDO,
-                        ).count(),
+                        )
+                        .count(),
                     },
                 ],
             },
@@ -566,16 +571,23 @@ class Admin2ModuleView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
         users = User.objects.order_by("-date_joined", "-id")[:8]
         rows = []
         for user in users:
-            access_label = "Superusuario" if user.is_superuser else "Staff" if user.is_staff else "Basico"
+            access_label = (
+                "Superusuario" if user.is_superuser else "Staff" if user.is_staff else "Basico"
+            )
             access_tone = "emerald" if user.is_superuser else "cyan" if user.is_staff else "slate"
             rows.append(
                 {
                     "cells": [
-                        {"value": user.get_username(), "subvalue": user.get_full_name() or "Sin nombre completo"},
+                        {
+                            "value": user.get_username(),
+                            "subvalue": user.get_full_name() or "Sin nombre completo",
+                        },
                         {"value": user.email or "-", "subvalue": "Correo principal"},
                         {"value": access_label, "badge": True, "tone": access_tone},
                         {
-                            "value": user.last_login.strftime("%d/%m/%Y %H:%M") if user.last_login else "Sin ingreso",
+                            "value": user.last_login.strftime("%d/%m/%Y %H:%M")
+                            if user.last_login
+                            else "Sin ingreso",
                             "subvalue": f"Alta: {user.date_joined.strftime('%d/%m/%Y')}",
                         },
                     ]
@@ -590,8 +602,16 @@ class Admin2ModuleView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
                 {"label": "Superusuarios", "value": User.objects.filter(is_superuser=True).count()},
             ],
             "module_actions": [
-                {"label": "Usuarios en Django Admin", "url": reverse("admin:auth_user_changelist"), "kind": "primary"},
-                {"label": "Grupos y permisos", "url": reverse("admin:auth_group_changelist"), "kind": "secondary"},
+                {
+                    "label": "Usuarios en Django Admin",
+                    "url": reverse("admin:auth_user_changelist"),
+                    "kind": "primary",
+                },
+                {
+                    "label": "Grupos y permisos",
+                    "url": reverse("admin:auth_group_changelist"),
+                    "kind": "secondary",
+                },
             ],
             "table_title": "Ultimas cuentas registradas",
             "table_columns": ["Usuario", "Correo", "Acceso", "Ultimo ingreso"],
@@ -603,7 +623,10 @@ class Admin2ModuleView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
                     "items": [
                         {"label": "Consulta y supervision", "value": "Desde /admin2"},
                         {"label": "Permisos avanzados", "value": "Desde Django Admin"},
-                        {"label": "Evitar duplicar complejidad", "value": "Decisiones mas mantenibles"},
+                        {
+                            "label": "Evitar duplicar complejidad",
+                            "value": "Decisiones mas mantenibles",
+                        },
                     ],
                 }
             ],
@@ -615,7 +638,11 @@ class Admin2ModuleView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
             rows.append(
                 {
                     "cells": [
-                        {"value": item["title"], "url": item["url"], "subvalue": item["description"]},
+                        {
+                            "value": item["title"],
+                            "url": item["url"],
+                            "subvalue": item["description"],
+                        },
                         {"value": item["count"]},
                         {"value": item["active_count"], "subvalue": "Registros activos"},
                         {"value": "Gestionar", "badge": True, "tone": "cyan", "url": item["url"]},
@@ -631,11 +658,31 @@ class Admin2ModuleView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
                 {"label": "Tipos", "value": TipoActivo.objects.count()},
             ],
             "module_actions": [
-                {"label": "Abrir catálogos", "url": reverse("admin2-catalogo-lista", args=["areas"]), "kind": "primary"},
-                {"label": "Catalogos en Django Admin", "url": reverse("admin:catalogos_area_changelist"), "kind": "secondary"},
-                {"label": "Atributos de activos", "url": reverse("admin2-atributos-lista"), "kind": "secondary"},
-                {"label": "Configurar por tipo", "url": reverse("admin2-configuraciones-atributos-lista"), "kind": "secondary"},
-                {"label": "Criterios de busqueda", "url": reverse("admin2-criterios-busqueda-activos"), "kind": "secondary"},
+                {
+                    "label": "Abrir catálogos",
+                    "url": reverse("admin2-catalogo-lista", args=["areas"]),
+                    "kind": "primary",
+                },
+                {
+                    "label": "Catalogos en Django Admin",
+                    "url": reverse("admin:catalogos_area_changelist"),
+                    "kind": "secondary",
+                },
+                {
+                    "label": "Atributos de activos",
+                    "url": reverse("admin2-atributos-lista"),
+                    "kind": "secondary",
+                },
+                {
+                    "label": "Configurar por tipo",
+                    "url": reverse("admin2-configuraciones-atributos-lista"),
+                    "kind": "secondary",
+                },
+                {
+                    "label": "Criterios de busqueda",
+                    "url": reverse("admin2-criterios-busqueda-activos"),
+                    "kind": "secondary",
+                },
             ],
             "table_title": "Catalogos disponibles",
             "table_columns": ["Catalogo", "Total", "Activos", "Accion"],
@@ -665,8 +712,16 @@ class Admin2ModuleView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
                             "badge": True,
                             "tone": "emerald" if user.is_superuser else "amber",
                         },
-                        {"value": "Activo" if user.is_active else "Inactivo", "badge": True, "tone": "cyan" if user.is_active else "rose"},
-                        {"value": user.last_login.strftime("%d/%m/%Y %H:%M") if user.last_login else "Sin ingreso"},
+                        {
+                            "value": "Activo" if user.is_active else "Inactivo",
+                            "badge": True,
+                            "tone": "cyan" if user.is_active else "rose",
+                        },
+                        {
+                            "value": user.last_login.strftime("%d/%m/%Y %H:%M")
+                            if user.last_login
+                            else "Sin ingreso"
+                        },
                     ]
                 }
             )
@@ -676,11 +731,24 @@ class Admin2ModuleView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
                 {"label": "Staff", "value": User.objects.filter(is_staff=True).count()},
                 {"label": "Superusuarios", "value": User.objects.filter(is_superuser=True).count()},
                 {"label": "Usuarios activos", "value": User.objects.filter(is_active=True).count()},
-                {"label": "Asignaciones abiertas", "value": Asignacion.objects.filter(estado_asignacion__in=ASIGNACIONES_ABIERTAS).count()},
+                {
+                    "label": "Asignaciones abiertas",
+                    "value": Asignacion.objects.filter(
+                        estado_asignacion__in=ASIGNACIONES_ABIERTAS
+                    ).count(),
+                },
             ],
             "module_actions": [
-                {"label": "Gestionar grupos", "url": reverse("admin:auth_group_changelist"), "kind": "primary"},
-                {"label": "Ver usuarios", "url": reverse("admin:auth_user_changelist"), "kind": "secondary"},
+                {
+                    "label": "Gestionar grupos",
+                    "url": reverse("admin:auth_group_changelist"),
+                    "kind": "primary",
+                },
+                {
+                    "label": "Ver usuarios",
+                    "url": reverse("admin:auth_user_changelist"),
+                    "kind": "secondary",
+                },
             ],
             "table_title": "Cuentas con privilegios",
             "table_columns": ["Usuario", "Nivel", "Estado", "Ultimo acceso"],
@@ -690,7 +758,10 @@ class Admin2ModuleView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
                 {
                     "title": "Puntos de control",
                     "items": [
-                        {"label": "Revisa superusuarios", "value": "Solo los estrictamente necesarios"},
+                        {
+                            "label": "Revisa superusuarios",
+                            "value": "Solo los estrictamente necesarios",
+                        },
                         {"label": "Usa grupos", "value": "Permisos mas faciles de mantener"},
                         {"label": "Monitorea ultimo acceso", "value": "Detecta cuentas dormidas"},
                     ],
@@ -723,9 +794,13 @@ class Admin2ModuleView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
                         {"value": item["estado_activo__nombre"] or "Sin estado"},
                         {"value": item["total"]},
                         {
-                            "value": "Disponible" if (item["estado_activo__nombre"] or "").lower() == "disponible" else "Seguimiento",
+                            "value": "Disponible"
+                            if (item["estado_activo__nombre"] or "").lower() == "disponible"
+                            else "Seguimiento",
                             "badge": True,
-                            "tone": "emerald" if (item["estado_activo__nombre"] or "").lower() == "disponible" else "slate",
+                            "tone": "emerald"
+                            if (item["estado_activo__nombre"] or "").lower() == "disponible"
+                            else "slate",
                         },
                     ]
                 }
@@ -734,7 +809,9 @@ class Admin2ModuleView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
         month_panel_items = []
         for item in asignaciones_por_mes:
             if item["mes"]:
-                month_panel_items.append({"label": item["mes"].strftime("%b %Y"), "value": item["total"]})
+                month_panel_items.append(
+                    {"label": item["mes"].strftime("%b %Y"), "value": item["total"]}
+                )
 
         areas = (
             Colaborador.objects.values("area__nombre")
@@ -745,23 +822,44 @@ class Admin2ModuleView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
         return {
             "stats": [
                 {"label": "Valor del inventario", "value": f"${valor_total}"},
-                {"label": "Activos disponibles", "value": activos_vigentes.filter(estado_activo__permite_asignacion=True).count()},
-                {"label": "Activos asignados", "value": activos_vigentes.filter(estado_activo__nombre__iexact="Asignado").count()},
+                {
+                    "label": "Activos disponibles",
+                    "value": activos_vigentes.filter(
+                        estado_activo__permite_asignacion=True
+                    ).count(),
+                },
+                {
+                    "label": "Activos asignados",
+                    "value": activos_vigentes.filter(
+                        estado_activo__nombre__iexact="Asignado"
+                    ).count(),
+                },
                 {"label": "Asignaciones totales", "value": Asignacion.objects.count()},
             ],
             "module_actions": [
                 {"label": "Abrir dashboard", "url": reverse("dashboard-inicio"), "kind": "primary"},
-                {"label": "Ir a asignaciones", "url": reverse("asignaciones:lista"), "kind": "secondary"},
+                {
+                    "label": "Ir a asignaciones",
+                    "url": reverse("asignaciones:lista"),
+                    "kind": "secondary",
+                },
             ],
             "table_title": "Activos por estado",
             "table_columns": ["Estado", "Total", "Lectura"],
             "table_rows": rows,
             "table_empty_message": "No hay datos de estado para mostrar.",
             "info_panels": [
-                {"title": "Asignaciones por mes", "items": month_panel_items or [{"label": "Sin movimientos", "value": "-"}]},
+                {
+                    "title": "Asignaciones por mes",
+                    "items": month_panel_items or [{"label": "Sin movimientos", "value": "-"}],
+                },
                 {
                     "title": "Colaboradores por área",
-                    "items": [{"label": item["area__nombre"] or "Sin área", "value": item["total"]} for item in areas] or [{"label": "Sin datos", "value": "-"}],
+                    "items": [
+                        {"label": item["area__nombre"] or "Sin área", "value": item["total"]}
+                        for item in areas
+                    ]
+                    or [{"label": "Sin datos", "value": "-"}],
                 },
             ],
         }
@@ -777,13 +875,21 @@ class Admin2ModuleView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
             rows.append(
                 {
                     "cells": [
-                        {"value": activo.codigo, "url": reverse("activos:detalle", args=[activo.pk]), "subvalue": str(activo.tipo_activo)},
-                        {"value": f"{activo.marca} {activo.modelo}".strip(), "subvalue": f"Serie: {activo.serie}"},
+                        {
+                            "value": activo.codigo,
+                            "url": reverse("activos:detalle", args=[activo.pk]),
+                            "subvalue": str(activo.tipo_activo),
+                        },
+                        {
+                            "value": f"{activo.marca} {activo.modelo}".strip(),
+                            "subvalue": f"Serie: {activo.serie}",
+                        },
                         {
                             "value": activo.estado_activo.nombre,
                             "badge": True,
                             "tone": "orange"
-                            if "operativo" in activo.estado_activo.nombre.lower() or "en uso" in activo.estado_activo.nombre.lower()
+                            if "operativo" in activo.estado_activo.nombre.lower()
+                            or "en uso" in activo.estado_activo.nombre.lower()
                             else "emerald"
                             if activo.estado_activo.permite_asignacion
                             else "cyan"
@@ -796,12 +902,14 @@ class Admin2ModuleView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
             )
 
         estados = (
-            Activo.objects.filter(activo=True).values("estado_activo__nombre")
+            Activo.objects.filter(activo=True)
+            .values("estado_activo__nombre")
             .annotate(total=Count("id"))
             .order_by("-total", "estado_activo__nombre")[:5]
         )
         tipos = (
-            Activo.objects.filter(activo=True).values("tipo_activo__nombre")
+            Activo.objects.filter(activo=True)
+            .values("tipo_activo__nombre")
             .annotate(total=Count("id"))
             .order_by("-total", "tipo_activo__nombre")[:5]
         )
@@ -809,15 +917,41 @@ class Admin2ModuleView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
         return {
             "stats": [
                 {"label": "Total activos", "value": Activo.objects.filter(activo=True).count()},
-                {"label": "Disponibles", "value": Activo.objects.filter(activo=True, estado_activo__permite_asignacion=True).count()},
-                {"label": "Con fotografia", "value": Activo.objects.filter(activo=True, fotos__isnull=False).distinct().count()},
+                {
+                    "label": "Disponibles",
+                    "value": Activo.objects.filter(
+                        activo=True, estado_activo__permite_asignacion=True
+                    ).count(),
+                },
+                {
+                    "label": "Con fotografia",
+                    "value": Activo.objects.filter(activo=True, fotos__isnull=False)
+                    .distinct()
+                    .count(),
+                },
                 {"label": "Tipos registrados", "value": TipoActivo.objects.count()},
             ],
             "module_actions": [
-                {"label": "Ver inventario completo", "url": reverse("activos:lista"), "kind": "primary"},
-                {"label": "Depreciaciones de activos", "url": reverse("depreciacion:reporte"), "kind": "secondary"},
-                {"label": "Configurar depreciación", "url": reverse("depreciacion:configurar-alertas"), "kind": "secondary"},
-                {"label": "Crear asignación", "url": reverse("asignaciones:nueva"), "kind": "secondary"},
+                {
+                    "label": "Ver inventario completo",
+                    "url": reverse("activos:lista"),
+                    "kind": "primary",
+                },
+                {
+                    "label": "Depreciaciones de activos",
+                    "url": reverse("depreciacion:reporte"),
+                    "kind": "secondary",
+                },
+                {
+                    "label": "Configurar depreciación",
+                    "url": reverse("depreciacion:configurar-alertas"),
+                    "kind": "secondary",
+                },
+                {
+                    "label": "Crear asignación",
+                    "url": reverse("asignaciones:nueva"),
+                    "kind": "secondary",
+                },
             ],
             "table_title": "Ultimos activos incorporados",
             "table_columns": ["Código", "Equipo", "Estado", "Alta"],
@@ -826,48 +960,85 @@ class Admin2ModuleView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
             "info_panels": [
                 {
                     "title": "Inventario por estado",
-                    "items": [{"label": item["estado_activo__nombre"] or "Sin estado", "value": item["total"]} for item in estados] or [{"label": "Sin datos", "value": "-"}],
+                    "items": [
+                        {
+                            "label": item["estado_activo__nombre"] or "Sin estado",
+                            "value": item["total"],
+                        }
+                        for item in estados
+                    ]
+                    or [{"label": "Sin datos", "value": "-"}],
                 },
                 {
                     "title": "Inventario por tipo",
-                    "items": [{"label": item["tipo_activo__nombre"] or "Sin tipo", "value": item["total"]} for item in tipos] or [{"label": "Sin datos", "value": "-"}],
+                    "items": [
+                        {"label": item["tipo_activo__nombre"] or "Sin tipo", "value": item["total"]}
+                        for item in tipos
+                    ]
+                    or [{"label": "Sin datos", "value": "-"}],
                 },
             ],
         }
 
     def build_auditoria_payload(self):
-        eventos = (
-            EventoActivo.objects.select_related("activo", "tipo_evento", "usuario_responsable")
-            .order_by("-fecha_evento", "-id")[:8]
-        )
+        eventos = EventoActivo.objects.select_related(
+            "activo", "tipo_evento", "usuario_responsable"
+        ).order_by("-fecha_evento", "-id")[:8]
         rows = []
         for evento in eventos:
             rows.append(
                 {
                     "cells": [
-                        {"value": evento.activo.codigo, "url": reverse("activos:detalle", args=[evento.activo_id]), "subvalue": str(evento.tipo_evento)},
-                        {"value": evento.detalle[:80] + ("..." if len(evento.detalle) > 80 else "")},
+                        {
+                            "value": evento.activo.codigo,
+                            "url": reverse("activos:detalle", args=[evento.activo_id]),
+                            "subvalue": str(evento.tipo_evento),
+                        },
+                        {
+                            "value": evento.detalle[:80]
+                            + ("..." if len(evento.detalle) > 80 else "")
+                        },
                         {"value": evento.usuario_responsable.get_username()},
                         {"value": evento.fecha_evento.strftime("%d/%m/%Y %H:%M")},
                     ]
                 }
             )
 
-        ultimas_asignaciones = Asignacion.objects.select_related("colaborador").order_by("-updated_at", "-id")[:5]
+        ultimas_asignaciones = Asignacion.objects.select_related("colaborador").order_by(
+            "-updated_at", "-id"
+        )[:5]
 
-        registros_atributos = RegistroAuditoria.objects.select_related("usuario").order_by("-created_at", "-id")[:8]
+        registros_atributos = RegistroAuditoria.objects.select_related("usuario").order_by(
+            "-created_at", "-id"
+        )[:8]
         return {
             "stats": [
                 {"label": "Eventos de activo", "value": EventoActivo.objects.count()},
                 {"label": "Notificaciones", "value": Notificacion.objects.count()},
-                {"label": "Asignaciones activas", "value": Asignacion.objects.filter(estado_asignacion__in=ASIGNACIONES_ABIERTAS).count()},
-                {"label": "Pendientes", "value": Notificacion.objects.filter(read_at__isnull=True).count()},
+                {
+                    "label": "Asignaciones activas",
+                    "value": Asignacion.objects.filter(
+                        estado_asignacion__in=ASIGNACIONES_ABIERTAS
+                    ).count(),
+                },
+                {
+                    "label": "Pendientes",
+                    "value": Notificacion.objects.filter(read_at__isnull=True).count(),
+                },
                 {"label": "Cambios de atributos", "value": RegistroAuditoria.objects.count()},
             ],
             "module_actions": [
                 {"label": "Ver activos", "url": reverse("activos:lista"), "kind": "primary"},
-                {"label": "Administrar notificaciones", "url": get_admin_changelist_url(Notificacion), "kind": "secondary"},
-                {"label": "Auditoria de atributos", "url": reverse("admin:auditoria_registroauditoria_changelist"), "kind": "secondary"},
+                {
+                    "label": "Administrar notificaciones",
+                    "url": get_admin_changelist_url(Notificacion),
+                    "kind": "secondary",
+                },
+                {
+                    "label": "Auditoria de atributos",
+                    "url": reverse("admin:auditoria_registroauditoria_changelist"),
+                    "kind": "secondary",
+                },
             ],
             "table_title": "Eventos recientes de activos",
             "table_columns": ["Activo", "Detalle", "Usuario", "Fecha"],
@@ -882,15 +1053,21 @@ class Admin2ModuleView(Admin2AccessMixin, Admin2BaseContextMixin, TemplateView):
                             "value": registro.created_at.strftime("%d/%m/%Y %H:%M"),
                         }
                         for registro in registros_atributos
-                    ] or [{"label": "Sin cambios registrados", "value": "-"}],
+                    ]
+                    or [{"label": "Sin cambios registrados", "value": "-"}],
                 },
                 {
                     "title": "Ultimas asignaciones tocadas",
                     "items": [
-                        {"label": item.codigo_asignacion or "Sin codigo", "value": item.colaborador.apellidos, "url": reverse("asignaciones:lista")}
+                        {
+                            "label": item.codigo_asignacion or "Sin codigo",
+                            "value": item.colaborador.apellidos,
+                            "url": reverse("asignaciones:lista"),
+                        }
                         for item in ultimas_asignaciones
-                    ] or [{"label": "Sin movimientos", "value": "-"}],
-                }
+                    ]
+                    or [{"label": "Sin movimientos", "value": "-"}],
+                },
             ],
         }
 
@@ -962,7 +1139,9 @@ class Admin2CatalogListView(Admin2CatalogsContextMixin, TemplateView):
         context["catalog_has_assignation_column"] = "permite_asignacion" in config["columns"]
         context["catalog_objects"] = objects
         context["catalog_total"] = len(objects)
-        context["catalog_active_total"] = sum(1 for item in objects if getattr(item, "activo", False))
+        context["catalog_active_total"] = sum(
+            1 for item in objects if getattr(item, "activo", False)
+        )
         context["create_url"] = reverse("admin2-catalogo-crear", args=[self.catalog_slug])
         context["admin_catalog_url"] = reverse(config["admin_changelist"])
         context["is_asset_type_catalog"] = self.catalog_slug == "tipos-activo"
@@ -981,9 +1160,7 @@ class Admin2CatalogFormView(Admin2CatalogsContextMixin, FormView):
             fields=config["fields"],
         )
         if "descripcion" in form_class.base_fields:
-            form_class.base_fields["descripcion"].widget = forms.Textarea(
-                attrs={"rows": 4}
-            )
+            form_class.base_fields["descripcion"].widget = forms.Textarea(attrs={"rows": 4})
         for field_name, field in form_class.base_fields.items():
             if isinstance(field.widget, forms.CheckboxInput):
                 field.widget.attrs.update({"class": "admin2-checkbox"})
@@ -1066,7 +1243,9 @@ class Admin2AtributoListView(Admin2AttributeSchemaAccessMixin, TemplateView):
         queryset = AtributoActivo.objects.prefetch_related("configuraciones_tipo__tipo_activo")
         if query:
             queryset = queryset.filter(
-                Q(nombre__icontains=query) | Q(clave__icontains=query) | Q(descripcion__icontains=query)
+                Q(nombre__icontains=query)
+                | Q(clave__icontains=query)
+                | Q(descripcion__icontains=query)
             )
         if tipo_dato:
             queryset = queryset.filter(tipo_dato=tipo_dato)
@@ -1075,14 +1254,16 @@ class Admin2AtributoListView(Admin2AttributeSchemaAccessMixin, TemplateView):
         elif estado == "inactivos":
             queryset = queryset.filter(activo=False)
         context.update(self.get_schema_context())
-        context.update({
-            "admin2_page_title": "Atributos de activos",
-            "atributos": queryset.order_by("nombre", "clave"),
-            "query": query,
-            "tipo_dato": tipo_dato,
-            "estado": estado,
-            "tipos_dato": AtributoActivo.TipoDato.choices,
-        })
+        context.update(
+            {
+                "admin2_page_title": "Atributos de activos",
+                "atributos": queryset.order_by("nombre", "clave"),
+                "query": query,
+                "tipo_dato": tipo_dato,
+                "estado": estado,
+                "tipos_dato": AtributoActivo.TipoDato.choices,
+            }
+        )
         return context
 
 
@@ -1110,11 +1291,13 @@ class Admin2AtributoFormView(Admin2AttributeSchemaAccessMixin, FormView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.update(self.get_schema_context())
-        context.update({
-            "admin2_page_title": "Editar atributo" if self.object else "Nuevo atributo",
-            "formset": kwargs.get("formset") or self.get_formset(),
-            "object": self.object,
-        })
+        context.update(
+            {
+                "admin2_page_title": "Editar atributo" if self.object else "Nuevo atributo",
+                "formset": kwargs.get("formset") or self.get_formset(),
+                "object": self.object,
+            }
+        )
         return context
 
     def form_valid(self, form):
@@ -1131,13 +1314,25 @@ class Admin2AtributoFormView(Admin2AttributeSchemaAccessMixin, FormView):
             self.object.save()
             formset.instance = self.object
             formset.save()
-            accion = RegistroAuditoria.Accion.MODIFICAR if change else RegistroAuditoria.Accion.CREAR
+            accion = (
+                RegistroAuditoria.Accion.MODIFICAR if change else RegistroAuditoria.Accion.CREAR
+            )
             if change and anterior_activo != self.object.activo:
-                accion = RegistroAuditoria.Accion.ACTIVAR if self.object.activo else RegistroAuditoria.Accion.DESACTIVAR
+                accion = (
+                    RegistroAuditoria.Accion.ACTIVAR
+                    if self.object.activo
+                    else RegistroAuditoria.Accion.DESACTIVAR
+                )
             registrar_evento(
-                entidad="AtributoActivo", objeto_id=self.object.pk, accion=accion,
-                resumen=f"{self.object.nombre} ({self.object.clave})", usuario=self.request.user,
-                detalle={"campos": form.changed_data, "opciones_actualizadas": formset.has_changed()},
+                entidad="AtributoActivo",
+                objeto_id=self.object.pk,
+                accion=accion,
+                resumen=f"{self.object.nombre} ({self.object.clave})",
+                usuario=self.request.user,
+                detalle={
+                    "campos": form.changed_data,
+                    "opciones_actualizadas": formset.has_changed(),
+                },
             )
         messages.success(self.request, "Atributo guardado correctamente.")
         return redirect("admin2-atributos-lista")
@@ -1165,18 +1360,24 @@ class Admin2ConfiguracionAtributoListView(Admin2AttributeSchemaAccessMixin, Temp
         elif estado == "inactivos":
             queryset = queryset.filter(activo=False)
         context.update(self.get_schema_context())
-        context.update({
-            "admin2_page_title": "Atributos por tipo de activo",
-            "configuraciones": queryset.order_by("tipo_activo__nombre", "orden", "atributo__nombre"),
-            "tipos_activo": TipoActivo.objects.annotate(
-                atributos_activos=Count(
-                    "configuraciones_atributos",
-                    filter=Q(configuraciones_atributos__activo=True),
-                )
-            ).order_by("nombre"),
-            "query": query, "tipo_id": tipo_id, "estado": estado,
-            "limite_atributos": int(getattr(settings, "MAX_ATRIBUTOS_ACTIVOS_POR_TIPO", 10)),
-        })
+        context.update(
+            {
+                "admin2_page_title": "Atributos por tipo de activo",
+                "configuraciones": queryset.order_by(
+                    "tipo_activo__nombre", "orden", "atributo__nombre"
+                ),
+                "tipos_activo": TipoActivo.objects.annotate(
+                    atributos_activos=Count(
+                        "configuraciones_atributos",
+                        filter=Q(configuraciones_atributos__activo=True),
+                    )
+                ).order_by("nombre"),
+                "query": query,
+                "tipo_id": tipo_id,
+                "estado": estado,
+                "limite_atributos": int(getattr(settings, "MAX_ATRIBUTOS_ACTIVOS_POR_TIPO", 10)),
+            }
+        )
         return context
 
 
@@ -1193,7 +1394,11 @@ class Admin2ConfiguracionAtributoFormView(Admin2AttributeSchemaAccessMixin, Form
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs.update({"instance": self.object, "creando": self.object is None})
-        if self.object is None and self.request.method == "GET" and self.request.GET.get("tipo", "").isdigit():
+        if (
+            self.object is None
+            and self.request.method == "GET"
+            and self.request.GET.get("tipo", "").isdigit()
+        ):
             kwargs["initial"] = {"tipo_activo": self.request.GET["tipo"]}
         return kwargs
 
@@ -1201,11 +1406,15 @@ class Admin2ConfiguracionAtributoFormView(Admin2AttributeSchemaAccessMixin, Form
         context = super().get_context_data(**kwargs)
         context.update(self.get_schema_context())
         limite = int(getattr(settings, "MAX_ATRIBUTOS_ACTIVOS_POR_TIPO", 10))
-        context.update({
-            "admin2_page_title": "Editar configuracion" if self.object else "Vincular atributo a un tipo",
-            "object": self.object,
-            "limite_atributos": limite,
-        })
+        context.update(
+            {
+                "admin2_page_title": "Editar configuracion"
+                if self.object
+                else "Vincular atributo a un tipo",
+                "object": self.object,
+                "limite_atributos": limite,
+            }
+        )
         return context
 
     def form_valid(self, form):
@@ -1216,19 +1425,29 @@ class Admin2ConfiguracionAtributoFormView(Admin2AttributeSchemaAccessMixin, Form
             TipoActivo.objects.select_for_update().get(pk=self.object.tipo_activo_id)
             if not change:
                 ultimo = (
-                    TipoActivoAtributo.objects.filter(tipo_activo_id=self.object.tipo_activo_id, activo=True)
-                    .aggregate(maximo=Max("orden"))["maximo"] or 0
+                    TipoActivoAtributo.objects.filter(
+                        tipo_activo_id=self.object.tipo_activo_id, activo=True
+                    ).aggregate(maximo=Max("orden"))["maximo"]
+                    or 0
                 )
                 self.object.orden = ultimo + 1
             if not self.object.created_by_id:
                 self.object.created_by = self.request.user
             self.object.updated_by = self.request.user
             self.object.save()
-            accion = RegistroAuditoria.Accion.MODIFICAR if change else RegistroAuditoria.Accion.ASOCIAR
+            accion = (
+                RegistroAuditoria.Accion.MODIFICAR if change else RegistroAuditoria.Accion.ASOCIAR
+            )
             if change and anterior_activo != self.object.activo:
-                accion = RegistroAuditoria.Accion.ACTIVAR if self.object.activo else RegistroAuditoria.Accion.DESACTIVAR
+                accion = (
+                    RegistroAuditoria.Accion.ACTIVAR
+                    if self.object.activo
+                    else RegistroAuditoria.Accion.DESACTIVAR
+                )
             registrar_evento(
-                entidad="TipoActivoAtributo", objeto_id=self.object.pk, accion=accion,
+                entidad="TipoActivoAtributo",
+                objeto_id=self.object.pk,
+                accion=accion,
                 resumen=f"{self.object.atributo.nombre} en {self.object.tipo_activo.nombre}",
                 usuario=self.request.user,
                 detalle={"campos": form.changed_data, "orden": self.object.orden},
@@ -1247,13 +1466,16 @@ class Admin2ConfiguracionAtributoDesactivarView(Admin2AttributeSchemaAccessMixin
             configuracion.updated_by = request.user
             configuracion.save(update_fields=("activo", "updated_by", "updated_at"))
             registrar_evento(
-                entidad="TipoActivoAtributo", objeto_id=configuracion.pk,
+                entidad="TipoActivoAtributo",
+                objeto_id=configuracion.pk,
                 accion=RegistroAuditoria.Accion.DESACTIVAR,
                 resumen=f"{configuracion.atributo.nombre} fue quitado de {configuracion.tipo_activo.nombre}",
                 usuario=request.user,
                 detalle={"historial_conservado": True},
             )
-            messages.success(request, "El atributo fue quitado del tipo; sus valores historicos se conservaron.")
+            messages.success(
+                request, "El atributo fue quitado del tipo; sus valores historicos se conservaron."
+            )
         return redirect("admin2-configuraciones-atributos-lista")
 
 
@@ -1264,37 +1486,37 @@ class Admin2CriterioBusquedaActivoView(Admin2AttributeSchemaAccessMixin, FormVie
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.update(self.get_schema_context())
-        context.update({
-            "admin2_page_title": "Criterios de busqueda de activos",
-            "criterios_activos": TipoActivoAtributo.objects.filter(
-                activo=True,
-                filtrable=True,
-                tipo_activo__activo=True,
-                atributo__activo=True,
-            ).exclude(
-                atributo__tipo_dato=AtributoActivo.TipoDato.TEXTO_PROTEGIDO,
-            ).count(),
-            "atributos_protegidos": TipoActivoAtributo.objects.filter(
-                activo=True,
-                tipo_activo__activo=True,
-                atributo__activo=True,
-                atributo__tipo_dato=AtributoActivo.TipoDato.TEXTO_PROTEGIDO,
-            ).select_related("tipo_activo", "atributo"),
-        })
+        context.update(
+            {
+                "admin2_page_title": "Criterios de busqueda de activos",
+                "criterios_activos": TipoActivoAtributo.objects.filter(
+                    activo=True,
+                    filtrable=True,
+                    tipo_activo__activo=True,
+                    atributo__activo=True,
+                )
+                .exclude(
+                    atributo__tipo_dato=AtributoActivo.TipoDato.TEXTO_PROTEGIDO,
+                )
+                .count(),
+                "atributos_protegidos": TipoActivoAtributo.objects.filter(
+                    activo=True,
+                    tipo_activo__activo=True,
+                    atributo__activo=True,
+                    atributo__tipo_dato=AtributoActivo.TipoDato.TEXTO_PROTEGIDO,
+                ).select_related("tipo_activo", "atributo"),
+            }
+        )
         return context
 
     def form_valid(self, form):
-        ids_seleccionados = {
-            configuracion.pk for configuracion in form.cleaned_data["criterios"]
-        }
+        ids_seleccionados = {configuracion.pk for configuracion in form.cleaned_data["criterios"]}
         configuraciones = TipoActivoAtributo.objects.filter(
             activo=True,
             tipo_activo__activo=True,
             atributo__activo=True,
         )
-        ids_anteriores = set(
-            configuraciones.filter(filtrable=True).values_list("pk", flat=True)
-        )
+        ids_anteriores = set(configuraciones.filter(filtrable=True).values_list("pk", flat=True))
         habilitados = sorted(ids_seleccionados - ids_anteriores)
         deshabilitados = sorted(ids_anteriores - ids_seleccionados)
 

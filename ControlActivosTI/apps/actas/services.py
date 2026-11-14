@@ -72,7 +72,9 @@ def _nombre_archivo(asignacion, tipo, devolucion=None):
     codigo = asignacion.codigo_asignacion or f"ASG-{asignacion.pk}"
     if devolucion:
         codigo_devolucion = devolucion.codigo_devolucion or f"DEV-{devolucion.pk}"
-        colaborador = slugify(asignacion.nombre_colaborador_completo).replace("-", "_") or "colaborador"
+        colaborador = (
+            slugify(asignacion.nombre_colaborador_completo).replace("-", "_") or "colaborador"
+        )
         fecha = devolucion.fecha_devolucion.strftime("%Y-%m-%d")
         return f"Acta_Recepcion_{colaborador}_{fecha}_{codigo_devolucion}.xlsx"
     return f"acta_entrega_{codigo}.xlsx"
@@ -91,9 +93,7 @@ def _clave_empresa(empresa):
         if nombre == clave or nombre.startswith(f"{clave} "):
             return clave
     nombre_visible = _texto(getattr(empresa, "nombre", empresa), default="sin empresa")
-    raise ValueError(
-        f'No existe una configuracion de actas para la empresa "{nombre_visible}".'
-    )
+    raise ValueError(f'No existe una configuracion de actas para la empresa "{nombre_visible}".')
 
 
 def obtener_plantilla_acta(tipo, empresa):
@@ -188,8 +188,7 @@ def _insertar_filas_preservando_combinadas(ws, indice, cantidad):
         if max_row >= indice:
             max_row += cantidad
         ws.print_area = (
-            f"${get_column_letter(min_col)}${min_row}:"
-            f"${get_column_letter(max_col)}${max_row}"
+            f"${get_column_letter(min_col)}${min_row}:${get_column_letter(max_col)}${max_row}"
         )
 
 
@@ -231,19 +230,25 @@ def _preparar_filas_activos(
 
 def _normalizar_encabezado(valor):
     texto = unicodedata.normalize("NFKD", str(valor or ""))
-    return "".join(caracter for caracter in texto if not unicodedata.combining(caracter)).strip().upper()
+    return (
+        "".join(caracter for caracter in texto if not unicodedata.combining(caracter))
+        .strip()
+        .upper()
+    )
 
 
 def _localizar_tabla_activos(ws):
     for fila in range(1, ws.max_row + 1):
         valores = {
-            _normalizar_encabezado(ws.cell(fila, columna).value)
-            for columna in COLUMNAS_ACTIVOS
+            _normalizar_encabezado(ws.cell(fila, columna).value) for columna in COLUMNAS_ACTIVOS
         }
         if set(ENCABEZADOS_ACTIVOS).issubset(valores):
             fila_inicio = fila + 1
             for candidata in range(fila_inicio, ws.max_row + 1):
-                if any(ws.cell(candidata, columna).value not in (None, "") for columna in COLUMNAS_ACTIVOS):
+                if any(
+                    ws.cell(candidata, columna).value not in (None, "")
+                    for columna in COLUMNAS_ACTIVOS
+                ):
                     return fila, fila_inicio, candidata - fila_inicio
     raise ValueError("No se encontro la tabla de activos mediante sus encabezados.")
 
@@ -310,9 +315,7 @@ def _restaurar_controles_checkbox(contenido, plantilla_path):
         extras = {}
 
         feature_bags = [
-            nombre
-            for nombre in plantilla.namelist()
-            if nombre.startswith("xl/featurePropertyBag/")
+            nombre for nombre in plantilla.namelist() if nombre.startswith("xl/featurePropertyBag/")
         ]
         if not feature_bags:
             return contenido
@@ -366,15 +369,10 @@ def _restaurar_controles_checkbox(contenido, plantilla_path):
         )
 
         relaciones = ET.fromstring(archivos["xl/_rels/workbook.xml.rels"])
-        if not any(
-            relacion.get("Type") == TIPO_RELACION_CHECKBOX
-            for relacion in relaciones
-        ):
+        if not any(relacion.get("Type") == TIPO_RELACION_CHECKBOX for relacion in relaciones):
             relacion_original = next(
                 relacion
-                for relacion in ET.fromstring(
-                    plantilla.read("xl/_rels/workbook.xml.rels")
-                )
+                for relacion in ET.fromstring(plantilla.read("xl/_rels/workbook.xml.rels"))
                 if relacion.get("Type") == TIPO_RELACION_CHECKBOX
             )
             relacion_checkbox = deepcopy(relacion_original)
@@ -506,7 +504,7 @@ def _llenar_fotografias_entrega(ws, asignacion):
 
         for b in range(bloques_extra):
             r_inicio = fila_insercion + (b * filas_por_bloque)
-            es_ultimo = (b == bloques_extra - 1)
+            es_ultimo = b == bloques_extra - 1
 
             for offset in range(filas_por_bloque):
                 fila_actual = r_inicio + offset
@@ -516,7 +514,9 @@ def _llenar_fotografias_entrega(ws, asignacion):
                 celda_izq = ws.cell(fila_actual, 2)
                 celda_izq.border = Border(left=borde_medio, right=None, top=None, bottom=None)
                 for c in range(3, 9):
-                    ws.cell(fila_actual, c).border = Border(left=None, right=None, top=None, bottom=None)
+                    ws.cell(fila_actual, c).border = Border(
+                        left=None, right=None, top=None, bottom=None
+                    )
                 celda_der = ws.cell(fila_actual, 9)
                 celda_der.border = Border(left=None, right=borde_medio, top=None, bottom=None)
 
@@ -593,13 +593,17 @@ def _llenar_fotografias_entrega(ws, asignacion):
                     )
                     ws.add_image(excel_img)
         except Exception:
-            logger.exception("Error al insertar evidencia fotografica en acta evidencia_id=%s", evidencia.pk)
+            logger.exception(
+                "Error al insertar evidencia fotografica en acta evidencia_id=%s", evidencia.pk
+            )
 
 
 def _llenar_firmas_entrega(ws, asignacion):
     fila_recibe = _buscar_fila_por_texto(ws, "RECIBE CONFORME")
     if fila_recibe:
-        ws.cell(fila_recibe + 1, 4).value = _texto(asignacion.nombre_colaborador_completo, default="")
+        ws.cell(fila_recibe + 1, 4).value = _texto(
+            asignacion.nombre_colaborador_completo, default=""
+        )
         ws.cell(fila_recibe + 2, 4).value = _cargo_con_area(asignacion.colaborador, default="")
 
 
@@ -613,10 +617,12 @@ def construir_hoja_acta_entrega(asignacion):
             "activo__tipo_activo",
             "activo__estado_activo",
             "activo__proveedor_propietario",
-        ).prefetch_related(
+        )
+        .prefetch_related(
             "activo__valores_atributos__atributo",
             "activo__valores_atributos__valor_opcion",
-        ).order_by("orden", "id")
+        )
+        .order_by("orden", "id")
     )
     _fila_encabezado, fila_inicio, filas_plantilla = _localizar_tabla_activos(ws)
     _preparar_filas_activos(
@@ -637,9 +643,11 @@ def construir_hoja_acta_entrega(asignacion):
         ws.cell(indice, 2).value = _texto(detalle.articulo_acta, default="")
         ws.cell(indice, 4).value = _texto(detalle.activo.marca, default="")
         ws.cell(indice, 6).value = _valor_excel(detalle.activo.valor)
-        ws.cell(indice, 6).number_format = '$#,##0.00'
+        ws.cell(indice, 6).number_format = "$#,##0.00"
         ws.cell(indice, 7).value = None
-        ws.cell(indice, 8).value = detalle.caracteristicas_acta if detalle.caracteristicas_acta != "-" else ""
+        ws.cell(indice, 8).value = (
+            detalle.caracteristicas_acta if detalle.caracteristicas_acta != "-" else ""
+        )
         ws.cell(indice, 9).value = _observaciones_acta_activo(detalle.activo)
         _ajustar_alto_fila_activo(ws, indice)
 
@@ -685,15 +693,19 @@ def _observaciones_recepcion(devolucion_detalle):
 
 
 def construir_filas_recepcion(devolucion):
-    detalles = devolucion.detalles.select_related(
-        "detalle_asignacion__activo__tipo_activo",
-        "detalle_asignacion__activo__estado_activo",
-        "detalle_asignacion__activo__proveedor_propietario",
-        "devolucion",
-    ).prefetch_related(
-        "detalle_asignacion__activo__valores_atributos__atributo",
-        "detalle_asignacion__activo__valores_atributos__valor_opcion",
-    ).order_by("detalle_asignacion__orden", "id")
+    detalles = (
+        devolucion.detalles.select_related(
+            "detalle_asignacion__activo__tipo_activo",
+            "detalle_asignacion__activo__estado_activo",
+            "detalle_asignacion__activo__proveedor_propietario",
+            "devolucion",
+        )
+        .prefetch_related(
+            "detalle_asignacion__activo__valores_atributos__atributo",
+            "detalle_asignacion__activo__valores_atributos__valor_opcion",
+        )
+        .order_by("detalle_asignacion__orden", "id")
+    )
 
     return [
         {
@@ -745,7 +757,9 @@ def generar_acta_recepcion(devolucion):
         filas_plantilla=filas_plantilla,
     )
 
-    ws["I1"] = PLANTILLAS_POR_EMPRESA[_clave_empresa(asignacion.colaborador.empresa)][TIPO_RECEPCION]
+    ws["I1"] = PLANTILLAS_POR_EMPRESA[_clave_empresa(asignacion.colaborador.empresa)][
+        TIPO_RECEPCION
+    ]
     ws["E6"] = devolucion.fecha_devolucion
     ws["E10"] = _texto(asignacion.nombre_colaborador_completo, default="")
     ws["E11"] = _texto(asignacion.colaborador.cedula, default="")
@@ -775,7 +789,9 @@ def generar_acta_asignacion(asignacion):
     return construir_hoja_acta_entrega(asignacion)
 
 
-def generar_o_actualizar_acta(asignacion, usuario, tipo=TIPO_ENTREGA, devolucion=None, forzar=False):
+def generar_o_actualizar_acta(
+    asignacion, usuario, tipo=TIPO_ENTREGA, devolucion=None, forzar=False
+):
     filtros = {"asignacion": asignacion, "tipo": tipo, "devolucion": devolucion}
     existente = ActaEntrega.objects.filter(**filtros).first()
     if not forzar and existente and existente.emitida and existente.archivo:
@@ -808,12 +824,12 @@ def generar_o_actualizar_acta(asignacion, usuario, tipo=TIPO_ENTREGA, devolucion
     else:
         activos_instantanea = [
             instantanea_activo(detalle.activo)
-            for detalle in asignacion.detalles.select_related(
-                "activo__tipo_activo"
-            ).prefetch_related(
+            for detalle in asignacion.detalles.select_related("activo__tipo_activo")
+            .prefetch_related(
                 "activo__valores_atributos__atributo",
                 "activo__valores_atributos__valor_opcion",
-            ).order_by("orden", "id")
+            )
+            .order_by("orden", "id")
         ]
     acta.instantanea_datos = {
         "tipo": tipo,
@@ -831,12 +847,16 @@ def generar_o_actualizar_acta(asignacion, usuario, tipo=TIPO_ENTREGA, devolucion
 
 def generar_o_actualizar_actas_devolucion(devolucion, usuario):
     asignacion = devolucion.asignacion
-    acta_entrega = ActaEntrega.objects.filter(
-        asignacion=asignacion,
-        tipo=TIPO_ENTREGA,
-        devolucion__isnull=True,
-        archivo__isnull=False,
-    ).exclude(archivo="").first()
+    acta_entrega = (
+        ActaEntrega.objects.filter(
+            asignacion=asignacion,
+            tipo=TIPO_ENTREGA,
+            devolucion__isnull=True,
+            archivo__isnull=False,
+        )
+        .exclude(archivo="")
+        .first()
+    )
     if not acta_entrega:
         acta_entrega = generar_o_actualizar_acta(asignacion, usuario, tipo=TIPO_ENTREGA)
     acta_recepcion = generar_o_actualizar_acta(

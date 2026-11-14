@@ -95,6 +95,7 @@ class ActivoSelectMultiple(forms.SelectMultiple):
 
     def _build_search_value(self, activo):
         from apps.activos.attribute_services import valores_visibles
+
         valores_dinamicos = [valor.valor_formateado for _config, valor in valores_visibles(activo)]
         valores = [
             activo.codigo,
@@ -115,6 +116,7 @@ class ActivoSelectMultiple(forms.SelectMultiple):
 
     def _build_specs_value(self, activo):
         from apps.activos.attribute_services import valores_visibles
+
         dinamicos = [
             f"{config.atributo.nombre}: {valor.valor_formateado}"
             for config, valor in valores_visibles(activo)
@@ -143,6 +145,7 @@ class ActivoMultipleChoiceField(forms.ModelMultipleChoiceField):
         ]
 
         from apps.activos.attribute_services import valores_visibles
+
         specs = [
             f"{config.atributo.nombre}: {valor.valor_formateado}"
             for config, valor in valores_visibles(obj)
@@ -263,7 +266,9 @@ class AsignacionCreateForm(forms.ModelForm):
             else:
                 field.widget.attrs["class"] = BASE_CLASS
             if name == "activos":
-                field.help_text = "Usa el buscador y selecciona uno o varios activos con los checks."
+                field.help_text = (
+                    "Usa el buscador y selecciona uno o varios activos con los checks."
+                )
 
     def clean_activos(self):
         activos = self.cleaned_data.get("activos")
@@ -287,10 +292,14 @@ class AsignacionCreateForm(forms.ModelForm):
         ceco = colaborador.centro_costo
 
         if not ceco:
-            raise forms.ValidationError("El colaborador debe tener un CECO vigente antes de asignar activos.")
+            raise forms.ValidationError(
+                "El colaborador debe tener un CECO vigente antes de asignar activos."
+            )
 
         if not ceco.activo or not ceco.acepta_asignaciones:
-            raise forms.ValidationError("El CECO del colaborador no esta habilitado para asignaciones.")
+            raise forms.ValidationError(
+                "El CECO del colaborador no esta habilitado para asignaciones."
+            )
 
         return colaborador
 
@@ -357,7 +366,9 @@ class AsignacionDetalleDevolucionForm(forms.ModelForm):
             .order_by("nombre")
         )
         self.fields["estado_activo_devolucion"].required = False
-        self.fields["devolver"].widget.attrs["class"] = "h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+        self.fields["devolver"].widget.attrs["class"] = (
+            "h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+        )
         self.fields["estado_activo_devolucion"].widget.attrs["class"] = BASE_CLASS
         self.fields["observaciones_devolucion"].widget.attrs["class"] = TEXTAREA_CLASS
 
@@ -405,7 +416,9 @@ class EvidenciaEntregaForm(forms.ModelForm):
             self.fields["imagen"].widget.attrs["accept"] = "image/*,.jpg,.jpeg,.png,.webp"
         if "descripcion" in self.fields:
             self.fields["descripcion"].widget.attrs["class"] = BASE_CLASS
-            self.fields["descripcion"].widget.attrs["placeholder"] = "Ej: Equipos completos, pantalla encendida, sellos..."
+            self.fields["descripcion"].widget.attrs["placeholder"] = (
+                "Ej: Equipos completos, pantalla encendida, sellos..."
+            )
         if "orden" in self.fields:
             self.fields["orden"].widget = forms.HiddenInput()
 
@@ -449,7 +462,9 @@ class EvidenciaDevolucionForm(forms.ModelForm):
             self.fields["imagen"].widget.attrs["accept"] = "image/*,.jpg,.jpeg,.png,.webp"
         if "descripcion" in self.fields:
             self.fields["descripcion"].widget.attrs["class"] = BASE_CLASS
-            self.fields["descripcion"].widget.attrs["placeholder"] = "Ej: Estado de pantalla, carcasa, cables..."
+            self.fields["descripcion"].widget.attrs["placeholder"] = (
+                "Ej: Estado de pantalla, carcasa, cables..."
+            )
         if "orden" in self.fields:
             self.fields["orden"].widget = forms.HiddenInput()
 

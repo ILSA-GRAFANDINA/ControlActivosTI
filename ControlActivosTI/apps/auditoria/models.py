@@ -32,7 +32,10 @@ class RegistroAuditoria(models.Model):
         verbose_name_plural = "Registros de auditoria"
         ordering = ["-created_at", "-id"]
         permissions = [
-            ("view_attribute_configuration_audit", "Puede ver auditoria de atributos configurables"),
+            (
+                "view_attribute_configuration_audit",
+                "Puede ver auditoria de atributos configurables",
+            ),
         ]
 
     def __str__(self):
