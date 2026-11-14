@@ -12,6 +12,8 @@ from apps.activos.models import Activo
 from apps.asignaciones.models import Asignacion, AsignacionDetalle
 from apps.colaboradores.models import Colaborador
 
+mimetypes.add_type("image/webp", ".webp")
+
 ASIGNACIONES_ABIERTAS = [
     Asignacion.EstadoAsignacion.ACTIVA,
     Asignacion.EstadoAsignacion.PARCIAL,
