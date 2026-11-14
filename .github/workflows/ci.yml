@@ -1,0 +1,75 @@
+name: CI - ControlActivosTI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - test
+  pull_request:
+    branches:
+      - main
+      - develop
+      - test
+
+jobs:
+  test:
+    name: Pruebas Django & PostgreSQL
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: controlactivos_ci_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci_postgres_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: ControlActivosTI
+
+    env:
+      APP_ENV: development
+      DEBUG: "True"
+      SECRET_KEY: django-insecure-ci-pipeline-key-2026
+      ALLOWED_HOSTS: 127.0.0.1,localhost,testserver
+      DB_NAME: controlactivos_ci_db
+      DB_USER: postgres
+      DB_PASSWORD: ci_postgres_password
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      LANGUAGE_CODE: es-ec
+      TIME_ZONE: America/Guayaquil
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: "ControlActivosTI/requirements.txt"
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Verificar migraciones pendientes
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Verificar configuracion de Django
+        run: python manage.py check
+
+      - name: Ejecutar suite de pruebas
+        run: python manage.py test --verbosity=2
