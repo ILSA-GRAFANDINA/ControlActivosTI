@@ -1161,7 +1161,7 @@ class Admin2CatalogFormView(Admin2CatalogsContextMixin, FormView):
         )
         if "descripcion" in form_class.base_fields:
             form_class.base_fields["descripcion"].widget = forms.Textarea(attrs={"rows": 4})
-        for field_name, field in form_class.base_fields.items():
+        for field in form_class.base_fields.values():
             if isinstance(field.widget, forms.CheckboxInput):
                 field.widget.attrs.update({"class": "admin2-checkbox"})
             else:
