@@ -3,14 +3,11 @@ name: CI - ControlActivosTI
 on:
   push:
     branches:
-      - main
-      - develop
       - test
   pull_request:
     branches:
       - main
       - develop
-      - test
 
 jobs:
   test:
@@ -73,3 +70,4 @@ jobs:
 
       - name: Ejecutar suite de pruebas
         run: python manage.py test --verbosity=2
+
