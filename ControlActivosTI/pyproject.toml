@@ -25,6 +25,9 @@ ignore = [
     "E501", # longitud de linea (manejada por el formateador)
 ]
 
+[tool.ruff.lint.isort]
+known-first-party = ["apps", "config"]
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
