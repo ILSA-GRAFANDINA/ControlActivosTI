@@ -30,10 +30,6 @@ ESTADO_ASIGNABLE_Q = (
 ESTADO_ASIGNADO_Q = ACTIVO_VIGENTE_Q & Q(estado_activo__nombre__iexact="Asignado")
 
 
-class InicioView(LoginRequiredMixin, TemplateView):
-    template_name = "dashboard/inicio.html"
-
-
 class HealthView(View):
     """Sonda minima; deliberadamente no expone configuracion ni excepciones."""
 
