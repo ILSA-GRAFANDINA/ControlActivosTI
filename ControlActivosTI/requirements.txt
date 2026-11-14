@@ -1,4 +1,4 @@
-﻿asgiref==3.11.1
+asgiref==3.11.1
 Django==6.0.8
 et_xmlfile==2.0.0
 openpyxl==3.1.5
