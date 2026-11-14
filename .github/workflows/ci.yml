@@ -38,6 +38,32 @@ jobs:
           src: "ControlActivosTI"
           args: "format --check --config ControlActivosTI/pyproject.toml"
 
+  security:
+    name: Seguridad (pip-audit & Bandit/Ruff)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Auditar dependencias con pip-audit (informativo)
+        continue-on-error: true
+        run: |
+          pip install --quiet pip-audit
+          pip-audit -r ControlActivosTI/requirements.txt
+
+      - name: Analisis estatico de seguridad SAST (informativo)
+        uses: astral-sh/ruff-action@v3
+        continue-on-error: true
+        with:
+          src: "ControlActivosTI"
+          args: "check --config ControlActivosTI/pyproject.toml --select S --extend-exclude '**/tests*.py'"
+
   test:
     name: Pruebas Django & PostgreSQL
     runs-on: ubuntu-latest
