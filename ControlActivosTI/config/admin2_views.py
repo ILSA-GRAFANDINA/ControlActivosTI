@@ -1,7 +1,6 @@
 from django import forms
 from django.conf import settings
-from django.contrib import admin
-from django.contrib import messages
+from django.contrib import admin, messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.models import Group
@@ -18,9 +17,17 @@ from django.views.generic import FormView, TemplateView
 
 from apps.activos.models import Activo, EventoActivo
 from apps.asignaciones.models import Asignacion, AsignacionDetalle
+from apps.auditoria.models import RegistroAuditoria
+from apps.auditoria.services import registrar_evento
+from apps.catalogos.forms import (
+    AtributoActivoAdmin2Form,
+    CriterioBusquedaActivoForm,
+    OpcionAtributoActivoAdmin2FormSet,
+    TipoActivoAtributoAdmin2Form,
+)
 from apps.catalogos.models import (
-    AtributoActivo,
     Area,
+    AtributoActivo,
     Cargo,
     CentroCosto,
     DepartamentoEmpresa,
@@ -32,17 +39,8 @@ from apps.catalogos.models import (
     Ubicacion,
     UbicacionFisicaActivo,
 )
-from apps.catalogos.forms import (
-    AtributoActivoAdmin2Form,
-    CriterioBusquedaActivoForm,
-    OpcionAtributoActivoAdmin2FormSet,
-    TipoActivoAtributoAdmin2Form,
-)
-from apps.auditoria.models import RegistroAuditoria
-from apps.auditoria.services import registrar_evento
 from apps.colaboradores.models import Colaborador
 from apps.notificaciones.models import Notificacion
-
 
 User = get_user_model()
 ASIGNACIONES_ABIERTAS = [

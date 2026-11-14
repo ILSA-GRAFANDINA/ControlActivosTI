@@ -4,7 +4,6 @@ import hashlib
 from django.conf import settings
 from django.core.exceptions import ValidationError
 
-
 ENCRYPTED_TEXT_PREFIX = "fernet$"
 MASK_CHARACTER = "*"
 

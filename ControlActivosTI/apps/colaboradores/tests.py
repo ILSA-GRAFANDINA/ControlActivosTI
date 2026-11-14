@@ -5,9 +5,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from apps.catalogos.models import Area, Cargo, CentroCosto, Empresa, Ubicacion
-
 from apps.colaboradores.models import Colaborador
-
 
 User = get_user_model()
 

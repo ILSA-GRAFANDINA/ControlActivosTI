@@ -1,10 +1,9 @@
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Count, Q, Sum
-from django.db import connection
 import mimetypes
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.files.storage import default_storage
+from django.db import connection
+from django.db.models import Count, Q, Sum
 from django.http import FileResponse, Http404, JsonResponse
 from django.views import View
 from django.views.generic import TemplateView

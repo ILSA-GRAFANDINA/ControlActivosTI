@@ -5,7 +5,6 @@ from apps.catalogos.models import Area, Cargo, CentroCosto, Empresa, Ubicacion
 
 from .models import Colaborador
 
-
 BASE_CLASS = (
     "w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 "
     "shadow-sm outline-none transition duration-200 "

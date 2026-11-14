@@ -7,25 +7,31 @@ from django.db import transaction
 from django.db.models import Case, Count, F, IntegerField, Prefetch, Q, Value, When
 from django.forms.models import model_to_dict
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse, QueryDict
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
-from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 from django.views.generic import CreateView, DetailView, ListView, TemplateView
 
 from apps.asignaciones.models import AsignacionDetalle
-from apps.catalogos.models import AtributoActivo, Empresa, EstadoActivo, TipoActivo, UbicacionFisicaActivo
+from apps.auditoria.models import RegistroAuditoria
+from apps.auditoria.services import registrar_evento
+from apps.catalogos.models import (
+    AtributoActivo,
+    Empresa,
+    EstadoActivo,
+    TipoActivo,
+    UbicacionFisicaActivo,
+)
+from apps.depreciacion.services import DepreciationService
 from apps.facturas.models import FacturaCompra
 from apps.notificaciones.services import NotificationService
-from apps.depreciacion.services import DepreciationService
 from apps.proveedores.models import Proveedor
 
+from .attribute_services import configuraciones_para_tipo, guardar_valores_atributos
 from .forms import ActivoAdminForm, FotoActivoCreateFormSet
 from .models import Activo, EventoActivo, FotoActivo, ValorAtributoActivo
 from .services import build_activos_export_workbook
-from .attribute_services import configuraciones_para_tipo, guardar_valores_atributos
-from apps.auditoria.models import RegistroAuditoria
-from apps.auditoria.services import registrar_evento
 
 
 class ActivoFilterMixin:

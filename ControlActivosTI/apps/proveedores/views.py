@@ -13,6 +13,7 @@ from apps.notificaciones.services import NotificationService
 from .forms import ProveedorForm
 from .models import Proveedor
 
+
 class ProveedorListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     permission_required = "proveedores.view_proveedor"
     raise_exception = True

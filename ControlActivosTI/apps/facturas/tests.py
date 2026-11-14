@@ -17,10 +17,9 @@ from pypdf import PdfWriter
 from apps.activos.forms import ActivoAdminForm
 from apps.activos.models import Activo
 from apps.catalogos.models import Empresa, EstadoActivo, TipoActivo
-from apps.proveedores.models import Proveedor
-
 from apps.facturas.forms import FacturaCompraForm
 from apps.facturas.models import FacturaCompra, ReemplazoDocumentoFactura
+from apps.proveedores.models import Proveedor
 
 
 def pdf_valido(nombre="factura.pdf", paginas=1):

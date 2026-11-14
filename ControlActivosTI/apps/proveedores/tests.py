@@ -8,7 +8,6 @@ from django.urls import reverse
 from apps.activos.forms import ActivoAdminForm
 from apps.activos.models import Activo
 from apps.catalogos.models import Empresa, EstadoActivo, TipoActivo
-
 from apps.proveedores.models import Proveedor
 
 

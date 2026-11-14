@@ -2,7 +2,6 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
-
 EXPORT_HEADERS = [
     "Codigo",
     "Tipo de activo",
@@ -60,6 +59,7 @@ def _activo_to_row(activo):
 
 def build_activos_export_workbook(activos):
     from apps.catalogos.models import TipoActivoAtributo
+
     from .attribute_services import valores_visibles
 
     tipo_ids = {activo.tipo_activo_id for activo in activos}

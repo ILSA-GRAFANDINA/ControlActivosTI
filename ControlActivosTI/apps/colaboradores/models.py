@@ -3,7 +3,6 @@ from django.db import models
 
 from apps.catalogos.models import Area, Cargo, CentroCosto, Empresa, Ubicacion
 
-
 cedula_validator = RegexValidator(
     regex=r"^\d{10}$",
     message="La cédula debe tener exactamente 10 dígitos.",

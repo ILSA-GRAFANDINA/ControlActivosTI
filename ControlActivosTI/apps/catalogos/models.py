@@ -1,14 +1,14 @@
+import re
+import unicodedata
+from datetime import date
+from decimal import Decimal
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.db import models, transaction
 from django.db.models import Q
 from django.db.models.functions import Lower
-from decimal import Decimal
-from datetime import date
-import re
-import unicodedata
-
 
 ceco_codigo_validator = RegexValidator(
     regex=r"^[A-Z0-9][A-Z0-9._-]{1,29}$",

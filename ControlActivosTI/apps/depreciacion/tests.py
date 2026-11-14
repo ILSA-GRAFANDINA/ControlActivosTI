@@ -9,9 +9,6 @@ from django.urls import reverse
 
 from apps.activos.models import Activo
 from apps.catalogos.models import EstadoActivo, TipoActivo
-from apps.notificaciones.models import Notificacion
-from apps.proveedores.models import Proveedor
-
 from apps.depreciacion.models import (
     ConfiguracionAlertasDepreciacion,
     EventoNotificacionDepreciacion,
@@ -20,6 +17,8 @@ from apps.depreciacion.services import (
     DepreciationNotificationService,
     DepreciationService,
 )
+from apps.notificaciones.models import Notificacion
+from apps.proveedores.models import Proveedor
 
 User = get_user_model()
 

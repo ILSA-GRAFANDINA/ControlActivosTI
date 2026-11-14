@@ -1,15 +1,15 @@
-from datetime import date
-from io import BytesIO
-from pathlib import Path
 import shutil
 import tempfile
 import uuid
 import xml.etree.ElementTree as ET
+from datetime import date
+from io import BytesIO
+from pathlib import Path
 from zipfile import ZipFile
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
-from django.conf import settings
 from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
@@ -35,7 +35,15 @@ from apps.asignaciones.models import (
     DevolucionDetalle,
     EvidenciaEntrega,
 )
-from apps.catalogos.models import Area, Cargo, CentroCosto, Empresa, EstadoActivo, TipoActivo, Ubicacion
+from apps.catalogos.models import (
+    Area,
+    Cargo,
+    CentroCosto,
+    Empresa,
+    EstadoActivo,
+    TipoActivo,
+    Ubicacion,
+)
 from apps.colaboradores.models import Colaborador
 from apps.proveedores.models import Proveedor
 

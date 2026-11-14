@@ -25,7 +25,6 @@ from .forms import (
 )
 from .models import Asignacion, Devolucion, EvidenciaDevolucion, EvidenciaEntrega
 
-
 logger = logging.getLogger("controlactivos")
 
 

@@ -1,14 +1,14 @@
-from datetime import date
-from pathlib import Path
 import shutil
 import tempfile
 import uuid
+from datetime import date
+from pathlib import Path
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
+from django.core.exceptions import ValidationError
 from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.test.utils import override_settings
 from django.urls import reverse
@@ -17,6 +17,14 @@ from django.utils import timezone
 from apps.actas.models import ActaEntrega
 from apps.activos.attribute_services import guardar_valores_atributos
 from apps.activos.models import Activo
+from apps.asignaciones.forms import AsignacionCreateForm
+from apps.asignaciones.models import (
+    Asignacion,
+    AsignacionDetalle,
+    Devolucion,
+    EvidenciaDevolucion,
+    EvidenciaEntrega,
+)
 from apps.catalogos.models import (
     Area,
     AtributoActivo,
@@ -30,15 +38,6 @@ from apps.catalogos.models import (
 )
 from apps.colaboradores.models import Colaborador
 from apps.proveedores.models import Proveedor
-
-from apps.asignaciones.forms import AsignacionCreateForm
-from apps.asignaciones.models import (
-    Asignacion,
-    AsignacionDetalle,
-    Devolucion,
-    EvidenciaDevolucion,
-    EvidenciaEntrega,
-)
 
 
 def make_test_media_root():
@@ -950,6 +949,7 @@ class EvidenciasFotograficasTests(TestCase):
 
     def _crear_imagen_subida(self, nombre="evidencia.png"):
         from io import BytesIO
+
         from PIL import Image
         buffer = BytesIO()
         image = Image.new("RGB", (200, 200), color="green")

@@ -3,12 +3,10 @@ import re
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
+from apps.activos.models import Activo, ValorAtributoActivo
 from apps.auditoria.models import RegistroAuditoria
 from apps.auditoria.services import registrar_evento
 from apps.catalogos.models import AtributoActivo, TipoActivoAtributo
-
-from apps.activos.models import Activo, ValorAtributoActivo
-
 
 LEGACY_FIELDS = {
     "procesador": "cpu",

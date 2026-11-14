@@ -27,7 +27,6 @@ from apps.catalogos.models import (
 
 from .encryption import mask_protected_text
 
-
 TIPOS_ACTIVO_CON_ESPECIFICACIONES = (
     "laptop",
     "pc",

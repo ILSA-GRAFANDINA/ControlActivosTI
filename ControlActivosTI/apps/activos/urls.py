@@ -1,8 +1,8 @@
 from django.urls import path
 
 from .views import (
-    ActivoCreateView,
     ActivoBaseSelectView,
+    ActivoCreateView,
     ActivoDetailView,
     ActivoExportView,
     ActivoListView,

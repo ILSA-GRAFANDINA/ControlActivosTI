@@ -11,7 +11,6 @@ from apps.catalogos.models import AtributoActivo, TipoActivoAtributo
 from .encryption import encrypt_protected_text
 from .models import Activo, ValorAtributoActivo
 
-
 LEGACY_FIELD_BY_KEY = {
     "procesador": "cpu",
     "cpu": "cpu",

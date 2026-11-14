@@ -1,11 +1,11 @@
-import logging
-from decimal import Decimal
-from io import BytesIO
-from copy import copy, deepcopy
-from math import ceil
 import hashlib
+import logging
 import unicodedata
 import xml.etree.ElementTree as ET
+from copy import copy, deepcopy
+from decimal import Decimal
+from io import BytesIO
+from math import ceil
 from zipfile import ZIP_DEFLATED, ZipFile
 
 from django.conf import settings
@@ -13,18 +13,17 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.utils import timezone
 from django.utils.text import slugify
-
-from PIL import Image, ImageOps
-
 from openpyxl import load_workbook
 from openpyxl.drawing.image import Image as ExcelImage
 from openpyxl.drawing.spreadsheet_drawing import AnchorMarker, OneCellAnchor
 from openpyxl.drawing.xdr import XDRPositiveSize2D
 from openpyxl.styles import Alignment, Border, Side
 from openpyxl.utils import get_column_letter, range_boundaries
+from PIL import Image, ImageOps
+
+from apps.activos.attribute_services import instantanea_activo
 
 from .models import ActaEntrega
-from apps.activos.attribute_services import instantanea_activo
 
 logger = logging.getLogger("controlactivos")
 

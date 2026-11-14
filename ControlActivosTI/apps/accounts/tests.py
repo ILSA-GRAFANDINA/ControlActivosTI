@@ -1,22 +1,23 @@
-from datetime import date
-from pathlib import Path
 import shutil
 import uuid
+from datetime import date
+from pathlib import Path
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import PBKDF2PasswordHasher, identify_hasher
 from django.contrib.auth.models import Permission
-from django.test import TestCase
-from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase
 from django.test.utils import override_settings
+from django.urls import reverse
 
+from apps.accounts.models import PerfilUsuario
 from apps.activos.models import Activo
 from apps.asignaciones.models import Asignacion, AsignacionDetalle
-from apps.accounts.models import PerfilUsuario
+from apps.auditoria.models import RegistroAuditoria
 from apps.catalogos.models import (
-    AtributoActivo,
     Area,
+    AtributoActivo,
     Cargo,
     CentroCosto,
     EstadoActivo,
@@ -24,7 +25,6 @@ from apps.catalogos.models import (
     TipoActivoAtributo,
     Ubicacion,
 )
-from apps.auditoria.models import RegistroAuditoria
 from apps.colaboradores.models import Colaborador
 
 

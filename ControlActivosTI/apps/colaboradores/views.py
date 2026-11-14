@@ -3,9 +3,8 @@ from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Count, Prefetch, Q
-from django.urls import reverse
 from django.http import HttpResponseRedirect, JsonResponse, QueryDict
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.utils.dateparse import parse_date
 from django.views import View
 from django.views.generic import CreateView, DetailView, ListView, UpdateView

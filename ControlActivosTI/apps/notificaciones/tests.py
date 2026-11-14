@@ -21,11 +21,10 @@ from apps.catalogos.models import (
     UbicacionFisicaActivo,
 )
 from apps.colaboradores.models import Colaborador
-from apps.proveedores.models import Proveedor
-
 from apps.notificaciones.context_processors import notifications_context
 from apps.notificaciones.models import Notificacion
 from apps.notificaciones.services import NotificationService, prepare_notifications
+from apps.proveedores.models import Proveedor
 
 User = get_user_model()
 

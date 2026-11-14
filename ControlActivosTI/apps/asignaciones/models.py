@@ -1,7 +1,6 @@
 import posixpath
 from io import BytesIO
 from pathlib import Path
-from PIL import Image, ImageOps
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -10,6 +9,7 @@ from django.core.files.storage import default_storage
 from django.db import models, transaction
 from django.db.models import Max, Q
 from django.utils import timezone
+from PIL import Image, ImageOps
 
 from apps.activos.models import Activo
 from apps.catalogos.models import CentroCosto, EstadoActivo

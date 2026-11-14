@@ -2,8 +2,8 @@ from django.urls import path
 
 from .views import (
     AsignacionCreateView,
-    AsignacionDevolucionView,
     AsignacionDetailView,
+    AsignacionDevolucionView,
     AsignacionListView,
     DevolucionDetailView,
 )
