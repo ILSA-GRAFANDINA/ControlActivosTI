@@ -183,6 +183,11 @@ jobs:
               cd /opt/controlactivosti/app
               /opt/controlactivosti/venv/bin/python manage.py check
               /opt/controlactivosti/venv/bin/python manage.py migrate --noinput
+            '
+
+            sudo bash -c '
+              set -a; source /etc/controlactivosti/controlactivosti.env; set +a
+              cd /opt/controlactivosti/app
               /opt/controlactivosti/venv/bin/python manage.py collectstatic --noinput
             '
 
