@@ -1,0 +1,136 @@
+name: CD - ControlActivosTI (Instancia EC2)
+
+on:
+  push:
+    branches:
+      - instancia
+
+jobs:
+  lint:
+    name: Calidad de Codigo (Ruff)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Verificar errores criticos de Python (bloqueante)
+        uses: astral-sh/ruff-action@v3
+        with:
+          src: "ControlActivosTI"
+          args: "check --select E9,F63,F7,F82"
+
+  test:
+    name: Pruebas Django & PostgreSQL
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: controlactivos_ci_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci_postgres_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: ControlActivosTI
+
+    env:
+      APP_ENV: development
+      DEBUG: "True"
+      SECRET_KEY: django-insecure-ci-pipeline-key-2026
+      ALLOWED_HOSTS: 127.0.0.1,localhost,testserver
+      DB_NAME: controlactivos_ci_db
+      DB_USER: postgres
+      DB_PASSWORD: ci_postgres_password
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      LANGUAGE_CODE: es-ec
+      TIME_ZONE: America/Guayaquil
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: "ControlActivosTI/requirements.txt"
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Verificar migraciones pendientes sin crear
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Validar configuracion Django (check)
+        run: python manage.py check
+
+      - name: Ejecutar suite de pruebas
+        run: python manage.py test --verbosity=2
+
+  deploy:
+    name: Desplegar en EC2 (Ubuntu + Apache/Gunicorn)
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Desplegar por SSH en EC2
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -euo pipefail
+
+            cd /tmp/ControlActivosTI
+            git fetch origin instancia
+            git checkout instancia
+            git reset --hard origin/instancia
+
+            sudo rsync -av --delete \
+              --exclude='.git' \
+              --exclude='.env' \
+              --exclude='.venv' \
+              --exclude='venv' \
+              --exclude='media' \
+              --exclude='private_media' \
+              --exclude='staticfiles' \
+              --exclude='__pycache__' \
+              --exclude='*.pyc' \
+              --exclude='*.sqlite3' \
+              --exclude='*.log' \
+              /tmp/ControlActivosTI/ControlActivosTI/ \
+              /opt/controlactivosti/app/
+
+            sudo /opt/controlactivosti/venv/bin/pip install -r /opt/controlactivosti/app/requirements.txt
+
+            sudo -u controlactivos bash -c '
+              set -a; source /etc/controlactivosti/controlactivosti.env; set +a
+              cd /opt/controlactivosti/app
+              /opt/controlactivosti/venv/bin/python manage.py check
+              /opt/controlactivosti/venv/bin/python manage.py migrate --noinput
+              /opt/controlactivosti/venv/bin/python manage.py collectstatic --noinput
+            '
+
+            sudo chown -R root:controlactivos /opt/controlactivosti/app
+            sudo find /opt/controlactivosti/app -type d -exec chmod 750 {} \;
+            sudo find /opt/controlactivosti/app -type f -exec chmod 640 {} \;
+
+            sudo systemctl restart controlactivosti
+            curl -fsS http://127.0.0.1:8000/health/
+            echo ""
+            echo "Despliegue completado correctamente."
