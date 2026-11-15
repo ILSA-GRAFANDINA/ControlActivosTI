@@ -82,7 +82,7 @@ jobs:
         run: python manage.py test --verbosity=2
 
   deploy:
-    name: Desplegar en EC2
+    name: Desplegar en EC2 (Ubuntu + Apache/Gunicorn)
     needs: [lint, test]
     runs-on: ubuntu-latest
 
@@ -96,11 +96,71 @@ jobs:
           script: |
             set -euo pipefail
 
-            cd /tmp/ControlActivosTI
-            git fetch origin instancia
-            git checkout instancia
-            git reset --hard origin/instancia
+            REPO_DIR="/home/${{ secrets.EC2_USER }}/ControlActivosTI"
+            REPO_URL="https://github.com/${{ github.repository }}.git"
+            AUTH_URL="https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
 
+            # 1. Clonar si no existe; si ya existe, actualizar rama instancia
+            if [ ! -d "${REPO_DIR}/.git" ]; then
+              git clone -b instancia "$AUTH_URL" "$REPO_DIR"
+              git -C "$REPO_DIR" remote set-url origin "$REPO_URL"
+            else
+              cd "$REPO_DIR"
+              git fetch "$AUTH_URL" instancia
+              git checkout instancia
+              git reset --hard FETCH_HEAD
+            fi
+
+            # 2. Instalacion inicial en EC2 virgen si aun no existe el venv
+            if [ ! -x /opt/controlactivosti/venv/bin/python ]; then
+              cd "${REPO_DIR}/ControlActivosTI"
+              printf "s\n" | sudo bash install_ubuntu.sh
+              sudo a2dissite 000-default.conf || true
+              sudo systemctl reload apache2
+            fi
+
+            # 3. Asegurar base de datos PostgreSQL si aun no existe
+            DB_PASS="${{ secrets.DB_PASSWORD }}"
+            if [ -n "$DB_PASS" ]; then
+              if ! sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='controlactivos_app'" | grep -q 1; then
+                printf "CREATE ROLE controlactivos_app LOGIN PASSWORD :'pass' NOSUPERUSER NOCREATEDB NOCREATEROLE;\n" | sudo -u postgres psql -v pass="$DB_PASS"
+              fi
+              if ! sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='controlactivos'" | grep -q 1; then
+                sudo -u postgres psql -c "CREATE DATABASE controlactivos OWNER controlactivos_app ENCODING 'UTF8';"
+                sudo -u postgres psql -d controlactivos -c "REVOKE CREATE ON SCHEMA public FROM PUBLIC;"
+                sudo -u postgres psql -d controlactivos -c "GRANT USAGE, CREATE ON SCHEMA public TO controlactivos_app;"
+              fi
+            fi
+
+            # 4. Completar /etc/controlactivosti/controlactivosti.env si tiene valores vacios
+            ENV_FILE="/etc/controlactivosti/controlactivosti.env"
+            sudo env ENV_FILE="$ENV_FILE" DB_PASS="$DB_PASS" EC2_HOST_VAL="${{ secrets.EC2_HOST }}" /opt/controlactivosti/venv/bin/python - <<'PYEOF'
+import os
+from pathlib import Path
+from django.core.management.utils import get_random_secret_key
+
+env_path = Path(os.environ["ENV_FILE"])
+lines = env_path.read_text(encoding="utf-8").splitlines()
+db_pass = os.environ.get("DB_PASS", "")
+ec2_host = os.environ["EC2_HOST_VAL"]
+
+new_lines = []
+for line in lines:
+    if line == "SECRET_KEY=":
+        new_lines.append(f"SECRET_KEY={get_random_secret_key()}")
+    elif line == "DB_PASSWORD=" and db_pass:
+        new_lines.append(f"DB_PASSWORD={db_pass}")
+    elif line.startswith("ALLOWED_HOSTS=") and ec2_host not in line:
+        new_lines.append(f"ALLOWED_HOSTS=127.0.0.1,localhost,{ec2_host}")
+    elif line.startswith("CSRF_TRUSTED_ORIGINS=") and ec2_host not in line:
+        new_lines.append(f"CSRF_TRUSTED_ORIGINS=http://{ec2_host}")
+    else:
+        new_lines.append(line)
+
+env_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+PYEOF
+
+            # 5. Sincronizar codigo a produccion (DEPLOY_PRODUCTION.md)
             sudo rsync -av --delete \
               --exclude='.git' \
               --exclude='.env' \
@@ -113,7 +173,7 @@ jobs:
               --exclude='*.pyc' \
               --exclude='*.sqlite3' \
               --exclude='*.log' \
-              /tmp/ControlActivosTI/ControlActivosTI/ \
+              "${REPO_DIR}/ControlActivosTI/" \
               /opt/controlactivosti/app/
 
             sudo /opt/controlactivosti/venv/bin/pip install -r /opt/controlactivosti/app/requirements.txt
@@ -130,6 +190,7 @@ jobs:
             sudo find /opt/controlactivosti/app -type d -exec chmod 750 {} \;
             sudo find /opt/controlactivosti/app -type f -exec chmod 640 {} \;
 
+            sudo systemctl enable --now controlactivosti
             sudo systemctl restart controlactivosti
             curl -fsS http://127.0.0.1:8000/health/
             echo ""
