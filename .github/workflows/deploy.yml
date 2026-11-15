@@ -82,7 +82,7 @@ jobs:
         run: python manage.py test --verbosity=2
 
   deploy:
-    name: Desplegar en EC2 (Ubuntu + Apache/Gunicorn)
+    name: Desplegar en EC2
     needs: [lint, test]
     runs-on: ubuntu-latest
 
