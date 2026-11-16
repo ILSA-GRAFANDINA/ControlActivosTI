@@ -102,12 +102,12 @@ jobs:
 
             # 1. Clonar si no existe; si ya existe, actualizar rama instancia
             if [ ! -d "${REPO_DIR}/.git" ]; then
-              git clone -b instancia "$AUTH_URL" "$REPO_DIR"
+              git clone -b instancia2 "$AUTH_URL" "$REPO_DIR"
               git -C "$REPO_DIR" remote set-url origin "$REPO_URL"
             else
               cd "$REPO_DIR"
-              git fetch "$AUTH_URL" instancia
-              git checkout instancia
+              git fetch "$AUTH_URL" instancia2
+              git checkout instancia2
               git reset --hard FETCH_HEAD
             fi
 
