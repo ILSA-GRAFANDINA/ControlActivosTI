@@ -3,7 +3,7 @@ name: CD - ControlActivosTI (Instancia EC2)
 on:
   push:
     branches:
-      - instancia
+      - instancia2
 
 jobs:
   lint:
